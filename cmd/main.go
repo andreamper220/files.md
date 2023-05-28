@@ -7,6 +7,7 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/joho/godotenv"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slog"
 
@@ -21,7 +22,12 @@ func main() {
 	log := slog.New(slog.NewTextHandler(os.Stderr))
 	slog.SetDefault(log)
 
-	api, err := tgbotapi.NewBotAPI("5876425866:AAHoNGRY1BHBS7tURCJqaidKCCBn0Za9amM")
+	err := godotenv.Load()
+	if err != nil {
+		panic(fmt.Sprintf("Error loading .env file: %s\n", err))
+	}
+
+	api, err := tgbotapi.NewBotAPI(os.Getenv("BOT_API_TOKEN"))
 	if err != nil {
 		panic(fmt.Sprintf("Can't create TG api: %s\n", err))
 	}
