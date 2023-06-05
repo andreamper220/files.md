@@ -1,0 +1,31 @@
+package internal
+
+const (
+	maxTitleLength        = 100
+	cmdShowStart          = "start"
+	cmdShowLater          = "later"
+	cmdShowToday          = "today"
+	cmdShowNotes          = "notes"
+	cmdShowPostpone       = "postpone"
+	cmdShowDocs           = "docs"
+	cmdShowRename         = "rename"
+	cmdShowChecklists     = "checklists"
+	cmdShowStats          = "stats"
+	cmdComplete           = "comp"
+	cmdPostpone           = "post"
+	cmdRenameFile         = "rename_file"
+	cmdShowMultilineTask  = "task"
+	cmdShowDoc            = "doc"
+	cmdShowChecklist      = "checklist"
+	cmdShowChooseDay      = "to_day"
+	cmdShowToNote         = "to_note"
+	cmdShowToDoc          = "to_doc"
+	cmdShowToChecklist    = "to_checklist"
+	cmdMove               = "mv"
+	cmdMoveToNewDir       = "mv_to_new_dir"
+	cmdMoveToDoc          = "mv_to_doc"
+	cmdMoveToNewDoc       = "mv_to_new_doc"
+	cmdMoveToChecklist    = "mv_to_chk"
+	cmdMoveToNewChecklist = "mv_to_new_chk"
+	cmdSchedule           = "sc"
+)
