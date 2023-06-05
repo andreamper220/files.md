@@ -41,7 +41,7 @@ Refer to [developer's handbook](https://github.com/zakirullin/cognitive-load) fo
 - `dir` - a dir that is meant to store notes under some category, like "happiness"
 - `userID` - chatID. For the most part we're only using chatID as userID (PM with the bot)
 - `mtime` - modification time (content only, renaming doesn't affect)
-- `ctime` - change time (parent folder rename won't affect)
+- `ctime` - file's ownership, location, file type and permission settings changed time (parent folder rename won't affect)
 - `atime` - access time
 
 ### ADRs (Architecture Decision Records)
