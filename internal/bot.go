@@ -373,7 +373,7 @@ func (b *Bot) showList(params []string) error {
 			btn = tg.NewBtn(str.Emoji("👀", file.Title), cmd)
 		} else {
 			cmd := tg.NewCmd(cmdComplete, []string{dir, fs.Hash(file.Name)})
-			btn = tg.NewBtn(file.Title, cmd)
+			btn = tg.NewBtn(i18n.Emojify(file.Title), cmd)
 		}
 
 		kb.AddRow(btn)
