@@ -278,7 +278,7 @@ func TestFS_TouchNew(t *testing.T) {
 func TestFS_TouchExisting(t *testing.T) {
 	r := require.New(t)
 	fs, _ := NewFS(-1, afero.NewMemMapFs())
-	err := fs.Put("today", "a.md", "")
+	err := fs.Put("today", "a.md", "A")
 	r.Nil(err)
 
 	path := fs.path("today", "a.md")
@@ -293,5 +293,9 @@ func TestFS_TouchExisting(t *testing.T) {
 	fi, err = fs.backend.Stat(path)
 	r.Nil(err)
 	r.Less(orig_ctime, Ctime(fi))
+
+	content, err := fs.Content("today", "a.md")
+	r.Nil(err)
+	r.Equal("A", content)
 
 }

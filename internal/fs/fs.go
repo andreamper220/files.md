@@ -458,6 +458,7 @@ func (fs FS) Touch(dir, filename string) error {
 		if err != nil {
 			return fmt.Errorf("fs.Touch: can't update file's ctime: %w", err)
 		}
+		return nil
 	}
 	err = fs.Put(dir, filename, "")
 	if err != nil {
