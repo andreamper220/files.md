@@ -21,6 +21,7 @@ Locally bot's artficats can be seen in `cmd/testdata`
 - **We commit often, so pull `main` every once in a while**
 - Once your feature is ready, open a PR to `main`
 
+How to start a feature branch:
 ```bash
 $ git checkout main
 $ git pull
