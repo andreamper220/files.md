@@ -1,4 +1,4 @@
-![Gopher](https://github.com/zakirullin/stuff-bot/raw/main/cmd/testdata/_img_/gopherv13.png)
+![Gopher](https://github.com/zakirullin/stuff-bot/raw/main/cmd/testdata/_img_/gopherv13.svg)
 
 ## Spin it up
 1) Register new telegram bot via [@BotFather](https://t.me/BotFather)
