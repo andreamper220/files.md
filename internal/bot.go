@@ -246,62 +246,14 @@ func (b *Bot) saveForward(u UpdInterface) error {
 }
 
 func (b *Bot) replyToInlineQuery(u UpdInterface) error {
-	query, _ := u.InlineQuery()
-	query = strings.TrimSpace(query)
-	if len(query) == 0 {
-		return nil
-	}
+	//query, _ := u.InlineQuery()
 
-	// Check for directory traversal attack
-	if strings.Contains(query, "/") {
-		return nil
-	}
-
-	// Query maybe be either:
-	// - directory, we return all notes from directories prefixed by this directory
-	// - directory note_name, we search for this note_name in all matching directories
-	// - note_name, we search for this note_name across all directories
-	var supposedDir, search string
-	isExists, err := b.fs.Exists("", query)
-	if err != nil {
-		return fmt.Errorf("b.replyToIlineQuery: %w", err)
-	}
-	if !isExists {
-		parts := strings.SplitN(query, " ", 2)
-		supposedDir = parts[0]
-		if len(parts) > 1 {
-			search = parts[1]
-		}
-	}
-
-	// Find all similar notes directories
-	var searchInDirs []string
-	notesDirs, err := b.fs.FilesAndDirs("")
-	if err != nil {
-		return fmt.Errorf("b.replyToInlineQuery: %w", err)
-	}
-	notesDirs = fs.OnlyNotes(notesDirs)
-	for _, noteDir := range notesDirs {
-		if strings.HasPrefix(noteDir.Name, supposedDir) {
-			searchInDirs = append(searchInDirs, noteDir.Name)
-		}
-	}
-
-	// If no matching directories are found, we search through all directories
-	if len(searchInDirs) == 0 {
-		for _, noteDir := range notesDirs {
-			searchInDirs = append(searchInDirs, noteDir.Name)
-		}
-		search = query
-	}
-
-	_ = search
+	//_ = search
 
 	// TODO move to config
 	//imgUrl := "http://inmind.tech/img/notev14.png"
 
 	return nil
-
 }
 
 func (b *Bot) createOrAdd(dir, filename, content string) error {

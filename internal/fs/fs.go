@@ -37,6 +37,8 @@ const (
 	DirWatch     = "-watch-"
 	DirShop      = "-shop-"
 	FilePomodoro = "Take a break.md"
+
+	minSearchSimilarity = 70
 )
 
 // FS allows us to manipulate user files. We can use different
@@ -56,6 +58,7 @@ type File struct {
 	Ctime       int64
 	IsMultiline bool
 	IsDir       bool
+	ParentDir   string
 }
 
 // TODO create Unsorted
@@ -227,6 +230,7 @@ func (fs FS) FilesAndDirs(dir string) ([]File, error) {
 			Ctime(entry),
 			entry.Size() > 0,
 			entry.IsDir(),
+			dir,
 		}
 		files = append(files, file)
 	}
@@ -342,6 +346,78 @@ func Title(filename string) string {
 func Hash(filename string) string {
 	hash := md5.Sum([]byte(filename))
 	return hex.EncodeToString(hash[:])[:11]
+}
+
+func (fs FS) SearchNotes(query string) ([]File, error) {
+	query = strings.TrimSpace(query)
+	if len(query) == 0 {
+		return nil, nil
+	}
+	query = strings.ToLower(query)
+
+	// Check for directory traversal attack
+	if strings.Contains(query, "/") {
+		return nil, nil
+	}
+
+	// Query maybe be either:
+	// - directory, we return all notes from directories prefixed by this directory
+	// - directory note_name, we search for this note_name in all matching directories
+	// - note_name, we search for this note_name across all directories
+	var supposedDir, search string
+	isExists, err := fs.Exists("", query)
+	if err != nil {
+		return nil, fmt.Errorf("b.replyToIlineQuery: %w", err)
+	}
+	if !isExists {
+		parts := strings.SplitN(query, " ", 2)
+		supposedDir = parts[0]
+		if len(parts) > 1 {
+			search = parts[1]
+		}
+	}
+
+	// Find all similar notes directories
+	var searchInDirs []string
+	notesDirs, err := fs.FilesAndDirs("")
+	if err != nil {
+		return nil, fmt.Errorf("b.replyToInlineQuery: %w", err)
+	}
+	notesDirs = OnlyNotes(notesDirs)
+	for _, noteDir := range notesDirs {
+		if strings.HasPrefix(noteDir.Name, supposedDir) {
+			searchInDirs = append(searchInDirs, noteDir.Name)
+		}
+	}
+
+	// If no matching directories are found, we search through all directories
+	if len(searchInDirs) == 0 {
+		for _, noteDir := range notesDirs {
+			searchInDirs = append(searchInDirs, noteDir.Name)
+		}
+		search = query
+	}
+
+	var notes []File
+	for _, dir := range searchInDirs {
+		// We can tolerate incomplete search
+		files, _ := fs.FilesAndDirs(dir)
+		files = OnlyFiles(files)
+		notes = append(notes, files...)
+	}
+	notes = SortByCtime(notes)
+
+	var matchedNotes []File
+	for _, note := range notes {
+		isWildcard := len(search) == 0
+		isSubstring := strings.Contains(strings.ToLower(note.Name), query)
+		isSimilar := str.Similar(strings.ToLower(note.Name), query) > minSearchSimilarity
+		if isWildcard || isSubstring || isSimilar {
+			matchedNotes = append(matchedNotes, note)
+		}
+	}
+
+	return matchedNotes, nil
 }
 
 func ExcludeChecklists(dirs []File) []File {
