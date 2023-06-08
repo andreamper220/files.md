@@ -31,6 +31,12 @@ $ git pull
 $ git checkout -b feature/feature_name
 ```
 
+## Bot's artifacts are plain files, yet we differentiate the following types:
+- Tasks: `/today/pay the bills.md` (`today/*.md`, `later/*.md`, `_trash_/*.md`)
+- Notes: `/brain/brain is the most complex object.md` (`/.*/*.md`)
+- Documents: `/my big project.md` (`/*.md`)
+- Check list items: `/-shop-/cheese.md` (`-*-/*.md`)
+
 ## Glossary
 - `filename` - a filename with extension, like "note.md" (USE THIS AS ID)
 - `title` - an extension-stripped and capitalized filename, like "Note"
