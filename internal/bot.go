@@ -75,7 +75,7 @@ func (b *Bot) Reply(u UpdInterface) error {
 
 	cmd, err := b.extractCmd(u)
 	if err != nil {
-		return fmt.Errorf("b.Reply: can't extract cmd: %w", err)
+		return fmt.Errorf("can't extract cmd: %w", err)
 	}
 	if cmd != nil {
 		if _, ok := u.CallbackQueryID(); !ok {
@@ -152,12 +152,12 @@ func (b *Bot) extractCmd(u UpdInterface) (*tg.Cmd, error) {
 	// Input expectation is mostly used for renaming things
 	cmd, err := b.db.InputExpectation(b.userID)
 	if err != nil {
-		return nil, fmt.Errorf("b.Reply: %w", err)
+		return nil, fmt.Errorf("can't extract cmd: %w", err)
 	}
 	if cmd != nil {
 		err = b.db.DelInputExpectation(b.userID)
 		if err != nil {
-			return nil, fmt.Errorf("b.getCmd: %w", err)
+			return nil, fmt.Errorf("can't extract cmd: %w", err)
 		}
 
 		for i, param := range cmd.Params {
@@ -200,13 +200,13 @@ func (b *Bot) save(u UpdInterface) error {
 
 	title, content, err := b.extractTitleAndContent(msg)
 	if err != nil {
-		return fmt.Errorf("b.save: %w", err)
+		return fmt.Errorf("can't save: %w", err)
 	}
 
 	filename := fs.Filename(title)
 	err = b.createOrAdd(fs.DirToday, filename, content)
 	if err != nil {
-		return fmt.Errorf("b.save: %w", err)
+		return fmt.Errorf("can't save: %w", err)
 	}
 
 	return b.showMove([]string{fs.Hash(filename)})
@@ -218,7 +218,7 @@ func (b *Bot) saveForward(u UpdInterface) error {
 
 	title, content, err := b.extractTitleAndContent(msg)
 	if err != nil {
-		return fmt.Errorf("b.save: %w", err)
+		return fmt.Errorf("can't save: %w", err)
 	}
 	filename := fs.Filename(title)
 
@@ -230,7 +230,7 @@ func (b *Bot) saveForward(u UpdInterface) error {
 	time.Sleep(300 * time.Millisecond)
 	files, err := b.fs.FilesAndDirs(fs.DirToday)
 	if err != nil {
-		return fmt.Errorf("b.saveForward: %w", err)
+		return fmt.Errorf("can't save forward: %w", err)
 	}
 
 	files = fs.SortByCtime(fs.OnlyFiles(files))
@@ -245,7 +245,7 @@ func (b *Bot) saveForward(u UpdInterface) error {
 
 	err = b.createOrAdd(fs.DirToday, filename, content)
 	if err != nil {
-		return fmt.Errorf("b.save: %w", err)
+		return fmt.Errorf("can't save: %w", err)
 	}
 
 	return b.showMove([]string{fs.Hash(filename)})
@@ -268,9 +268,10 @@ func (b *Bot) replyToInlineQuery(u UpdInterface) error {
 	}
 
 	queryID, _ := u.InlineQueryID()
-	b.tg.AnswerInlineQuery(queryID, results, inlineResultsCacheTime, "")
-
-	// TODO move to config
+	err = b.tg.AnswerInlineQuery(queryID, results, inlineResultsCacheTime, "")
+	if err != nil {
+		return fmt.Errorf("can't answer to inline query: %w", err)
+	}
 
 	return nil
 }
@@ -278,20 +279,20 @@ func (b *Bot) replyToInlineQuery(u UpdInterface) error {
 func (b *Bot) createOrAdd(dir, filename, content string) error {
 	exists, err := b.fs.Exists(dir, filename)
 	if err != nil {
-		return fmt.Errorf("b.createOrAdd can't check file existence: %w", err)
+		return fmt.Errorf("can't create: %w", err)
 	}
 
 	if exists {
 		existingContent, err := b.fs.Content(dir, filename)
 		if err != nil {
-			return fmt.Errorf("b.createOrAdd can't get content: %w", err)
+			return fmt.Errorf("can't create: %w", err)
 		}
 
 		content = fmt.Sprintf("%s\n%s", strings.TrimSpace(existingContent), content)
 	}
 
 	if err := b.fs.Put(fs.DirToday, filename, content); err != nil {
-		return fmt.Errorf("b.createOrAdd: can't put: %w", err)
+		return fmt.Errorf("can't create: %w", err)
 	}
 
 	return nil
@@ -299,7 +300,7 @@ func (b *Bot) createOrAdd(dir, filename, content string) error {
 
 func (b *Bot) extractTitleAndContent(msg string) (string, string, error) {
 	if len(msg) == 0 {
-		return "", "", fmt.Errorf("b.extractTitleAndContent: empty msg")
+		return "", "", fmt.Errorf("can't extract title: empty msg")
 	}
 
 	parts := strings.SplitN(msg, "\n", 2)
@@ -332,7 +333,7 @@ func (b *Bot) tr(str string, args ...any) string {
 func (b *Bot) show(text string, kb *tg.Keyboard, markup string) error {
 	mid, err := b.db.LastKeyboardMsgID(b.userID)
 	if err != nil {
-		return fmt.Errorf("b.show: can't get last mid: %w", err)
+		return fmt.Errorf("can't show: %w", err)
 	}
 
 	if mid == nil {
@@ -340,12 +341,12 @@ func (b *Bot) show(text string, kb *tg.Keyboard, markup string) error {
 
 		mid, err := b.tg.Send(b.userID, text, kb, markup)
 		if err != nil {
-			return fmt.Errorf("b.show: can't send: %w", err)
+			return fmt.Errorf("can't show: %w", err)
 		}
 
 		err = b.db.SetLastKeyboardMsgID(b.userID, mid)
 		if err != nil {
-			return fmt.Errorf("b.show: can't set last mid: %w", err)
+			return fmt.Errorf("can't show: %w", err)
 		}
 
 		return nil
@@ -377,7 +378,7 @@ func (b *Bot) showMove(params []string) error {
 
 	err := b.show(b.tr("Task added for <b>today</b>!"), kb, tg.MarkupHTML)
 	if err != nil {
-		return fmt.Errorf("b.showMove: %w", err)
+		return fmt.Errorf("can't move: %w", err)
 	}
 
 	return nil
@@ -398,7 +399,7 @@ func (b *Bot) showList(params []string) error {
 
 	files, err := b.fs.FilesAndDirs(dir)
 	if err != nil {
-		return fmt.Errorf("list: can't get files in %s dir: %w", dir, err)
+		return fmt.Errorf("can't show list: can't get files in %s dir: %w", dir, err)
 	}
 
 	var kb tg.Keyboard
@@ -430,7 +431,7 @@ func (b *Bot) showList(params []string) error {
 
 	err = b.show(msg, &kb, tg.MarkupHTML)
 	if err != nil {
-		return fmt.Errorf("b.showList: %w", err)
+		return fmt.Errorf("can't show list: %w", err)
 	}
 
 	return nil
@@ -439,7 +440,7 @@ func (b *Bot) showList(params []string) error {
 func (b *Bot) showNotes(params []string) error {
 	dirs, err := b.fs.FilesAndDirs("")
 	if err != nil {
-		return fmt.Errorf("b.showNotes: can't get dirs: %w", err)
+		return fmt.Errorf("can't show notes: can't get dirs: %w", err)
 	}
 	dirs = fs.OnlyNotes(fs.OnlyDirs(dirs))
 
@@ -455,7 +456,7 @@ func (b *Bot) showNotes(params []string) error {
 
 	err = b.show("notes:", &kb, tg.MarkupHTML)
 	if err != nil {
-		return fmt.Errorf("b.showNotes: %w", err)
+		return fmt.Errorf("can't show notes: %w", err)
 	}
 
 	return nil
@@ -464,7 +465,7 @@ func (b *Bot) showNotes(params []string) error {
 func (b *Bot) showDocs(params []string) error {
 	files, err := b.fs.FilesAndDirs("")
 	if err != nil {
-		return fmt.Errorf("b.showDocs: can't get dirs: %w", err)
+		return fmt.Errorf("can't show docs: can't get dirs: %w", err)
 	}
 	files = fs.OnlyFiles(files)
 
@@ -480,7 +481,7 @@ func (b *Bot) showDocs(params []string) error {
 
 	err = b.show(b.tr("📝 Your docs:"), &kb, tg.MarkupHTML)
 	if err != nil {
-		return fmt.Errorf("b.showDocs: %w", err)
+		return fmt.Errorf("can't show docs: %w", err)
 	}
 
 	return nil
@@ -504,7 +505,7 @@ func (b *Bot) showChecklists(params []string) error {
 
 	err = b.show(b.tr("☑️ Checklists"), &kb, tg.MarkupHTML)
 	if err != nil {
-		return fmt.Errorf("b.showChecklists: %w", err)
+		return fmt.Errorf("can't show checklists: %w", err)
 	}
 
 	return nil
@@ -513,7 +514,7 @@ func (b *Bot) showChecklists(params []string) error {
 func (b *Bot) showPostpone(params []string) error {
 	files, err := b.fs.FilesAndDirs(fs.DirToday)
 	if err != nil {
-		return fmt.Errorf("b.showPostpone: can't get files in '%s' dir: %w", fs.DirToday, err)
+		return fmt.Errorf("can't show postpone: can't get files in '%s' dir: %w", fs.DirToday, err)
 	}
 
 	var kb tg.Keyboard
@@ -529,7 +530,7 @@ func (b *Bot) showPostpone(params []string) error {
 
 	err = b.show(b.tr("🦥 Select a task to postpone:"), &kb, tg.MarkupHTML)
 	if err != nil {
-		return fmt.Errorf("b.showPostpone: %w", err)
+		return fmt.Errorf("can't show postpone: %w", err)
 	}
 
 	return nil
@@ -541,14 +542,14 @@ func (b *Bot) postpone(params []string) error {
 
 	filename, err := b.fs.Unhash(fs.DirToday, filenameHash)
 	if err != nil {
-		return fmt.Errorf("b.postpone: can't unhash old filename %s in %s: %w", fs.DirToday, filenameHash, err)
+		return fmt.Errorf("can't postpone: can't unhash old filename %s in %s: %w", fs.DirToday, filenameHash, err)
 	}
 
 	// TODO touch
 	// TODO multiline
 	err = b.fs.Rename(fs.DirToday, filename, fs.DirLater, filename)
 	if err != nil {
-		return fmt.Errorf("b.postpone: can't move: %w", err)
+		return fmt.Errorf("can't postpone: can't move: %w", err)
 	}
 
 	return b.showPostpone(nil)
@@ -566,7 +567,7 @@ func (b *Bot) showRename(params []string) error {
 
 	files, err := b.fs.FilesAndDirs(dir)
 	if err != nil {
-		return fmt.Errorf("b.rename: can't get files in %s dir: %w", dir, err)
+		return fmt.Errorf("can't rename: can't get files in %s dir: %w", dir, err)
 	}
 
 	var kb tg.Keyboard
@@ -601,12 +602,12 @@ func (b *Bot) showRenameFile(params []string) error {
 
 	filename, err := b.fs.Unhash(dir, filenameHash)
 	if err != nil {
-		return fmt.Errorf("b.task: can't unhash filename %s in %s: %w", filenameHash, dir, err)
+		return fmt.Errorf("can't show rename: can't unhash filename %s in %s: %w", filenameHash, dir, err)
 	}
 
 	content, err := b.fs.Content(dir, filename)
 	if err != nil {
-		return fmt.Errorf("b.task: can't get content for %s: %w", filename, err)
+		return fmt.Errorf("can't show rename: can't get content for %s: %w", filename, err)
 	}
 
 	kb := tg.NewKeyboard([]tg.Row{
@@ -615,12 +616,12 @@ func (b *Bot) showRenameFile(params []string) error {
 
 	err = b.db.SetInputExpectation(b.userID, tg.NewCmd(cmdMove, []string{dir, filename, dir, "%s"}))
 	if err != nil {
-		return fmt.Errorf("b.showRenameFile: can't set input expectation: %w", err)
+		return fmt.Errorf("can't show rename: can't set input expectation: %w", err)
 	}
 
 	err = b.show(fmt.Sprintf("%s\n%s", fs.Title(filename), content), kb, tg.MarkupHTML)
 	if err != nil {
-		return fmt.Errorf("b.showRenameFile: %w", err)
+		return fmt.Errorf("can't show rename: %w", err)
 	}
 
 	return nil
@@ -629,12 +630,12 @@ func (b *Bot) showRenameFile(params []string) error {
 func (b *Bot) showStats(params []string) error {
 	report, err := stats.TodayReport(b.fs, b.db, b.userID)
 	if err != nil {
-		return fmt.Errorf("b.showStats: %w", err)
+		return fmt.Errorf("can't show stats: %w", err)
 	}
 
 	err = b.show(report, nil, tg.MarkupHTML)
 	if err != nil {
-		return fmt.Errorf("b.showStats: %w", err)
+		return fmt.Errorf("can't show stats: %w", err)
 	}
 
 	return nil
