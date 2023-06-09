@@ -21,8 +21,11 @@ import (
 )
 
 func main() {
-	log := slog.New(slog.NewTextHandler(os.Stderr))
-	slog.SetDefault(log)
+	opts := slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}
+	logger := slog.New(opts.NewTextHandler(os.Stderr))
+	slog.SetDefault(logger)
 
 	err := godotenv.Load()
 	if err != nil {

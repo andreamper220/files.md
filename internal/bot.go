@@ -3,6 +3,7 @@ package internal
 import (
 	"errors"
 	"fmt"
+	"golang.org/x/exp/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -87,7 +88,7 @@ func (b *Bot) Reply(u UpdInterface) error {
 			// TODO create error
 			return errors.New(fmt.Sprintf("no such command %s", cmd.Name))
 		}
-
+		slog.Debug("Command is called", "command", cmd.Name, "params", cmd.Params)
 		err = handler(cmd.Params)
 		if err != nil {
 			return err
