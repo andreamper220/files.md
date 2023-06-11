@@ -16,6 +16,7 @@ import (
 	"zakirullin/dumpbot/internal/sched"
 	"zakirullin/dumpbot/internal/stats"
 	"zakirullin/dumpbot/internal/userconfig"
+	"zakirullin/dumpbot/pkg/slice"
 	"zakirullin/dumpbot/pkg/str"
 	"zakirullin/dumpbot/pkg/tg"
 )
@@ -27,6 +28,7 @@ var now = func() time.Time {
 const (
 	maxTitleLength         = 100
 	inlineResultsCacheTime = 15 // seconds
+	btnsPerRow             = 3
 )
 
 // TGInterface provides a simple interface to telegram API
@@ -366,20 +368,26 @@ func (b *Bot) showMove(params []string) error {
 		i18n.StrToDoc:       tg.NewCmd(cmdShowToDoc, []string{filenameHash}),
 	}
 
-	var kb tg.Keyboard
-	userCmds := b.conf.MoveToCmds()
-	for _, userCmd := range userCmds {
-		cmd, ok := availableCmds[userCmd]
+	var btns []tg.Btn
+	userCmdNames := b.conf.MoveToCmds()
+	for _, userCmdName := range userCmdNames {
+		cmd, ok := availableCmds[userCmdName]
 		if !ok {
 			// TODO rem unsupported cmd?
 			continue
 		}
+		btns = append(btns, tg.NewBtn(userCmdName, cmd))
+	}
 
-		kb.AddRow(tg.NewBtn(b.tr(userCmd), cmd))
+	var kb tg.Keyboard
+	userBtnsByRows := slice.Chunk(btns, btnsPerRow)
+	for _, row := range userBtnsByRows {
+		kb.AddRow(tg.NewRow(row...))
 	}
 	kb.AddRow(tg.NewBtn(i18n.StrBtnGoToToday, tg.NewCmd(cmdShowToday, nil)))
 
 	b.delAllKeyboards()
+
 	err := b.show(b.tr("Task added for <b>today</b>!"), &kb, tg.MarkupHTML)
 	if err != nil {
 		return fmt.Errorf("move: %w", err)
