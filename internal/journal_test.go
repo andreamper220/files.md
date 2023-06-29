@@ -50,7 +50,8 @@ func Test_AddDailyNote(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := insertDailyNote(tt.md, tt.note)
+			header := now().Format(userconfig.DefaultConfig.JournalHeaderFormat())
+			got := insertDailyNote(tt.md, header, tt.note)
 			r.Equal(tt.want, got)
 		})
 	}
@@ -69,8 +70,8 @@ func TestBot_pathToJournal(t *testing.T) {
 			want:                "May 2023.md",
 		},
 		{
-			pathToJournalConfig: "2006/01/2006-01-02.md",
-			want:                "2023/05/2023-05-30.md",
+			pathToJournalConfig: "2006-01-02.md",
+			want:                "2023-05-30.md",
 		},
 	}
 	for _, tt := range tests {

@@ -25,6 +25,7 @@ var DefaultConfig = Config{ // TODO apply default config if some fields are miss
 		PomodoroDurationMinute: 25,
 		Schedules:              []Schedule{},
 		JournalFilename:        "January 2006.md",
+		JournalHeaderFormat:    "02, Monday",
 	},
 }
 
@@ -58,7 +59,8 @@ type raw struct {
 	HomeCmd                string     `json:"homeCmd"`
 	MoveToCommands         []string   `json:"moveToCommands"`
 	PomodoroDurationMinute float64    `json:"pomodoroDurationMinute"`
-	JournalFilename        string     `json:"JournalFilename"`
+	JournalFilename        string     `json:"journalFilename"`
+	JournalHeaderFormat    string     `json:"journalHeaderFormat"`
 	Schedules              []Schedule `json:"schedules"`
 }
 
@@ -173,11 +175,22 @@ func (c *Config) DelFromSchedule(filename string) {
 
 func (c *Config) JournalFilename() string {
 	if c.raw.JournalFilename == "" {
-		return DefaultConfig.JournalFilename() // Same as in PHP bot
+		return DefaultConfig.raw.JournalFilename
 	}
 	return c.raw.JournalFilename
 }
 
 func (c *Config) SetPathToJournal(path string) {
 	c.raw.JournalFilename = path
+}
+
+func (c *Config) JournalHeaderFormat() string {
+	if c.raw.JournalHeaderFormat == "" {
+		return DefaultConfig.raw.JournalHeaderFormat
+	}
+	return c.raw.JournalHeaderFormat
+}
+
+func (c *Config) SetJournalHeaderFormat(format string) {
+	c.raw.JournalHeaderFormat = format
 }

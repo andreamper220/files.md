@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	dateFormat         = "02, Monday"
 	headerLevel        = 4
 	intraNoteSeparator = "; "
 )
@@ -37,11 +36,11 @@ func (b *Bot) AddDailyNote(dir, noteFilename string) error {
 			return err
 		}
 	}
-	content = insertDailyNote(content, note)
+	content = insertDailyNote(content, now().Format(b.conf.JournalHeaderFormat()), note)
 	return b.fs.Put(fs.DirJournal, journalFilename, content)
 }
 
-func insertDailyNote(mdContent, note string) string {
+func insertDailyNote(mdContent, header, note string) string {
 	r := markdown.NewRenderer()
 	md := goldmark.New(
 		goldmark.WithRenderer(r),
@@ -51,13 +50,8 @@ func insertDailyNote(mdContent, note string) string {
 
 	source := []byte(mdContent)
 	root := md.Parser().Parse(text.NewReader(source))
-
-	date := now().Format(dateFormat)
-	root = addListItemAftreHeader(source, root, date, note)
-
-	//root.Dump(source, 2)
+	root = addListItemAftreHeader(source, root, header, note)
 	r.Render(&buf, source, root)
-
 	return buf.String()
 }
 
