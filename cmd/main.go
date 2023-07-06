@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+
 	"zakirullin/stuffbot/internal/sync"
 
 	"github.com/alicebob/miniredis/v2"
@@ -61,6 +62,9 @@ func main() {
 	}
 	defer redis.Close()
 
+	// Initiate per-user locks
+	locks := sync.NewPerUserLocker()
+
 	// Workers
 	ticker := time.NewTicker(5 * time.Second)
 	quit := make(chan struct{})
@@ -77,6 +81,7 @@ func main() {
 				if err != nil {
 					fmt.Printf("Worker's error: %s\n", err)
 				}
+				checkAndLogFrozenRequests(locks.FrozenRequests(time.Second))
 			case <-quit:
 				ticker.Stop()
 				return
@@ -89,8 +94,6 @@ func main() {
 	tgConfig.Timeout = 60
 	updates := api.GetUpdatesChan(tgConfig)
 
-	// Initiate per-user locks
-	locks := sync.NewPerUserLocker()
 	for upd := range updates {
 		go func(upd tgbotapi.Update) {
 			defer func() {
@@ -102,12 +105,13 @@ func main() {
 
 			u := tg.NewUpd(upd)
 			userID := u.UserID()
-			locks.Lock(userID)
-			defer locks.Unlock(userID)
 
 			var updJSON []byte
 			updJSON, _ = json.Marshal(upd)
 			slog.Debug("Bot update: ", "upd", updJSON)
+
+			locks.Lock(userID, updJSON)
+			defer locks.Unlock(userID)
 
 			userPath := fs.UserPath(conf.StoragePath, userID)
 			userFS, err := fs.NewFS(userPath, afero.NewOsFs())
@@ -141,5 +145,14 @@ func main() {
 				slog.Error("Bot error", "err", err)
 			}
 		}(upd)
+	}
+}
+
+func checkAndLogFrozenRequests(reqs map[int64]interface{}) {
+	if len(reqs) == 0 {
+		return
+	}
+	for userID, req := range reqs {
+		slog.Error("Frozen request", "userID", userID, "req", req)
 	}
 }

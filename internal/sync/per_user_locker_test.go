@@ -1,13 +1,14 @@
 package sync
 
 import (
-	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
-func BenchmarkLocker(b *testing.B) {
+func Benchmark_Locker(b *testing.B) {
 	const M = 4
 	b.ReportAllocs()
 	r := require.New(b)
@@ -16,32 +17,32 @@ func BenchmarkLocker(b *testing.B) {
 	wg.Add(b.N * M)
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < M; j++ {
-			go func(i int64) { l.Lock(i); l.Unlock(i); wg.Done() }(int64(i))
+			go func(i int64) { l.Lock(i, nil); l.Unlock(i); wg.Done() }(int64(i))
 		}
 	}
 	wg.Wait()
 	r.Equal(0, l.Len())
 }
 
-func TestLocker(t *testing.T) {
+func Test_Locker(t *testing.T) {
 	r := require.New(t)
 	l := NewPerUserLocker()
 	r.Equal(0, l.Len())
-	l.Lock(1)
-	r.False(l.TryLock(1))
+	l.Lock(1, nil)
+	r.False(l.TryLock(1, nil))
 	l.Unlock(1)
-	r.True(l.TryLock(1))
+	r.True(l.TryLock(1, nil))
 	l.Unlock(1)
 	r.Equal(0, l.Len())
 }
 
-func TestLockerQueue(t *testing.T) {
+func Test_Locker_Queue(t *testing.T) {
 	const queueLen = 10
 	const userId = 42
 	r := require.New(t)
 	l := NewPerUserLocker()
 	for i := 0; i < queueLen; i++ {
-		go func(i int64) { l.Lock(userId) }(int64(i))
+		go func(i int64) { l.Lock(userId, nil) }(int64(i))
 	}
 	for i := 0; i < queueLen; i++ {
 		time.Sleep(time.Millisecond) // wait for some goroutines to grab the lock
@@ -61,4 +62,19 @@ func TestLockerQueue(t *testing.T) {
 		l.Unlock(userId)
 	}()
 
+}
+
+func Test_Locker_FrozenRequests(t *testing.T) {
+	r := require.New(t)
+	l := NewPerUserLocker()
+	l.Lock(1, 11)
+	time.Sleep(10 * time.Millisecond)
+	l.Lock(2, 22)
+	r.Empty(l.FrozenRequests(time.Second))
+	fr := l.FrozenRequests(5 * time.Millisecond)
+	r.Len(fr, 1)
+	req, ok := fr[1]
+	r.True(ok)
+	r.Equal(11, req)
+	r.Len(l.FrozenRequests(0), 2)
 }
