@@ -3,6 +3,7 @@ package journal
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -11,42 +12,46 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
 	"zakirullin/stuffbot/internal/fs"
+	pkgText "zakirullin/stuffbot/pkg/text"
 )
 
 var now = time.Now // to be replaced in tests
 
+var re = regexp.MustCompile(`\n+`)
+
 const (
-	headerLevel        = 4
-	intraNoteSeparator = "; "
+	headerLevel = 4
 )
 
 func AddDailyNote(dir, noteFilename string, botFs *fs.FS, journalFilenameFormat, journalHeaderFormat string) error {
-	content, err := botFs.Content(dir, noteFilename)
+	noteContent, err := botFs.Content(dir, noteFilename)
 	if err != nil {
 		return fmt.Errorf("failed to move to journal: can't get note content: %w", err)
 	}
 	note := fs.Title(noteFilename)
-	if strings.TrimSpace(content) != "" {
-		for _, line := range strings.Split(content, "\n") {
-			line = strings.TrimSpace(line)
-			if line != "" {
-				note += intraNoteSeparator + line
-			}
-		}
+	noteContent = strings.TrimSpace(noteContent)
+	if noteContent != "" {
+		note += "\n" + noteContent
 	}
+	// Replace all occurrence of one or several multiples in a row with exactly two newlines, to comply with markdown
+	note = re.ReplaceAllString(pkgText.NormNewLines(note), "\n\n")
+
 	journalFilename := now().Format(journalFilenameFormat)
 	exists, err := botFs.Exists(fs.DirJournal, journalFilename)
 	if err != nil {
 		return err
 	}
+	var md string
 	if exists {
-		content, err = botFs.Content(fs.DirJournal, journalFilename)
+		md, err = botFs.Content(fs.DirJournal, journalFilename)
 		if err != nil {
 			return err
 		}
+		md = pkgText.NormNewLines(md)
 	}
-	content = insertDailyNote(content, journalHeaderFormat, note)
-	return botFs.Put(fs.DirJournal, journalFilename, content)
+
+	md = insertDailyNote(md, journalHeaderFormat, note)
+	return botFs.Put(fs.DirJournal, journalFilename, md)
 }
 
 func insertDailyNote(mdContent, journalHeaderFormat, note string) string {
