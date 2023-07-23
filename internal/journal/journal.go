@@ -17,7 +17,7 @@ import (
 
 var now = time.Now // to be replaced in tests
 
-var re = regexp.MustCompile(`\n+`)
+var newLines = regexp.MustCompile(`\n+`)
 
 const (
 	headerLevel = 4
@@ -29,12 +29,15 @@ func AddDailyNote(dir, noteFilename string, botFs *fs.FS, journalFilenameFormat,
 		return fmt.Errorf("failed to move to journal: can't get note content: %w", err)
 	}
 	note := fs.Title(noteFilename)
+	dt := time.Now().Format("`15:04 MST`")
 	noteContent = strings.TrimSpace(noteContent)
 	if noteContent != "" {
-		note += "\n" + noteContent
+		note = dt + "\n" + note + "\n" + noteContent
+	} else {
+		note = dt + ": " + note
 	}
 	// Replace all occurrence of one or several multiples in a row with exactly two newlines, to comply with markdown
-	note = re.ReplaceAllString(pkgText.NormNewLines(note), "\n\n")
+	note = newLines.ReplaceAllString(pkgText.NormNewLines(note), "\n\n")
 
 	journalFilename := now().Format(journalFilenameFormat)
 	exists, err := botFs.Exists(fs.DirJournal, journalFilename)
