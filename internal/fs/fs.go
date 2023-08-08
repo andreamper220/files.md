@@ -79,6 +79,7 @@ func NewFS(rootPath string, backend afero.Fs) (*FS, error) {
 func (fs FS) CreateUserDirs() error {
 	for _, dir := range []string{DirArchive, DirToday, DirLater, DirInbox, DirImg, DirRead, DirWatch, DirShop} {
 		path := fmt.Sprintf("%s/%s", fs.rootPath, dir)
+		path = strings.ReplaceAll(path, "//", "/")
 		exists, err := afero.Exists(fs.backend, path)
 		if err != nil {
 			return fmt.Errorf("create default dirs: %w", err)
@@ -129,9 +130,9 @@ func (fs FS) Put(dir, filename, content string) error {
 		return fmt.Errorf("put: unsafe path '%s': %w", path, errUnsafePath)
 	}
 
-	dirs := strings.Split(path, string(os.PathSeparator))
+	dirs := strings.Split(path, "/")
 	dirs = dirs[:len(dirs)-1]
-	pathToDir := strings.Join(dirs, string(os.PathSeparator))
+	pathToDir := strings.Join(dirs, "/")
 	if err := fs.backend.MkdirAll(pathToDir, 0755); err != nil {
 		return fmt.Errorf("put: can't create dirs '%s': %w", pathToDir, err)
 	}
@@ -594,11 +595,11 @@ func (fs FS) Touch(dir, filename string) error {
 func (fs FS) Path(dir, filename string) string {
 	dir = strings.ReplaceAll(dir, "/", "|")
 	filename = strings.ReplaceAll(filename, "/", "|")
-	if len(dir) == 0 {
-		return fmt.Sprintf("%s/%s", fs.rootPath, filename)
-	}
-
-	return fmt.Sprintf("%s/%s/%s", fs.rootPath, dir, filename)
+	path := fmt.Sprintf("%s/%s/%s", fs.rootPath, dir, filename)
+	path = strings.ReplaceAll(path, "//", "/")
+	// we need to do it twice for the worst case: fs.rootPath == "/", dir == "", filename == "file" -> path: "///file"
+	path = strings.ReplaceAll(path, "//", "/")
+	return path
 }
 
 func Exists(path string) (bool, error) {
