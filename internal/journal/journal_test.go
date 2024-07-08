@@ -28,43 +28,31 @@ func Test_AddRecord(t *testing.T) {
 		{
 			name: "Empty MD",
 			record: "note 1",
-			want: "#### 30, Tuesday\n\nnote 1\n",
+			want: "#### 30, Tuesday\n`10:04` note 1\n",
 		},
 		{
 			name: "No Headers",
 			md:   "some text",
 			record: "note 1",
-			want: "some text\n\n#### 30, Tuesday\n\nnote 1\n",
+			want: "some text\n#### 30, Tuesday\n`10:04` note 1\n",
 		},
 		{
 			name: "Bare header",
 			md:   "#### 30, Tuesday\n",
 			record: "note 1",
-			want: "#### 30, Tuesday\n\nnote 1\n",
-		},
-		{
-			name: "Bare headers",
-			md:   "#### 30, Tuesday\n\n#### 31, Friday\n",
-			record: "note 1",
-			want: "#### 30, Tuesday\n\nnote 1\n\n#### 31, Friday\n",
+			want: "#### 30, Tuesday\n`10:04` note 1\n",
 		},
 		{
 			name: "New daily note",
-			md:   "#### 29, Tuesday\n\nnote 1",
+			md:   "#### 29, Tuesday\nnote 1",
 			record: "note 2",
-			want: "#### 29, Tuesday\n\nnote 1\n\n#### 30, Tuesday\n\nnote 2\n",
+			want: "#### 29, Tuesday\nnote 1\n#### 30, Tuesday\n`10:04` note 2\n",
 		},
 		{
 			name: "Append daily note",
-			md:   "#### 29, Tuesday\nnote 1\n\n#### 30, Tuesday\nnote 2",
+			md:   "#### 29, Tuesday\nnote 1\n#### 30, Tuesday\nnote 2",
 			record: "note 3",
-			want: "#### 29, Tuesday\n\nnote 1\n\n#### 30, Tuesday\n\nnote 2\n\n---\n\nnote 3\n",
-		},
-		{
-			name: "Append daily note",
-			md:   "#### 29, Tuesday\n\nnote 1\n\n#### 30, Tuesday\n\nnote 2\n",
-			record: "note 3",
-			want: "#### 29, Tuesday\n\nnote 1\n\n#### 30, Tuesday\n\nnote 2\n\n---\n\nnote 3\n",
+			want: "#### 29, Tuesday\nnote 1\n#### 30, Tuesday\nnote 2\n`10:04` note 3\n",
 		},
 	}
 

@@ -12,7 +12,7 @@ import (
 var now = time.Now
 
 func AddRecord(botFs *fs.FS, noteFilename string) error {
-	record, err := botFs.RestoreContent(fs.DirToday, noteFilename)
+	record, err := botFs.Read(fs.DirToday, noteFilename)
 	if err != nil {
 		return fmt.Errorf("failed to move to journal: can't get note content: %w", err)
 	}
@@ -31,16 +31,19 @@ func AddRecord(botFs *fs.FS, noteFilename string) error {
 		}
 		md = txt.NormNewLines(md)
 		md = strings.TrimSpace(md)
+		if len(md) != 0 {
+			md += "\n"	
+		}
 	}
+
 
 	header := fmt.Sprintf("#### %d, %s", now().Day(), now().Weekday())
 	if !strings.Contains(md, header) {
-		md = fmt.Sprintf("%s\n%s", md, header)
+		md += header + "\n"
 	}
 
-	md = fmt.Sprintf("%s\n%s %s\n", md, now().Format("`13:01`"), record)
-
-	fmt.Println(journalFilename)
+	record = fmt.Sprintf("%s %s\n", now().Format("`15:04`"), record)
+	md += record
 
 	return botFs.Write(fs.DirJournal, journalFilename, md)
 }
