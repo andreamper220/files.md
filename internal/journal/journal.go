@@ -17,6 +17,11 @@ func AddRecord(botFs *fs.FS, noteFilename string) error {
 		return fmt.Errorf("failed to move to journal: can't get note content: %w", err)
 	}
 
+	record = strings.TrimSpace(record)
+	if len(record) == 0 {
+		record = fs.Title(noteFilename)
+	}
+
 	journalFilename := now().Format("2006 January.md")
 	exists, err := botFs.Exists(fs.DirJournal, journalFilename)
 	if err != nil {
