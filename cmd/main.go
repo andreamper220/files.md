@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"time"
 
-
-	"github.com/lmittmann/tint"
 	"github.com/alicebob/miniredis/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
+	"github.com/lmittmann/tint"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slog"
 
@@ -23,6 +23,7 @@ import (
 	"zakirullin/stuffbot/internal/sync"
 	"zakirullin/stuffbot/internal/userconfig"
 	"zakirullin/stuffbot/pkg/tg"
+	"zakirullin/stuffbot/pkg/txt"
 )
 
 func main() {
@@ -101,10 +102,10 @@ func main() {
 	go func() {
 		router := http.NewServeMux()
 		router.HandleFunc("GET /habits/{id}", func(w http.ResponseWriter, r *http.Request) {
-		  id := r.PathValue("id")
-		  fmt.Fprintf(w, "habits task with id=%v\n", id)
+			id := r.PathValue("id")
+			fmt.Fprintf(w, "habits task with id=%v\n", id)
 		})
-	  
+
 		http.ListenAndServe(":8080", router)
 	}()
 
@@ -132,7 +133,7 @@ func main() {
 			userLocker.Lock(userID, string(updJSON))
 			defer userLocker.Unlock(userID)
 
-			userPath := fs.UserPath(conf.StoragePath, userID)
+			userPath := path.Join(conf.StoragePath, txt.I64(userID))
 			userFS, err := fs.NewFS(userPath, afero.NewOsFs())
 			if err != nil {
 				slog.Error("Bot error: can't create fs", "err", err)

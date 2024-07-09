@@ -2,6 +2,7 @@ package worker
 
 import (
 	"fmt"
+	"path"
 	"strconv"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"zakirullin/stuffbot/internal/fs"
 	"zakirullin/stuffbot/internal/sched"
 	"zakirullin/stuffbot/internal/userconfig"
+	"zakirullin/stuffbot/pkg/txt"
 )
 
 func MoveDueTasksToToday(storagePath, configFilename string, fsBackend afero.Fs) error {
@@ -27,7 +29,7 @@ func MoveDueTasksToToday(storagePath, configFilename string, fsBackend afero.Fs)
 		if err != nil {
 			return fmt.Errorf("schedule worker: can't parse user ID: %s", err)
 		}
-		userPath := fs.UserPath(storagePath, userID)
+		userPath := path.Join(storagePath, txt.I64(userID))
 		userFS, err := fs.NewFS(userPath, fsBackend)
 		if err != nil {
 			return fmt.Errorf("schedule worker: can't create FS: %s", err)

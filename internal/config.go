@@ -11,7 +11,6 @@ import (
 type Config struct {
 	StoragePath    string `required:"true" envconfig:"STORAGE_PATH"`
 	BotAPIToken    string `required:"true" envconfig:"BOT_API_TOKEN"`
-	AdminUserID    string `required:"true" envconfig:"ADMIN_USER_ID"`
 	ConfigFilename string `default:"config.json"`
 }
 

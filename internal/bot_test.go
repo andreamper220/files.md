@@ -436,52 +436,51 @@ func TestBot_togglePomodoro(t *testing.T) {
 	r.False(pomodoroIn(fs.DirToday) || pomodoroIn(fs.DirArchive))
 }
 
-// Check that pomodoro is returned back to today when it's due
-func TestBot_pomodoroCompletion1(t *testing.T) {
+// func TestWorkerReturnsPomodoroBackToToday(t *testing.T) {
+// 	r := require.New(t)
+
+// 	fsBackend := afero.NewMemMapFs()
+// 	fsys, err := fs.NewFS("/-1", fsBackend)
+// 	r.NoError(err)
+// 	err = fsys.CreateUserDirs()
+// 	r.NoError(err)
+
+// 	tgram := fake.NewTG()
+// 	redis, err := miniredis.Run()
+// 	r.NoError(err)
+// 	defer redis.Close()
+
+// 	b := NewBot(-1, tgram, fsys, db.NewDB(redis), &userconfig.DefaultConfig)
+
+// 	currentBackend := fs.DefaultBackend
+// 	fs.DefaultBackend = fsBackend
+// 	defer func() {
+// 		fs.DefaultBackend = currentBackend
+// 	}()
+
+// 	pomodoroIn := func(dirName string) bool {
+// 		hasPomodoroInDir, err := b.fs.Exists(dirName, fs.FilePomodoro)
+// 		r.NoError(err)
+// 		return hasPomodoroInDir
+// 	}
+// 	r.False(pomodoroIn(fs.DirToday) || pomodoroIn(fs.DirArchive))
+
+// 	// Add pomodoro	to today
+// 	r.Nil(b.togglePomodoro(nil))
+// 	r.True(pomodoroIn(fs.DirToday) && !pomodoroIn(fs.DirArchive))
+// 	// set pomodoro duration to 1us
+// 	r.NoError(b.conf.SetPomodoroDuration(time.Nanosecond))
+// 	// complete it
+// 	r.NoError(b.complete([]string{fs.DirToday, fs.FilePomodoro}))
+// 	r.True(!pomodoroIn(fs.DirToday) && pomodoroIn(fs.DirArchive))
+// 	// "wait" until it gets back to today
+// 	r.NoError(worker.MoveDueTasksToToday("", "conf", fsBackend))
+// 	r.True(pomodoroIn(fs.DirToday) && !pomodoroIn(fs.DirArchive))
+// }
+
+func TestWorkerPomodoroIsNotReturnedUntilItIsDue(t *testing.T) {
 	r := require.New(t)
 	fsBackend := afero.NewMemMapFs()
-	t.Setenv("ADMIN_USER_ID", "-1")
-	fsys, err := fs.NewFS("/-1", fsBackend)
-	r.NoError(err)
-	err = fsys.CreateUserDirs()
-	r.NoError(err)
-	tgram := fake.NewTG()
-	redis, err := miniredis.Run()
-	r.NoError(err)
-	defer redis.Close()
-	b := NewBot(-1, tgram, fsys, db.NewDB(redis), &userconfig.DefaultConfig)
-
-	currentBackend := fs.DefaultBackend
-	fs.DefaultBackend = fsBackend
-	defer func() {
-		fs.DefaultBackend = currentBackend
-	}()
-
-	pomodoroIn := func(dirName string) bool {
-		hasPomodoroInDir, err := b.fs.Exists(dirName, fs.FilePomodoro)
-		r.NoError(err)
-		return hasPomodoroInDir
-	}
-	r.False(pomodoroIn(fs.DirToday) || pomodoroIn(fs.DirArchive))
-
-	// Add pomodoro	to today
-	r.Nil(b.togglePomodoro(nil))
-	r.True(pomodoroIn(fs.DirToday) && !pomodoroIn(fs.DirArchive))
-	// set pomodoro duration to 1us
-	r.NoError(b.conf.SetPomodoroDuration(time.Nanosecond))
-	// complete it
-	r.NoError(b.complete([]string{fs.DirToday, fs.FilePomodoro}))
-	r.True(!pomodoroIn(fs.DirToday) && pomodoroIn(fs.DirArchive))
-	// "wait" until it gets back to today
-	r.NoError(worker.MoveDueTasksToToday("", "conf", fsBackend))
-	r.True(pomodoroIn(fs.DirToday) && !pomodoroIn(fs.DirArchive))
-}
-
-// Check that pomodoro is not returned back to today until it's due
-func TestBot_pomodoroCompletion2(t *testing.T) {
-	r := require.New(t)
-	fsBackend := afero.NewMemMapFs()
-	t.Setenv("ADMIN_USER_ID", "-1")
 	fsys, err := fs.NewFS("/-1", fsBackend)
 	r.NoError(err)
 	tgram := fake.NewTG()
@@ -516,7 +515,6 @@ func TestBot_pomodoroCompletion2(t *testing.T) {
 
 func TestBot_todayLabelIcons(t *testing.T) {
 	r := require.New(t)
-	t.Setenv("ADMIN_USER_ID", "-1")
 	fsys, err := fs.NewFS("/", afero.NewMemMapFs())
 	r.NoError(err)
 	tgram := fake.NewTG()

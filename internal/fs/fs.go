@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"regexp"
 	"sort"
 	"strconv"
@@ -62,32 +63,31 @@ type File struct {
 	ParentDir   string
 }
 
-func NewFS(rootPath string, backend afero.Fs) (*FS, error) {
-	exists, err := afero.Exists(backend, rootPath)
+func NewFS(absRootPath string, backend afero.Fs) (*FS, error) {
+	exists, err := afero.Exists(backend, absRootPath)
 	if err != nil {
 		return nil, fmt.Errorf("new fs: %w", err)
 	}
 	if !exists {
-		err = backend.Mkdir(rootPath, 0755)
+		err = backend.Mkdir(absRootPath, 0755)
 		if err != nil {
 			return nil, fmt.Errorf("new fs: %w", err)
 		}
 	}
 
-	return &FS{rootPath, backend}, nil
+	return &FS{absRootPath, backend}, nil
 }
 
 func (fs FS) CreateUserDirs() error {
 	for _, dir := range []string{DirArchive, DirToday, DirLater, DirInbox, DirImg, DirRead, DirWatch, DirShop, DirInsights} {
-		path := fmt.Sprintf("%s/%s", fs.rootPath, dir)
-		path = strings.ReplaceAll(path, "//", "/")
-		exists, err := afero.Exists(fs.backend, path)
+		userPath := path.Join(fs.rootPath, dir)
+		exists, err := afero.Exists(fs.backend, userPath)
 		if err != nil {
 			return fmt.Errorf("create default dirs: %w", err)
 		}
 
 		if !exists {
-			err = fs.backend.Mkdir(path, 0755)
+			err = fs.backend.Mkdir(userPath, 0755)
 			if err != nil {
 				return fmt.Errorf("create default dirs: %w", err)
 			}
@@ -229,14 +229,14 @@ func (fs FS) Unhash(dir, filenameHash string) (string, error) {
 }
 
 func (fs FS) FilesAndDirs(dir string) ([]File, error) {
-	path := fs.Path(dir, "")
-	if !fs.isSafe(path) {
-		return nil, fmt.Errorf("can't get files: %w", errUnsafePath)
+	userPath := fs.Path(dir, "")
+	if !fs.isSafe(userPath) {
+		return nil, fmt.Errorf("can't get files for '%s': %w", path.Join(fs.rootPath, dir), errUnsafePath)
 	}
 
-	entries, err := afero.ReadDir(fs.backend, path)
+	entries, err := afero.ReadDir(fs.backend, userPath)
 	if err != nil {
-		return nil, fmt.Errorf("can't get files: %w", err)
+		return nil, fmt.Errorf("can't get files for '%s': %w", path.Join(fs.rootPath, dir), err)
 	}
 
 	var files []File
@@ -541,10 +541,6 @@ func SortByCtime(entries []File) []File {
 	return entries
 }
 
-func UserPath(storagePath string, userID int64) string {
-	return fmt.Sprintf("%s/%d", storagePath, userID)
-}
-
 // Touch updates an existing file's access and modification times.
 // If there's no such file it creates an empty file.
 func (fs FS) Touch(dir, filename string) error {
@@ -569,12 +565,9 @@ func (fs FS) Touch(dir, filename string) error {
 func (fs FS) Path(dir, filename string) string {
 	dir = strings.ReplaceAll(dir, "/", "|")
 	filename = strings.ReplaceAll(filename, "/", "|")
-	path := fmt.Sprintf("%s/%s/%s", fs.rootPath, dir, filename)
-	path = strings.ReplaceAll(path, "//", "/")
-	// we need to do it twice for the worst case: fs.rootPath == "/", dir == "", filename == "file" -> path: "///file"
-	path = strings.ReplaceAll(path, "//", "/")
+	p := path.Join(fs.rootPath, dir, filename)
 
-	return path
+	return p
 }
 
 func Exists(path string) (bool, error) {
