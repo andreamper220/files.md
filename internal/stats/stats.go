@@ -12,9 +12,7 @@ import (
 	"zakirullin/stuffbot/internal/sched"
 )
 
-var now = func() time.Time {
-	return time.Now()
-}
+var now = time.Now
 
 func TodayReport(fsys *fs.FS, db *db.DB, userID int64) (string, error) {
 	files, err := DoneToday(fsys, db, userID)

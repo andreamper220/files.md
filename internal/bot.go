@@ -25,9 +25,7 @@ import (
 	"zakirullin/stuffbot/pkg/txt"
 )
 
-var now = func() time.Time {
-	return time.Now()
-}
+var now = time.Now 
 
 var botPlugins []BotPluginInterface
 
