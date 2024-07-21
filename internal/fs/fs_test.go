@@ -417,5 +417,4 @@ func TestUnhashRootDirectory(t *testing.T) {
 	r.NoError(err)
 
 	r.Equal("", unhashed)
-
 }

@@ -11,6 +11,11 @@ type Btn struct {
 	Cmd  Cmd
 }
 
+const (
+	CallbackCmd            = "cmd"
+	InlineQueryCurrentChat = "iq"
+)
+
 func NewBtn(name string, cmd Cmd) Btn {
 	return Btn{name, cmd}
 }
@@ -23,11 +28,15 @@ func NewRow(btns ...Btn) []Btn {
 type Cmd struct {
 	Name   string   `json:"n"`
 	Params []string `json:"p"`
-	Type   string   `json:"-"`
+	Type   string   `json:"t"`
 }
 
 func NewCmd(name string, params []string) Cmd {
 	return Cmd{name, params, "cmd"}
+}
+
+func NewTypedCmd(name string, params []string, cmdType string) Cmd {
+	return Cmd{name, params, cmdType}
 }
 
 func (c *Cmd) UnmarshalJSON(data []byte) error {

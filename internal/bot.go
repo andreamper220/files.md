@@ -68,23 +68,6 @@ type BotPluginInterface interface {
 	ExecutePlugin(string) bool
 }
 
-// Quick panel (cmd => appropriate icon). By now, it's hardcoded.
-
-type CmdMeta struct {
-	cmd   string
-	desc  string
-	emoji string
-}
-
-var quickPanelAvailableCmds = []CmdMeta{
-	{constants.CmdShowDoc, "Documents", i18n.EmDocs},
-	{constants.CmdShowChecklists, "Checklists", i18n.EmCheckList},
-	{constants.CmdShowPostpone, "Postpone", i18n.EmPostpone},
-	{constants.CmdShowReadChecklist, "Read", i18n.Emoji("Read")},
-	{constants.CmdShowWatchChecklist, "Watch", i18n.Emoji("Watch")},
-	{constants.CmdShowShopChecklist, "Shop", i18n.Emoji("Shop")},
-}
-
 var now = time.Now
 
 func NewBot(userID int64, tg TGInterface, fs *fs.FS, db *db.DB, conf *userconfig.Config) *Bot {
@@ -184,7 +167,7 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		constants.CmdAddToPanel:         b.addToPanel,
 		constants.CmdDelFromPonel:       b.delFromPanel,
 		// Used for button-like separators
-		constants.CmdDoNothing:          func(s []string) error { return nil },
+		constants.CmdDoNothing: func(s []string) error { return nil },
 	}
 }
 
@@ -434,14 +417,14 @@ func (b *Bot) showMove(params []string) error {
 func (b *Bot) quickPanelRow() []tg.Btn {
 	quickPanelRow := tg.NewRow()
 	// We iterate through hardcoded panel to preserve order of buttons in UI
-	for _, pair := range quickPanelAvailableCmds {
-		cmd := pair.cmd
-		if b.conf.HasQuickPanelCmd(cmd) {
+	for _, btn := range userconfig.QuickPanelAvailableBtns {
+		if b.conf.HasQuickPanelCmd(btn.Cmd) {
 			quickPanelRow = append(quickPanelRow, tg.NewBtn(
-				pair.emoji,
-				tg.NewCmd(cmd, []string{})))
+				btn.Emoji,
+				tg.NewTypedCmd(btn.Cmd, []string{}, btn.CmdType)))
 		}
 	}
+
 	return quickPanelRow
 }
 
@@ -1368,39 +1351,38 @@ func (b *Bot) showConfigureQuickPanel(params []string) error {
 	var kb tg.Keyboard
 
 	// Step 1. Append all buttons that are already chosen by user
-
-	var enabled []string
+	var usedBtns []string
 
 	// We iterate through hardcoded panel to preserve order of buttons in UI
-	for _, cmdDef := range quickPanelAvailableCmds {
-		cmd := cmdDef.cmd
-		if b.conf.HasQuickPanelCmd(cmd) {
-			name := fmt.Sprintf("%s %s %s", cmdDef.emoji, cmdDef.desc, i18n.QuickPanelDelButton)
-			enabledCmd := tg.NewCmd(constants.CmdDelFromPonel, []string{cmd})
-			kb.AddRow(tg.NewBtn(name, enabledCmd))
-			enabled = append(enabled, cmd)
+	for _, btn := range userconfig.QuickPanelAvailableBtns {
+		if !b.conf.HasQuickPanelCmd(btn.Cmd) {
+			continue
 		}
+
+		name := fmt.Sprintf("%s %s %s", btn.Emoji, btn.Description, i18n.QuickPanelDelButton)
+		enabledCmd := tg.NewCmd(constants.CmdDelFromPonel, []string{btn.Cmd})
+		kb.AddRow(tg.NewBtn(name, enabledCmd))
+		usedBtns = append(usedBtns, btn.Cmd)
 	}
 
-	// Step 2. Good, we're in the middle! Just a dummy delimiter column.
 	kb.AddRow(tg.NewBtn(i18n.QuickPanelDelimiter, tg.NewCmd("", nil)))
 
-	// Step 3. Now, let's fill buttons that are not disabled...
-	for _, cmdDef := range quickPanelAvailableCmds {
-		cmd := cmdDef.cmd
+	// Step 2. Now, let's fill buttons that are not disabled...
+	for _, btn := range userconfig.QuickPanelAvailableBtns {
 		// Check if command is enabled
-		cmdEnabled := false
-		for _, enabledCmd := range enabled {
-			if cmd == enabledCmd {
-				cmdEnabled = true
+		btnUsed := false
+		for _, usedBtn := range usedBtns {
+			if btn.Cmd == usedBtn {
+				btnUsed = true
 			}
 		}
-		// Command is not enabled, so add it to disabled list
-		if !cmdEnabled {
-			name := fmt.Sprintf("%s %s %s", cmdDef.emoji, cmdDef.desc, i18n.QuickPanelAddButton)
-			disabledCmd := tg.NewCmd(constants.CmdAddToPanel, []string{cmd})
-			kb.AddRow(tg.NewBtn(name, disabledCmd))
+		if btnUsed {
+			continue
 		}
+		// Command is not enabled, so add it to disabled list
+		name := fmt.Sprintf("%s %s %s", btn.Emoji, btn.Description, i18n.QuickPanelAddButton)
+		disabledCmd := tg.NewCmd(constants.CmdAddToPanel, []string{btn.Cmd})
+		kb.AddRow(tg.NewBtn(name, disabledCmd))
 	}
 
 	kb.AddRow(tg.NewBtn(i18n.StrBtnBack, tg.NewCmd(constants.CmdShowSettings, nil)))
@@ -1418,10 +1400,11 @@ func (b *Bot) addToPanel(params []string) error {
 	if len(params) == 0 {
 		return fmt.Errorf("no params suplied to addToPanel")
 	}
+
 	// Search whether a command is valid
 	found := false
-	for _, cmd := range quickPanelAvailableCmds {
-		if cmd.cmd == params[0] {
+	for _, btn := range userconfig.QuickPanelAvailableBtns {
+		if btn.Cmd == params[0] {
 			found = true
 			break
 		}
@@ -1435,6 +1418,7 @@ func (b *Bot) addToPanel(params []string) error {
 		return fmt.Errorf("button already exists in user's prefs: %s", params[0])
 	}
 	b.showConfigureQuickPanel([]string{})
+
 	return nil
 }
 

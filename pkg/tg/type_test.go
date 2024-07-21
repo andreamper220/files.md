@@ -14,7 +14,7 @@ func TestMarshalCmdJSON(t *testing.T) {
 	js, err := json.Marshal(cmd)
 
 	r.NoError(err)
-	r.Equal(`{"n":"test","p":["1"]}`, string(js))
+	r.Equal(`{"n":"test","p":["1"],"t":"cmd"}`, string(js))
 }
 
 func TestUnmarshalCmdJSON(t *testing.T) {
