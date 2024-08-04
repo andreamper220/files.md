@@ -3,6 +3,7 @@ package tg
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"unicode/utf16"
 
@@ -90,6 +91,16 @@ func (u *Upd) InlineQuery() (string, bool) {
 	}
 
 	return u.raw.InlineQuery.Query, true
+}
+
+func (u *Upd) InlineQueryOffset() int {
+	if u.raw.InlineQuery == nil {
+		return 0
+	}
+
+	offset, _ := strconv.Atoi(u.raw.InlineQuery.Offset)
+
+	return offset
 }
 
 func (u *Upd) IsForwarded() bool {

@@ -3,6 +3,7 @@ package internal
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -35,6 +36,8 @@ const (
 	inlineResultsCacheTime = 15 // seconds
 	btnsPerRow             = 3
 	quickBtnsPerRow        = 4
+	maxBtns                = 50
+	maxInlineResults       = 50
 	maxMsgLength           = 4096 // UTF-8 characters
 	maxMsgsToSendAtOnce    = 5
 )
@@ -49,6 +52,7 @@ type UpdInterface interface {
 	CallbackQueryID() (string, bool)
 	InlineQueryID() (string, bool)
 	InlineQuery() (string, bool)
+	InlineQueryOffset() int
 	IsSentViaBot() bool
 }
 
@@ -286,7 +290,9 @@ func (b *Bot) saveForward(u UpdInterface) error {
 		return fmt.Errorf("save forward: %w", err)
 	}
 
-	files = fs.SortByCtime(fs.OnlyFiles(files))
+	files = fs.SortByCtimeDesc(fs.OnlyFiles(files))
+	// TODO do we need that reverse?
+	slices.Reverse(files)
 	if len(files) > 0 {
 		file := files[len(files)-1]
 		fileWasCreatedRecently := (now().Unix() - file.Ctime) <= 2
@@ -314,6 +320,11 @@ func (b *Bot) search(u UpdInterface) error {
 	if err != nil {
 		return fmt.Errorf("inline reply: %w", err)
 	}
+	if u.InlineQueryOffset() >= len(matchedNotes) {
+		return nil
+	}
+	maxIndex := min(u.InlineQueryOffset()+maxInlineResults, len(matchedNotes))
+	matchedNotes = matchedNotes[u.InlineQueryOffset():maxIndex]
 
 	var results []interface{}
 	for id, note := range matchedNotes {
@@ -326,7 +337,8 @@ func (b *Bot) search(u UpdInterface) error {
 	}
 
 	queryID, _ := u.InlineQueryID()
-	err = b.tg.AnswerInlineQuery(queryID, results, inlineResultsCacheTime, "")
+	nextOffset := strconv.Itoa(u.InlineQueryOffset() + maxInlineResults)
+	err = b.tg.AnswerInlineQuery(queryID, results, inlineResultsCacheTime, nextOffset)
 	// TG library has a bug of unmarshalling sent result, we'll mute that temporarely
 	if err != nil && !strings.HasSuffix(err.Error(), "Go value of type tgbotapi.Message") {
 		return fmt.Errorf("inline reply: %w", err)
@@ -834,7 +846,7 @@ func (b *Bot) showFile(params []string) error {
 	}
 
 	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(tg.NewBtn(i18n.StrBtnBack, tg.NewCmd(constants.CmdShowFiles, nil))),
+		tg.NewRow(tg.NewBtn(i18n.StrBtnToday, tg.NewCmd(constants.CmdShowToday, nil))),
 	})
 
 	err = b.show(fmt.Sprintf("%s\n%s", fs.Title(filename), content), kb, tg.MarkupHTML)
@@ -857,12 +869,13 @@ func (b *Bot) showChecklist(params []string) error {
 	if err != nil {
 		return fmt.Errorf("show checklist: %w", err)
 	}
+	items = items[max(0, len(items)-maxBtns):]
 
 	kb := tg.NewKeyboard(nil)
 	for _, item := range items {
 		kb.AddRow(tg.NewBtn(item.Title, tg.NewCmd(constants.CmdComplete, []string{})))
 	}
-	kb.AddRow(tg.NewRow(tg.NewBtn(i18n.StrBtnBack, tg.NewCmd(constants.CmdShowFiles, nil))))
+	kb.AddRow(tg.NewRow(tg.NewBtn(i18n.StrBtnToday, tg.NewCmd(constants.CmdShowToday, nil))))
 
 	err = b.show(fs.Title(checklist), kb, tg.MarkupHTML)
 	if err != nil {

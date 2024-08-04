@@ -52,6 +52,10 @@ func (m *Upd) InlineQuery() (string, bool) {
 	return "", false
 }
 
+func (m *Upd) InlineQueryOffset() int {
+	return 0
+}
+
 func (m *Upd) IsForwarded() bool {
 	return false
 }

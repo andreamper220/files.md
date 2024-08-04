@@ -456,7 +456,7 @@ func (fs FS) SearchNotes(query string) ([]File, error) {
 		files = OnlyFiles(files)
 		notes = append(notes, files...)
 	}
-	notes = SortByCtime(notes)
+	notes = SortByCtimeDesc(notes)
 
 	var matchedNotes []File
 	for _, note := range notes {
@@ -653,9 +653,9 @@ func OnlyFilenames(entries []File) []string {
 	return filenames
 }
 
-func SortByCtime(entries []File) []File {
+func SortByCtimeDesc(entries []File) []File {
 	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].Ctime < entries[j].Ctime
+		return entries[i].Ctime > entries[j].Ctime
 	})
 
 	return entries

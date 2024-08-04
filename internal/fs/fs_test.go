@@ -133,7 +133,7 @@ func TestCreateBaseDirs(t *testing.T) {
 	r.ElementsMatch([]string{"later", "today", "_archive_", "-read-", "-shop-", "-watch-", "img", "inbox", "habits", "insights"}, dirNames)
 }
 
-func TestSortByCtime(t *testing.T) {
+func TestSortByCtimeDesc(t *testing.T) {
 	r := require.New(t)
 
 	saved := Ctime
@@ -158,7 +158,7 @@ func TestSortByCtime(t *testing.T) {
 	entries, err := fs.FilesAndDirs("today")
 	r.NoError(err)
 
-	r.Equal([]string{"b.md", "a.md"}, OnlyFilenames(SortByCtime(entries)))
+	r.Equal([]string{"a.md", "b.md"}, OnlyFilenames(SortByCtimeDesc(entries)))
 }
 
 func TestExcludeEverythingButUserDirs(t *testing.T) {
