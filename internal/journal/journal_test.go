@@ -58,6 +58,18 @@ func TestAddRecord(t *testing.T) {
 			record: "note 3",
 			want:   "#### 29 May, Tuesday\nnote 1\n#### 30 May, Tuesday\nnote 2\n`10:04` note 3\n",
 		},
+		{
+			name:   "Image without caption",
+			md:     "some text",
+			record: "![[../img/tg_HASH.jpg|center|400]]",
+			want:   "some text\n#### 30 May, Tuesday\n`10:04` ![[../img/tg_HASH.jpg|center|400]]\n",
+		},
+		{
+			name:   "Image with caption",
+			md:     "some text",
+			record: "![[../img/tg_HASH.jpg|center|400]]\nCaption",
+			want:   "some text\n#### 30 May, Tuesday\n![[../img/tg_HASH.jpg|center|400]]\n`10:04` Caption\n",
+		},
 	}
 
 	for _, test := range tests {

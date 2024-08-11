@@ -50,7 +50,17 @@ func AddRecord(userFS *fs.FS, noteFilename string) error {
 		md += todayHeader() + "\n"
 	}
 
-	record = fmt.Sprintf("%s %s\n", now().Format("`15:04`"), record)
+	pattern := `(!\[\[.*?\]\]\s+)(.*)`
+	re := regexp.MustCompile(pattern)
+	matches := re.FindStringSubmatch(record)
+	if len(matches) > 2 {
+		modifiedText := fmt.Sprintf("%s%s ", matches[1], now().Format("`15:04`"))
+		record = strings.Replace(record, matches[1], modifiedText, 1)
+		record = fmt.Sprintf("%s\n", strings.TrimSpace(record))
+	} else {
+		record = fmt.Sprintf("%s %s\n", now().Format("`15:04`"), record)
+	}
+
 	md += record
 
 	return userFS.Write(fs.DirJournal, journalFilename, md)
