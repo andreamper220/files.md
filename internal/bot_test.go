@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -23,7 +24,7 @@ func init() {
 	}
 }
 
-func TestAddTaskToToday(t *testing.T) {
+func TestSaveFromTextMsg(t *testing.T) {
 	r := require.New(t)
 
 	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
@@ -40,6 +41,57 @@ func TestAddTaskToToday(t *testing.T) {
 
 	r.Len(tasks, 1)
 	r.Equal("New task.md", tasks[0].Name)
+
+	content, err := bot.fs.Read("today", "New task.md")
+	r.NoError(err)
+	r.Empty(content)
+}
+
+func TestSaveFromLongTextMsg(t *testing.T) {
+	r := require.New(t)
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+
+	tgram := fake.NewTG()
+
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), &userconfig.DefaultConfig)
+	err = bot.Answer(fake.NewUpd(-1, strings.Repeat("a", 101)))
+	r.NoError(err)
+
+	tasks, err := bot.fs.FilesAndDirs("today")
+	r.NoError(err)
+
+	filename := fmt.Sprintf("A%s....md", strings.Repeat("a", 99))
+	r.Len(tasks, 1)
+	r.Equal(filename, tasks[0].Name)
+
+	content, err := bot.fs.Read("today", filename)
+	r.NoError(err)
+	r.Equal("A"+strings.Repeat("a", 100), content)
+}
+
+func TestSaveFromTextMsgWithSanitize(t *testing.T) {
+	r := require.New(t)
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+
+	tgram := fake.NewTG()
+
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), &userconfig.DefaultConfig)
+	err = bot.Answer(fake.NewUpd(-1, "New task/"))
+	r.NoError(err)
+
+	tasks, err := bot.fs.FilesAndDirs("today")
+	r.NoError(err)
+
+	r.Len(tasks, 1)
+	r.Equal("New task{|}.md", tasks[0].Name)
+
+	content, err := bot.fs.Read("today", "New task{|}.md")
+	r.NoError(err)
+	r.Equal("New task/", content)
 }
 
 func TestAddMultilineTaskToToday(t *testing.T) {

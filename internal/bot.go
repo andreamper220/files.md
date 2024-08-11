@@ -271,10 +271,8 @@ func (b *Bot) allowedTextCmds() []string {
 }
 
 func (b *Bot) saveFromRegularMsg(u UpdInterface) error {
-	msg := txt.EntitiesToMarkdown(u.MsgText(), u.MsgEntities())
-	msg = strings.TrimSpace(txt.NormNewLines(msg))
-
-	title, content, err := b.extractTitleAndContent(msg)
+	content := extractPlainText(u)
+	title, err := b.extractTitle(content)
 	if err != nil {
 		return fmt.Errorf("save: %w", err)
 	}
@@ -286,9 +284,10 @@ func (b *Bot) saveFromRegularMsg(u UpdInterface) error {
 	}
 
 	sanitizedTitle := fs.SanitizeFilename(title)
-	// Store original title if it was sanitized
-	if title != sanitizedTitle && len(content) == 0 {
-		content = msg
+
+	// If title is the same as content, we don't need to save it
+	if sanitizedTitle == content {
+		content = ""
 	}
 
 	filename := fs.Filename(sanitizedTitle)
@@ -349,10 +348,8 @@ func (b *Bot) saveFromPhoto(u UpdInterface) error {
 }
 
 func (b *Bot) saveFromForward(u UpdInterface) error {
-	msg := txt.EntitiesToMarkdown(u.MsgText(), u.MsgEntities())
-	msg = strings.TrimSpace(txt.NormNewLines(msg))
-
-	title, content, err := b.extractTitleAndContent(msg)
+	content := extractPlainText(u)
+	title, err := b.extractTitle(content)
 	if err != nil {
 		return fmt.Errorf("save forward: %w", err)
 	}
@@ -380,7 +377,6 @@ func (b *Bot) saveFromForward(u UpdInterface) error {
 		fileWasCreatedRecently := (now().Unix() - file.Ctime) <= 2
 		if fileWasCreatedRecently {
 			filename = file.Name
-			content = msg
 		}
 	}
 
@@ -476,26 +472,19 @@ func (b *Bot) createOrAdd(dir, filename, content string) error {
 	return nil
 }
 
-// Extract title and content from a message
-func (b *Bot) extractTitleAndContent(msg string) (string, string, error) {
+func (b *Bot) extractTitle(msg string) (string, error) {
 	if len(msg) == 0 {
-		return "", "", fmt.Errorf("extract title: empty msg")
+		return "", fmt.Errorf("extract title: empty msg")
 	}
 
 	parts := strings.SplitN(msg, "\n", 2)
 	title := txt.Ucfirst(strings.TrimSpace(parts[0]))
-	content := strings.TrimSpace(title)
 
 	if len(title) > maxTitleLength {
 		title = txt.Substr(title, 0, maxTitleLength) + "..."
 	}
 
-	isMultiline := len(parts) > 1
-	if isMultiline {
-		content = strings.TrimSpace(msg)
-	}
-
-	return title, content, nil
+	return title, nil
 }
 
 func (b *Bot) tr(str string, args ...any) string {
@@ -1636,6 +1625,13 @@ func (b *Bot) showRecurringKeyBoard(params []string) error {
 	}
 
 	return nil
+}
+
+func extractPlainText(u UpdInterface) string {
+	content := txt.EntitiesToMarkdown(u.MsgText(), u.MsgEntities())
+	content = strings.TrimSpace(txt.NormNewLines(content))
+
+	return txt.Ucfirst(content)
 }
 
 // func (b *Bot) getAngerEmoji(file fs.File) string {
