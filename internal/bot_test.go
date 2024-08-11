@@ -1108,7 +1108,7 @@ func TestMoveToExistingFile(t *testing.T) {
 
 	tgram := fake.NewTG()
 	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), &userconfig.DefaultConfig)
-	upd := fake.NewUpdCmdFake(-1, tg.NewCmd("mv_to_file", []string{"501ef2410e2", "1c8f819d075"}))
+	upd := fake.NewUpdCmdFake(-1, tg.NewCmd("mv_to_file", []string{"1c8f819d075", "501ef2410e2"}))
 	err = bot.Answer(upd)
 	r.NoError(err)
 

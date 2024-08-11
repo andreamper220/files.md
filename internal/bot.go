@@ -1056,8 +1056,8 @@ func (b *Bot) moveToNewDir(params []string) error {
 
 func (b *Bot) moveToExistingFile(params []string) error {
 	// TODO Remove input expectations if dir is not list
-	filenameHash := params[0]
-	existingFilenameHash := params[1]
+	existingFilenameHash := params[0]
+	filenameHash := params[1]
 
 	if filenameHash == existingFilenameHash {
 		return b.ShowTodayTasks(nil)
@@ -1070,7 +1070,7 @@ func (b *Bot) moveToExistingFile(params []string) error {
 
 	existingFilename, err := b.fs.Unhash(fs.DirRoot, existingFilenameHash)
 	if err != nil {
-		return fmt.Errorf("move to file: can't unhash doc '%s' in today: %w", filenameHash, err)
+		return fmt.Errorf("move to file: can't unhash file '%s' in today: %w", filenameHash, err)
 	}
 
 	fileContent, err := b.fs.Read(fs.DirRoot, filename)
@@ -1152,14 +1152,14 @@ func (b *Bot) moveToChecklist(params []string) error {
 
 func (b *Bot) moveToNewFile(params []string) error {
 	filenameHash := params[0]
-	filename := params[1]
+	existingFilename := params[1]
 
-	err := b.fs.Write(fs.DirRoot, txt.Ucfirst(filename), "")
+	err := b.fs.Write(fs.DirRoot, txt.Ucfirst(existingFilename), "")
 	if err != nil {
-		return fmt.Errorf("move to new file: can't create empty doc: %w", err)
+		return fmt.Errorf("move to new file: can't create empty file: %w", err)
 	}
 
-	return b.moveToExistingFile([]string{filenameHash, fs.Hash(filename)})
+	return b.moveToExistingFile([]string{fs.Hash(existingFilename), filenameHash})
 }
 
 func (b *Bot) moveToNewChecklist(params []string) error {
@@ -1171,7 +1171,7 @@ func (b *Bot) moveToNewChecklist(params []string) error {
 		return fmt.Errorf("move to new checklist: can't create empty doc: %w", err)
 	}
 
-	return b.moveToExistingFile([]string{filenameHash, fs.Hash(checklist)})
+	return b.moveToExistingFile([]string{fs.Hash(checklist), filenameHash})
 }
 
 func (b *Bot) moveToJournal(params []string) error {
