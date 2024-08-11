@@ -83,6 +83,10 @@ type DBInterface interface {
 	SetFilenameByMsgID(userID int64, msgID int, filename string)
 	DirByMsgID(userID int64, msgID int) string
 	SetDirByMsgID(userID int64, msgID int, filename string)
+	QuickCommand(userID int64) (string, bool)
+	SetQuickCommand(userID int64, cmd string)
+	QuickCommandParams(userID int64) ([]string, bool)
+	SetQuickCommandParams(userID int64, params []string)
 }
 
 // Bot provides commands that can be invoked by a user so to query
@@ -210,9 +214,9 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		constants.CmdShowChooseDay:      b.showChooseDay,
 		constants.CmdShowToFile:         b.showToFile,
 		constants.CmdShowToChecklist:    b.showToChecklist,
-		constants.CmdMove:               b.move,
+		constants.CmdMoveToDir:          b.moveToDir,
 		constants.CmdMoveToNewDir:       b.moveToNewDir,
-		constants.CmdMoveToFile:         b.moveToExistingFile,
+		constants.CmdMoveToExistingFile: b.moveToExistingFile,
 		constants.CmdMoveToNewFile:      b.moveToNewFile,
 		constants.CmdMoveToChecklist:    b.moveToChecklist,
 		constants.CmdMoveToNewChecklist: b.moveToNewChecklist,
@@ -405,6 +409,9 @@ func (b *Bot) addToRepliedFile(replyToMsgID int, newContent string) error {
 
 	b.delAllKeyboards()
 
+	b.db.SetQuickCommand(b.userID, constants.CmdMoveToExistingFile)
+	b.db.SetQuickCommandParams(b.userID, []string{fs.Hash(filename)})
+
 	return b.ShowTodayTasks(nil)
 }
 
@@ -522,7 +529,7 @@ func (b *Bot) showMoveTo(params []string) error {
 
 	btns := []tg.Btn{
 		tg.NewBtn(i18n.StrForTomorrow, tg.NewCmd(constants.CmdSchedule, []string{filenameHash, txt.I64(sched.Tomorrow()), ""})),
-		tg.NewBtn(i18n.StrForLater, tg.NewCmd(constants.CmdMove, []string{fs.DirToday, filenameHash, "later"})),
+		tg.NewBtn(i18n.StrForLater, tg.NewCmd(constants.CmdMoveToDir, []string{fs.DirLater, fs.DirToday, filenameHash})),
 		tg.NewBtn(i18n.StrForDay, tg.NewCmd(constants.CmdShowChooseDay, []string{filenameHash})),
 		tg.NewBtn(i18n.StrToFile, tg.NewCmd(constants.CmdShowToFile, []string{filenameHash})),
 		tg.NewBtn(i18n.StrToJournal, tg.NewCmd(constants.CmdMoveJournal, []string{fs.DirToday, filenameHash})),
@@ -534,7 +541,16 @@ func (b *Bot) showMoveTo(params []string) error {
 	for _, row := range userBtnsByRows {
 		kb.AddRow(row)
 	}
-	kb.AddRow(tg.NewBtn(i18n.StrBtnGoToToday, tg.NewCmd(constants.CmdShowToday, nil)))
+
+	lastRow := tg.NewRow()
+	quickCmd, ok := b.db.QuickCommand(b.userID)
+	if ok {
+		args, _ := b.db.QuickCommandParams(b.userID)
+		args = append(args, filenameHash)
+		lastRow = append(lastRow, tg.NewBtn(args[0], tg.NewCmd(quickCmd, params)))
+	}
+	lastRow = append(lastRow, tg.NewBtn(i18n.StrBtnGoToToday, tg.NewCmd(constants.CmdShowToday, nil)))
+	kb.AddRow(lastRow)
 
 	b.delAllKeyboards()
 
@@ -826,7 +842,7 @@ func (b *Bot) showRenameFile(params []string) error {
 		tg.NewRow(tg.NewBtn(i18n.StrBtnBack, tg.NewCmd(dir, []string{dir}))),
 	})
 
-	cmd := tg.NewCmd(constants.CmdMove, []string{dir, filename, dir, "%s"})
+	cmd := tg.NewCmd(constants.CmdMoveToDir, []string{dir, filename, dir, "%s"})
 	b.db.SetInputExpectation(b.userID, cmd)
 
 	err = b.show(fmt.Sprintf("%s\n%s", fs.Title(filename), content), kb, tg.MarkupHTML)
@@ -885,7 +901,7 @@ func (b *Bot) showMultilineTask(params []string) error {
 		btnLabel = i18n.StrBtnMoveToToday
 		toDir = fs.DirToday
 	}
-	moveToBtn = tg.NewBtn(btnLabel, tg.NewCmd(constants.CmdMove, []string{dir, filenameHash, toDir}))
+	moveToBtn = tg.NewBtn(btnLabel, tg.NewCmd(constants.CmdMoveToDir, []string{toDir, dir, filenameHash}))
 
 	kb := tg.NewKeyboard([]tg.Row{
 		tg.NewRow(moveToBtn),
@@ -986,18 +1002,18 @@ func (b *Bot) showStart(params []string) error {
 	return b.send("Welcome!")
 }
 
-func (b *Bot) move(params []string) error {
+func (b *Bot) moveToDir(params []string) error {
 	// TODO Remove input expectations if dir is not list
-	oldDirHash := params[0]
-	oldFilenameHash := params[1]
-	newDirHash := params[2]
+	toDirHash := params[0]
+	fromDirHash := params[1]
+	fromFilenameHash := params[2]
 
-	oldDir, err := b.fs.Unhash(fs.DirRoot, oldDirHash)
+	oldDir, err := b.fs.Unhash(fs.DirRoot, fromDirHash)
 	if err != nil {
 		return fmt.Errorf("move: can't unhash old dir: %w", err)
 	}
 
-	filename, err := b.fs.Unhash(oldDir, oldFilenameHash)
+	filename, err := b.fs.Unhash(oldDir, fromFilenameHash)
 	if err != nil {
 		return fmt.Errorf("move: can't unhash old filename: %w", err)
 	}
@@ -1006,7 +1022,7 @@ func (b *Bot) move(params []string) error {
 		newFilename = params[3]
 	}
 
-	newDir, err := b.fs.Unhash(fs.DirRoot, newDirHash)
+	newDir, err := b.fs.Unhash(fs.DirRoot, toDirHash)
 	if err != nil {
 		return fmt.Errorf("move: can't unhash new dir %s: %w", newDir, err)
 	}
@@ -1017,6 +1033,11 @@ func (b *Bot) move(params []string) error {
 	if err != nil {
 		return fmt.Errorf("move: can't move: %w", err)
 	}
+
+	b.db.SetQuickCommand(b.userID, constants.CmdMoveToDir)
+	// Move from dir is today, because quick command
+	// appears when file is in today dir
+	b.db.SetQuickCommandParams(b.userID, []string{toDirHash, fs.Hash(fs.DirToday)})
 
 	return b.ShowTodayTasks(nil)
 }
@@ -1030,7 +1051,7 @@ func (b *Bot) moveToNewDir(params []string) error {
 		return fmt.Errorf("move to new dir: %w", err)
 	}
 
-	return b.move([]string{fs.DirInbox, filenameHash, dir})
+	return b.moveToDir([]string{dir, fs.DirInbox, filenameHash})
 }
 
 func (b *Bot) moveToExistingFile(params []string) error {
@@ -1076,6 +1097,9 @@ func (b *Bot) moveToExistingFile(params []string) error {
 	if err != nil {
 		return fmt.Errorf("move to file: can't save file: %w", err)
 	}
+
+	b.db.SetQuickCommand(b.userID, constants.CmdMoveToExistingFile)
+	b.db.SetQuickCommandParams(b.userID, []string{fs.Hash(existingFilename)})
 
 	return b.ShowTodayTasks(nil)
 }
@@ -1397,7 +1421,7 @@ func (b *Bot) toFileKeyboardButtons(filenameHash string) ([]tg.Btn, error) {
 	var buttons []tg.Btn
 	newBtn := func(title, fileHash string) tg.Btn {
 		title = fmt.Sprintf("%s %s", i18n.Emoji("file"), title)
-		return tg.NewBtn(title, tg.NewCmd(constants.CmdMoveToFile, []string{filenameHash, fileHash}))
+		return tg.NewBtn(title, tg.NewCmd(constants.CmdMoveToExistingFile, []string{filenameHash, fileHash}))
 	}
 	for _, file := range files {
 		buttons = append(buttons, newBtn(file.Title, file.Hash))
@@ -1409,7 +1433,7 @@ func (b *Bot) toFileKeyboardButtons(filenameHash string) ([]tg.Btn, error) {
 func (b *Bot) toDirKeyboardButtons(filenameHash string) ([]tg.Btn, error) {
 	newBtn := func(dir string) tg.Btn {
 		emojifiedDir := fmt.Sprintf("%s %s", i18n.Emoji("dir"), dir)
-		return tg.NewBtn(emojifiedDir, tg.NewCmd(constants.CmdMove, []string{fs.DirRoot, filenameHash, dir}))
+		return tg.NewBtn(emojifiedDir, tg.NewCmd(constants.CmdMoveToDir, []string{dir, fs.DirRoot, filenameHash}))
 	}
 
 	dirs, err := b.fs.FilesAndDirs(fs.DirRoot)

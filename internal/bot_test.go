@@ -343,7 +343,7 @@ func TestAddTaskToLater(t *testing.T) {
 	tgram := fake.NewTG()
 
 	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), &userconfig.DefaultConfig)
-	err = bot.Answer(fake.NewUpdCmdFake(-1, tg.NewCmd("mv", []string{"today", "0824149b387", "later"})))
+	err = bot.Answer(fake.NewUpdCmdFake(-1, tg.NewCmd("mv_to_dir", []string{"later", "today", "0824149b387"})))
 	r.NoError(err)
 
 	todayTasks, err := bot.fs.FilesAndDirs("today")
@@ -983,7 +983,7 @@ func TestShowToFile(t *testing.T) {
 	r.NoError(err)
 
 	r.Equal(tg.NewKeyboard([]tg.Row{
-		tg.NewRow(tg.NewBtn("🗂️ dir", tg.NewCmd("mv", []string{"", "345fbd7ab08", "dir"}))),
+		tg.NewRow(tg.NewBtn("🗂️ dir", tg.NewCmd("mv_to_dir", []string{"dir", "", "345fbd7ab08"}))),
 		tg.NewBtn("Or choose a file:", tg.NewCmd("nothing", nil)),
 		tg.NewRow(tg.NewBtn("📄 Note", tg.NewCmd("mv_to_file", []string{"345fbd7ab08", "345fbd7ab08"}))),
 	},

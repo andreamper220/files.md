@@ -58,10 +58,6 @@ func (db *DB) DelInputExpectation(userID int64) {
 	inputExpectations.Delete(inputExpectationKey(userID))
 }
 
-func (db *DB) SetFilenameByMsgID(userID int64, msgID int, filename string) {
-	filenameByMsgID.Store(filenameByMsgIDKey(userID, msgID), filename)
-}
-
 func (db *DB) FilenameByMsgID(userID int64, msgID int) string {
 	filename, ok := filenameByMsgID.Load(filenameByMsgIDKey(userID, msgID))
 	if !ok {
@@ -71,8 +67,8 @@ func (db *DB) FilenameByMsgID(userID int64, msgID int) string {
 	return filename.(string)
 }
 
-func (db *DB) SetDirByMsgID(userID int64, msgID int, filename string) {
-	dirByMsgID.Store(dirByMsgIDKey(userID, msgID), filename)
+func (db *DB) SetFilenameByMsgID(userID int64, msgID int, filename string) {
+	filenameByMsgID.Store(filenameByMsgIDKey(userID, msgID), filename)
 }
 
 func (db *DB) DirByMsgID(userID int64, msgID int) string {
@@ -84,8 +80,8 @@ func (db *DB) DirByMsgID(userID int64, msgID int) string {
 	return filename.(string)
 }
 
-func (db *DB) SetQuickCommand(userID int64, cmd string) {
-	quickCommands.Store(userID, cmd)
+func (db *DB) SetDirByMsgID(userID int64, msgID int, filename string) {
+	dirByMsgID.Store(dirByMsgIDKey(userID, msgID), filename)
 }
 
 func (db *DB) QuickCommand(userID int64) (string, bool) {
@@ -97,17 +93,21 @@ func (db *DB) QuickCommand(userID int64) (string, bool) {
 	return cmd.(string), true
 }
 
-func (db *DB) SetQuickCommandTarget(userID int64, target string) {
-	quickCommandTargets.Store(userID, target)
+func (db *DB) SetQuickCommand(userID int64, cmd string) {
+	quickCommands.Store(userID, cmd)
 }
 
-func (db *DB) QuickCommandTarget(userID int64) (string, bool) {
-	target, ok := quickCommandTargets.Load(userID)
+func (db *DB) QuickCommandParams(userID int64) ([]string, bool) {
+	params, ok := quickCommandTargets.Load(userID)
 	if !ok {
-		return "", false
+		return nil, false
 	}
 
-	return target.(string), true
+	return params.([]string), true
+}
+
+func (db *DB) SetQuickCommandParams(userID int64, params []string) {
+	quickCommandTargets.Store(userID, params)
 }
 
 func lastKeyboardMsgIDKey(userID int64) string {

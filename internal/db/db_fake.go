@@ -52,16 +52,16 @@ func (db *FakeDB) SetDirByMsgID(userID int64, msgID int, dir string) {
 	db.DirByMessageID = dir
 }
 
-func (db *FakeDB) SetQuickCommand(userID int64, cmd string) {
-}
-
 func (db *FakeDB) QuickCommand(userID int64) (string, bool) {
 	return "", false
 }
 
-func (db *FakeDB) SetQuickCommandTarget(userID int64, target string) {
+func (db *FakeDB) SetQuickCommand(userID int64, cmd string) {
 }
 
-func (db *FakeDB) QuickCommandTarget(userID int64) (string, bool) {
-	return "", false
+func (db *FakeDB) QuickCommandParams(userID int64) ([]string, bool) {
+	return nil, false
+}
+
+func (db *FakeDB) SetQuickCommandParams(userID int64, params []string) {
 }
