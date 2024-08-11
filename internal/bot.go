@@ -547,7 +547,7 @@ func (b *Bot) showMoveTo(params []string) error {
 	if ok {
 		args, _ := b.db.QuickCommandParams(b.userID)
 		args = append(args, filenameHash)
-		lastRow = append(lastRow, tg.NewBtn(args[0], tg.NewCmd(quickCmd, params)))
+		lastRow = append(lastRow, tg.NewBtn(args[0], tg.NewCmd(quickCmd, args)))
 	}
 	lastRow = append(lastRow, tg.NewBtn(i18n.StrBtnGoToToday, tg.NewCmd(constants.CmdShowToday, nil)))
 	kb.AddRow(lastRow)
