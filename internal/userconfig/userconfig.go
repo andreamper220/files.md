@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"sort"
 	"time"
 
@@ -130,6 +131,7 @@ func (c *Config) Schedules() []Schedule {
 	sort.Slice(c.raw.Schedules, func(i, j int) bool {
 		return c.raw.Schedules[i].ScheduledAt > c.raw.Schedules[j].ScheduledAt
 	})
+	slices.Reverse(schedules)
 
 	return schedules
 }

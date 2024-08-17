@@ -50,15 +50,16 @@ func ScheduleReport(conf *userconfig.Config) string {
 	var report string
 	scheduledTasks := conf.Schedules()
 	for _, task := range scheduledTasks {
-		report += fmt.Sprintf("<b>%s</b>: %s\n", formatTaskDate(time.Unix(task.ScheduledAt, 0)), fs.Title(task.Filename))
+		report += fmt.Sprintf("<b>%s</b>: %s\n", formatTaskDate(task.ScheduledAt), fs.Title(task.Filename))
 	}
 
 	return report
 }
 
-func formatTaskDate(taskTime time.Time) string {
+// TODO write tests for that
+func formatTaskDate(scheduledAt int64) string {
 	today := now().Truncate(24 * time.Hour)
-	taskDate := taskTime.Truncate(24 * time.Hour)
+	taskDate := time.Unix(scheduledAt, 0).Truncate(24 * time.Hour)
 
 	diffDays := int(taskDate.Sub(today).Hours() / 24)
 
@@ -67,9 +68,9 @@ func formatTaskDate(taskTime time.Time) string {
 		return "Today"
 	case diffDays == 1:
 		return "Tomorrow"
-	case diffDays > 1 && diffDays <= 6 && taskDate.Weekday() > today.Weekday():
+	case diffDays > 1 && diffDays <= 6: // Nearest day
 		return taskDate.Weekday().String()
-	case diffDays >= 7 && diffDays <= 13 && taskDate.Weekday() == today.Weekday():
+	case diffDays >= 7 && diffDays <= 13:
 		return "Next " + taskDate.Weekday().String()
 	default:
 		return taskDate.Format("02 January")
