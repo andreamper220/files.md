@@ -421,7 +421,7 @@ func TestLater(t *testing.T) {
 	err = bot.Answer(fake.NewUpdCmdFake(-1, tg.NewCmd("later", nil)))
 	r.NoError(err)
 
-	r.Equal("⏳ Your tasks for later:", tgram.LastSentText)
+	r.Equal("⏳ Your tasks for <b>later</b>:", tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("First task", tg.NewCmd("c", []string{"later", "0824149b387"})),
 		tg.NewBtn("🥈 Second task", tg.NewCmd("c", []string{"later", "2940ad40402"})),
