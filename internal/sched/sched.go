@@ -47,8 +47,7 @@ func NextExcludeToday(crn string) int64 {
 	return sched.Next(now().Add(24 * time.Hour).UTC()).Unix()
 }
 
-func ScheduleReport(conf *userconfig.Config) string {
-	scheduledTasks := conf.Schedules()
+func ScheduleReport(scheduledTasks []userconfig.Schedule) string {
 	schedule := make(map[string][]string)
 	order := []string{}
 
@@ -79,7 +78,9 @@ func ScheduleReport(conf *userconfig.Config) string {
 // Filename.md => Tomorrow
 func FilenamesAndSchedules(conf *userconfig.Config) map[string]string {
 	formatted := make(map[string]string)
-	scheduledTasks := conf.Schedules()
+	// This method is used for not-so-important informative purposes,
+	// so we can tolerate problematic read
+	scheduledTasks, _ := conf.Schedules()
 	for _, task := range scheduledTasks {
 		formatted[task.Filename] = formatTaskDate(task.ScheduledAt)
 	}

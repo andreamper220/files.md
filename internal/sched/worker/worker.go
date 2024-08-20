@@ -42,22 +42,25 @@ func MoveDueTasksToToday(
 	for _, userDir := range userDirs {
 		userID, err := strconv.ParseInt(userDir.Name, 10, 64)
 		if err != nil {
-			return fmt.Errorf("schedule worker: can't parse user ID: %s", err)
+			slog.Error("schedule worker: can't parse user ID", "err", err)
+			continue
 		}
 		userPath := path.Join(storagePath, txt.I64(userID))
 		userFS, err := fs.NewFS(userPath, fsBackend)
 		if err != nil {
-			return fmt.Errorf("schedule worker: can't create FS: %s", err)
+			slog.Error("schedule worker: can't create user FS", "err", err)
+			continue
 		}
 
-		userconf := userconfig.NewConfig()
 		userconfPath := userFS.UnsafePath("", configFilename)
-		err = userconf.LoadOrCreate(userconfPath)
-		if err != nil {
-			return fmt.Errorf("schedule worker: can't load user config: %s", err)
-		}
+		userconf := userconfig.NewConfig(userID, userconfPath)
 
-		for _, schedule := range userconf.Schedules() {
+		schedules, err := userconf.Schedules()
+		if err != nil {
+			slog.Error("schedule worker: can't get schedules", "err", err)
+			continue
+		}
+		for _, schedule := range schedules {
 			secondsLeft := schedule.ScheduledAt - time.Now().Unix()
 			shouldScheduleForToday := secondsLeft <= 0
 			shouldScheduleForLater := secondsLeft > 0 && secondsLeft <= int64(daysInAdvanceForLater.Seconds())
@@ -80,30 +83,29 @@ func MoveDueTasksToToday(
 				slog.Error("schedule worker: can't move to today", "err", err)
 				continue
 			}
+			slog.Debug("scheduled task moved to today", schedule.Filename, "filename")
 
-			// Removing the task from the schedule
 			bot := internal.NewBot(userID, telegram, userFS, db.NewDB(), userconf)
 			_ = bot.ShowTodayTasks(nil)
-
-			slog.Debug("Scheduled task moved to today", schedule.Filename, "filename")
-
-			err = userconf.LoadOrCreate(userconfPath)
-			if err != nil {
-				return fmt.Errorf("schedule worker: can't load user config before save: %s", err)
-			}
-			userconf.DelFromSchedule(schedule.Filename)
 
 			// Schedule a recurring task if cron is not empty
 			if len(schedule.Cron) != 0 {
 				scheduledAt := sched.NextExcludeToday(schedule.Cron)
-				userconf.AddToSchedule(schedule.Filename, scheduledAt, schedule.Cron)
-				slog.Debug("Task was rescheduled", "filename", schedule.Filename, "schedule", schedule.Cron, "scheduledAt", scheduledAt)
+				err = userconf.AddToSchedule(schedule.Filename, scheduledAt, schedule.Cron)
+				if err != nil {
+					slog.Error("schedule worker: can't add to schedule", "err", err)
+					continue
+				}
+				slog.Debug("task was rescheduled", "filename", schedule.Filename, "schedule", schedule.Cron, "scheduledAt", scheduledAt)
 			}
 
-			err = userconf.Save(userconfPath)
+			// We must only delete when it's rescheduled already, not to lose the task
+			err = userconf.DelFromSchedule(schedule.Filename, schedule.ScheduledAt)
 			if err != nil {
-				return fmt.Errorf("schedule worker: can't save user config: %s", err)
+				slog.Error("schedule worker: can't delete from schedule", "err", err)
+				continue
 			}
+
 		}
 	}
 

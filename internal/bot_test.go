@@ -335,7 +335,7 @@ func TestAddTaskToLater(t *testing.T) {
 
 	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
 	r.NoError(err)
-	r.NoError(userFS.CreateUserDirs())
+	r.NoError(userFS.CreateDirsIfNotExist())
 
 	err = userFS.Write("today", "First task.md", "")
 	r.NoError(err)

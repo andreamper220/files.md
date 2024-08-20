@@ -120,9 +120,9 @@ func TestCreateBaseDirs(t *testing.T) {
 
 	fs, err := NewFS("/", afero.NewMemMapFs())
 	r.NoError(err)
-	r.NoError(fs.CreateUserDirs())
+	r.NoError(fs.CreateDirsIfNotExist())
 
-	err = fs.CreateUserDirs()
+	err = fs.CreateDirsIfNotExist()
 	r.NoError(err)
 
 	dirs, err := fs.FilesAndDirs("")

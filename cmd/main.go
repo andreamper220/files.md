@@ -118,28 +118,21 @@ func main() {
 				slog.Error("Bot error: can't create fs", "err", err)
 				return
 			}
-			err = userFS.CreateUserDirs()
+			err = userFS.CreateDirsIfNotExist()
 			if err != nil {
 				slog.Error("Bot error: can't create user dirs", "err", err)
 				return
 			}
 
-			userconf := userconfig.NewConfig()
 			userconfPath := userFS.UnsafePath("", config.Config.ConfigFilename)
-			err = userconf.LoadOrCreate(userconfPath)
+			userconf := userconfig.NewConfig(userID, userconfPath)
+			err = userconf.CreateDefaultIfNotExists()
 			if err != nil {
-				slog.Error("Bot error: can't get or create conf", "err", err)
+				slog.Error("Bot error: can't create default user config", "err", err)
 				return
 			}
-			defer func() {
-				err = userconf.Save(userconfPath)
-				if err != nil {
-					slog.Error("Bot error: can't save userconfig", "err", err)
-				}
-			}()
 
 			bot := internal.NewBot(userID, telegram, userFS, db.NewDB(), userconf)
-
 			if err := bot.Answer(u); err != nil {
 				slog.Error("Bot error", "err", err)
 			}

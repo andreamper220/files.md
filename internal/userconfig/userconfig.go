@@ -9,36 +9,41 @@ import (
 	"os"
 	"slices"
 	"sort"
+	"sync"
 	"time"
-
-	"golang.org/x/exp/slog"
 
 	"zakirullin/stuffbot/internal/consts"
 	"zakirullin/stuffbot/internal/fs"
 )
 
 var DefaultConfig = Config{ // TODO apply default config if some fields are missing
-	raw: raw{
-		Language: "en",
-		HomeCmd:  "today",
-		MoveToCmds: []string{
-			consts.CmdScheduleForTmrw,
-			consts.CmdLater,
-			consts.CmdShowScheduleForDay,
-			consts.CmdShowMoveToFile,
-			consts.CmdMoveToJournal,
-			//"checklist",
-		},
-		PomodoroDurationMinute: 50,
-		Schedules:              []Schedule{},
-		JournalFilenameFormat:  "January 2006.md",
-		JournalHeaderFormat:    "02, Monday",
-		QuickCmds:              []string{},
-	},
+
 }
 
+var defaultConfig = config{
+	Language: "en",
+	HomeCmd:  "today",
+	MoveToCmds: []string{
+		consts.CmdScheduleForTmrw,
+		consts.CmdLater,
+		consts.CmdShowScheduleForDay,
+		consts.CmdShowMoveToFile,
+		consts.CmdMoveToJournal,
+		//"checklist",
+	},
+	PomodoroDurationInMinutes: 50,
+	Schedules:                 []Schedule{},
+	QuickCmds:                 []string{},
+}
+
+var (
+	mu        sync.Mutex
+	userLocks map[int64]*sync.Mutex
+)
+
 type Config struct {
-	raw
+	userID int64
+	path   string
 }
 
 type Schedule struct {
@@ -48,53 +53,170 @@ type Schedule struct {
 	Cmd         string // For future use
 }
 
-type raw struct {
-	Language               string     `json:"language"`
-	HomeCmd                string     `json:"homeCommand"`
-	MoveToCmds             []string   `json:"moveToCommands"`
-	PomodoroDurationMinute float64    `json:"pomodoroDurationMinute"`
-	JournalFilenameFormat  string     `json:"journalFilename"`
-	JournalHeaderFormat    string     `json:"journalHeaderFormat"`
-	Schedules              []Schedule `json:"schedules"`
-	QuickCmds              []string   `json:"quickCommands"`
+type config struct {
+	Language                  string     `json:"language"`
+	HomeCmd                   string     `json:"homeCommand"`
+	MoveToCmds                []string   `json:"moveToCommands"`
+	PomodoroDurationInMinutes float64    `json:"pomodoroDurationInMinutes"`
+	Schedules                 []Schedule `json:"schedules"`
+	QuickCmds                 []string   `json:"quickCommands"`
 }
 
-func NewConfig() *Config {
-	return &Config{}
+func NewConfig(userID int64, path string) *Config {
+	return &Config{userID: userID, path: path}
 }
 
-func (c *Config) LoadOrCreate(path string) error {
-	exists, err := fs.Exists(path)
+func (c *Config) CreateDefaultIfNotExists() error {
+	exists, err := fs.Exists(c.path)
 	if err != nil {
-		return fmt.Errorf("config load: %w", err)
+		return fmt.Errorf("can't check whether config exists: %w", err)
 	}
-
-	if !exists {
-		c.raw = DefaultConfig.raw
+	if exists {
 		return nil
 	}
 
-	configFile, err := os.Open(path)
+	bytes, err := json.MarshalIndent(defaultConfig, "", "    ")
 	if err != nil {
-		return fmt.Errorf("config load: %w", err)
-	}
-	defer configFile.Close()
-
-	bytes, err := io.ReadAll(configFile)
-	if err != nil {
-		return fmt.Errorf("config load: %w", err)
+		return fmt.Errorf("can't marshal default config: %w", err)
 	}
 
-	err = json.Unmarshal(bytes, c)
+	err = fs.WriteFile(c.path, bytes)
 	if err != nil {
-		return fmt.Errorf("config load: can't unmarshal: %w", err)
+		return fmt.Errorf("can't write default config file: %w", err)
 	}
 
 	return nil
 }
 
-func (c *Config) Save(path string) error { // TODO add lazy saving, save only if config was changed
-	bytes, err := json.MarshalIndent(c, "", "    ")
+func (c *Config) SetPomodoroDuration(duration time.Duration) error {
+	if duration <= 0 || duration > 24*time.Hour {
+		return fmt.Errorf("set pomodoro duration: duration is invalid: %v", duration)
+	}
+
+	lock := c.userLock()
+	lock.Lock()
+	defer lock.Unlock()
+
+	conf, err := c.read(c.path)
+	if err != nil {
+		return fmt.Errorf("set pomodoro duration: can't read config: %w", err)
+	}
+	conf.PomodoroDurationInMinutes = duration.Minutes()
+	err = c.write(c.path, conf)
+	if err != nil {
+		return fmt.Errorf("set pomodoro duration: can't write config: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Config) PomodoroDuration() time.Duration {
+	conf, _ := c.read(c.path)
+
+	return time.Duration(conf.PomodoroDurationInMinutes * float64(time.Minute))
+}
+
+func (c *Config) Schedules() ([]Schedule, error) {
+	conf, err := c.read(c.path)
+	if err != nil {
+		return nil, fmt.Errorf("can't get schedules: can't read config: %w", err)
+	}
+
+	schedules := conf.Schedules
+	sort.Slice(schedules, func(i, j int) bool {
+		return schedules[i].ScheduledAt > schedules[j].ScheduledAt
+	})
+	slices.Reverse(schedules)
+
+	return schedules, nil
+}
+
+func (c *Config) AddToSchedule(filename string, scheduleAt int64, cron string) error {
+	lock := c.userLock()
+	lock.Lock()
+	defer lock.Unlock()
+
+	conf, err := c.read(c.path)
+	if err != nil {
+		return fmt.Errorf("can't add to schedule: can't read config: %w", err)
+	}
+	conf.Schedules = append(conf.Schedules, Schedule{filename, scheduleAt, cron, ""})
+	err = c.write(c.path, conf)
+	if err != nil {
+		return fmt.Errorf("can't add to schedule: can't write config: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Config) DelFromSchedule(filename string, scheduledAt int64) error {
+	lock := c.userLock()
+	lock.Lock()
+	defer lock.Unlock()
+
+	conf, err := c.read(c.path)
+	if err != nil {
+		return fmt.Errorf("can't del from schedule: can't read config: %w", err)
+	}
+
+	var newSchedules []Schedule
+	for _, schedule := range conf.Schedules {
+		if schedule.Filename == filename && schedule.ScheduledAt == scheduledAt {
+			continue
+		}
+		newSchedules = append(newSchedules, schedule)
+	}
+	conf.Schedules = newSchedules
+
+	err = c.write(c.path, conf)
+	if err != nil {
+		return fmt.Errorf("can't del from schedule: can't write config: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Config) ShouldSplitChecklist(checklist string) bool {
+	for _, unsplittableChecklist := range []string{fs.DirRead, fs.DirWatch} {
+		if checklist == unsplittableChecklist {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *Config) read(path string) (config, error) {
+	exists, err := fs.Exists(path)
+	if err != nil {
+		return defaultConfig, fmt.Errorf("config load: %w", err)
+	}
+
+	if !exists {
+		return defaultConfig, nil
+	}
+
+	configFile, err := os.Open(path)
+	if err != nil {
+		return defaultConfig, fmt.Errorf("config load: %w", err)
+	}
+	defer configFile.Close()
+
+	bytes, err := io.ReadAll(configFile)
+	if err != nil {
+		return defaultConfig, fmt.Errorf("config load: %w", err)
+	}
+
+	conf := config{}
+	err = json.Unmarshal(bytes, &conf)
+	if err != nil {
+		return defaultConfig, fmt.Errorf("config load: can't unmarshal: %w", err)
+	}
+
+	return conf, nil
+}
+
+func (c *Config) write(path string, conf config) error {
+	bytes, err := json.MarshalIndent(conf, "", "    ")
 	if err != nil {
 		return fmt.Errorf("config save: can't marshal config: %w", err)
 	}
@@ -107,78 +229,18 @@ func (c *Config) Save(path string) error { // TODO add lazy saving, save only if
 	return nil
 }
 
-func (c *Config) SetPomodoroDuration(value time.Duration) error {
-	if value <= 0 || value > 24*time.Hour {
-		return fmt.Errorf("raw.SetPomodoroDuration: value is invalid: %v", value)
+func (c *Config) userLock() *sync.Mutex {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if lock, exists := userLocks[c.userID]; exists {
+		return lock
 	}
-	c.raw.PomodoroDurationMinute = value.Minutes()
-	return nil
-}
 
-func (c *Config) PomodoroDuration() time.Duration {
-	minutes := c.raw.PomodoroDurationMinute
-	if minutes <= 0 {
-		slog.Error("Pomodoro duration is invalid. Using default value", "duration",
-			c.raw.PomodoroDurationMinute, "default", DefaultConfig.raw.PomodoroDurationMinute)
-		// I don't use DefaultConfig.PomodoroDuration() because it may cause infinite recursion
-		minutes = DefaultConfig.raw.PomodoroDurationMinute
-	}
-	return time.Duration(minutes * float64(time.Minute))
-}
+	// TODO fix real id
+	newLock := &sync.Mutex{}
+	userLocks[1] = newLock
 
-func (c *Config) Schedules() []Schedule {
-	schedules := c.raw.Schedules
-	sort.Slice(c.raw.Schedules, func(i, j int) bool {
-		return c.raw.Schedules[i].ScheduledAt > c.raw.Schedules[j].ScheduledAt
-	})
-	slices.Reverse(schedules)
+	return newLock
 
-	return schedules
-}
-
-// AddToSchedule task from archive or later at scheduleAt (Unix timestamp, sec). Tasks appear in today folder.
-// If cron is provided this task will be repeated. Other wise, it will be executed once.
-func (c *Config) AddToSchedule(filename string, scheduleAt int64, cron string) {
-	c.raw.Schedules = append(c.raw.Schedules, Schedule{filename, scheduleAt, cron, ""})
-}
-
-func (c *Config) DelFromSchedule(filename string) {
-	var newSchedules []Schedule
-	for _, schedule := range c.raw.Schedules {
-		if schedule.Filename != filename {
-			newSchedules = append(newSchedules, schedule)
-		}
-	}
-	c.raw.Schedules = newSchedules
-}
-
-func (c *Config) JournalFilenameFormat() string {
-	if c.raw.JournalFilenameFormat == "" {
-		return DefaultConfig.raw.JournalFilenameFormat
-	}
-	return c.raw.JournalFilenameFormat
-}
-
-func (c *Config) SetJournalFilenameFormat(path string) {
-	c.raw.JournalFilenameFormat = path
-}
-
-func (c *Config) JournalHeaderFormat() string {
-	if c.raw.JournalHeaderFormat == "" {
-		return DefaultConfig.raw.JournalHeaderFormat
-	}
-	return c.raw.JournalHeaderFormat
-}
-
-func (c *Config) SetJournalHeaderFormat(format string) {
-	c.raw.JournalHeaderFormat = format
-}
-
-func (c *Config) ShouldSplitChecklist(checklist string) bool {
-	for _, unsplittableChecklist := range []string{fs.DirRead, fs.DirWatch} {
-		if checklist == unsplittableChecklist {
-			return false
-		}
-	}
-	return true
 }

@@ -873,13 +873,17 @@ func (b *Bot) showStats(params []string) error {
 }
 
 func (b *Bot) showSchedule(params []string) error {
-	schedule := sched.ScheduleReport(b.conf)
+	scheduledTasks, err := b.conf.Schedules()
+	if err != nil {
+		return fmt.Errorf("show schedule: %w", err)
+	}
+	schedule := sched.ScheduleReport(scheduledTasks)
 	if len(schedule) == 0 {
 		schedule = i18n.Tr("You don't have any scheduled tasks! 🌴")
 	}
 
 	kb := tg.NewKeyboard([]tg.Row{tg.NewBtn(i18n.StrToday, tg.NewCmd(consts.CmdShowToday, nil))})
-	err := b.show(schedule, kb, tg.MarkupHTML)
+	err = b.show(schedule, kb, tg.MarkupHTML)
 	if err != nil {
 		return fmt.Errorf("show stats: %w", err)
 	}

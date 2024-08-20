@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -88,7 +89,7 @@ func NewFile(name, hash, title string, ctime int64, isMultiline, isDir bool, par
 	return File{name, hash, title, ctime, isMultiline, isDir, parentDir}
 }
 
-func (fs FS) CreateUserDirs() error {
+func (fs FS) CreateDirsIfNotExist() error {
 	for _, dir := range []string{
 		DirArchive,
 		DirToday,
@@ -699,6 +700,22 @@ func SortByCtimeDesc(entries []File) []File {
 
 func Exists(path string) (bool, error) {
 	return afero.Exists(DefaultBackend, path)
+}
+
+func ReadAll(path string) ([]byte, error) {
+	configFile, err := DefaultBackend.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("fs can't readAll: %w", err)
+	}
+	defer configFile.Close()
+
+	bytes, err := io.ReadAll(configFile)
+	if err != nil {
+		return nil, fmt.Errorf("fs can't readAll: %w", err)
+
+	}
+
+	return bytes, nil
 }
 
 // TODO fix permissions?

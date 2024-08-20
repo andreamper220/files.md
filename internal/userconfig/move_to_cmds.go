@@ -1,6 +1,8 @@
 package userconfig
 
 import (
+	"fmt"
+
 	"zakirullin/stuffbot/i18n"
 	"zakirullin/stuffbot/internal/consts"
 	"zakirullin/stuffbot/pkg/tg"
@@ -18,42 +20,55 @@ var AvailableMoveToBtns = []tg.Btn{
 	tg.NewBtn(i18n.StrToChecklist, tg.NewCmd(consts.CmdShowMoveToChecklist, nil)),
 }
 
-func (c *Config) AddMoveToCmd(cmd string) bool {
-	// Does this cmd already exist?
-	for _, existingCmds := range c.raw.MoveToCmds {
-		if existingCmds == cmd {
-			return false
-		}
+func (c *Config) AddMoveToCmd(cmd string) error {
+	lock := c.userLock()
+	lock.Lock()
+	defer lock.Unlock()
+
+	conf, err := c.read(c.path)
+	if err != nil {
+		return fmt.Errorf("can't add move to cmd: can't read config: %w", err)
 	}
-	c.raw.MoveToCmds = append(c.raw.MoveToCmds, cmd)
-
-	return true
-}
-
-func (c *Config) MoveToCmds() []string {
-	return c.raw.MoveToCmds
-}
-
-func (c *Config) HasMoveToCmd(cmd string) bool {
-	for _, pref := range c.raw.MoveToCmds {
-		if cmd == pref {
-			return true
-		}
+	conf.MoveToCmds = append(conf.MoveToCmds, cmd)
+	err = c.write(c.path, conf)
+	if err != nil {
+		return fmt.Errorf("can't add move to cmd: can't write config: %w", err)
 	}
-	return false
+
+	return nil
 }
 
-func (c *Config) DelMoveToCmd(cmd string) bool {
+func (c *Config) MoveToCmds() ([]string, error) {
+	conf, err := c.read(c.path)
+	if err != nil {
+		return nil, fmt.Errorf("can't get move to cmds: can't read config: %w", err)
+	}
+
+	return conf.MoveToCmds, nil
+}
+
+func (c *Config) DelMoveToCmd(cmd string) error {
+	lock := c.userLock()
+	lock.Lock()
+	defer lock.Unlock()
+
+	conf, err := c.read(c.path)
+	if err != nil {
+		return fmt.Errorf("can't del move to cmd: can't read config: %w", err)
+	}
+
 	var newCmds []string
-	found := false // Was the target
-	for _, existingCmd := range c.raw.MoveToCmds {
-		if existingCmd == cmd {
-			found = true
-		} else {
-			newCmds = append(newCmds, existingCmd)
+	for _, curMoveToCmd := range conf.MoveToCmds {
+		if curMoveToCmd != cmd {
+			newCmds = append(newCmds, curMoveToCmd)
 		}
 	}
-	c.raw.MoveToCmds = newCmds
+	conf.MoveToCmds = newCmds
 
-	return found
+	err = c.write(c.path, conf)
+	if err != nil {
+		return fmt.Errorf("can't del move to cmd: can't write config: %w", err)
+	}
+
+	return nil
 }

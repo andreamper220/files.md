@@ -1,6 +1,8 @@
 package userconfig
 
 import (
+	"fmt"
+
 	"zakirullin/stuffbot/internal/consts"
 	"zakirullin/stuffbot/pkg/tg"
 )
@@ -17,40 +19,55 @@ var AvailableQuickBtns = []tg.Btn{
 	tg.NewBtn("Habits", tg.NewCustomCmd(consts.CmdWebAppHabits, nil, tg.CmdTypeWebApp)),
 }
 
-func (c *Config) AddQuickCmd(cmd string) bool {
-	// Does this cmd already exist?
-	for _, existingCmd := range c.raw.QuickCmds {
-		if existingCmd == cmd {
-			return false
-		}
+func (c *Config) AddQuickCmd(cmd string) error {
+	lock := c.userLock()
+	lock.Lock()
+	defer lock.Unlock()
+
+	conf, err := c.read(c.path)
+	if err != nil {
+		return fmt.Errorf("can't add quick cmd: can't read config: %w", err)
 	}
-	c.raw.QuickCmds = append(c.raw.QuickCmds, cmd)
-	return true
+	conf.QuickCmds = append(conf.QuickCmds, cmd)
+	err = c.write(c.path, conf)
+	if err != nil {
+		return fmt.Errorf("can't add quick cmd: can't write config: %w", err)
+	}
+
+	return nil
 }
 
-func (c *Config) QuickCmds() []string {
-	return c.raw.QuickCmds
+func (c *Config) QuickCmds() ([]string, error) {
+	conf, err := c.read(c.path)
+	if err != nil {
+		return nil, fmt.Errorf("can't get quick cmds: can't read config: %w", err)
+	}
+
+	return conf.QuickCmds, nil
 }
 
-func (c *Config) HasQuickCmd(cmd string) bool {
-	for _, pref := range c.raw.QuickCmds {
-		if cmd == pref {
-			return true
-		}
-	}
-	return false
-}
+func (c *Config) DelQuickCmd(cmd string) error {
+	lock := c.userLock()
+	lock.Lock()
+	defer lock.Unlock()
 
-func (c *Config) DelQuickCmd(cmd string) bool {
-	var newButtons []string
-	found := false // Was the target
-	for _, curQuickCmd := range c.raw.QuickCmds {
-		if curQuickCmd == cmd {
-			found = true
-		} else {
-			newButtons = append(newButtons, curQuickCmd)
+	conf, err := c.read(c.path)
+	if err != nil {
+		return fmt.Errorf("can't del quick cmd: can't read config: %w", err)
+	}
+
+	var newCmds []string
+	for _, curQuickCmd := range conf.QuickCmds {
+		if curQuickCmd != cmd {
+			newCmds = append(newCmds, curQuickCmd)
 		}
 	}
-	c.raw.QuickCmds = newButtons
-	return found
+	conf.QuickCmds = newCmds
+
+	err = c.write(c.path, conf)
+	if err != nil {
+		return fmt.Errorf("can't del quick cmd: can't write config: %w", err)
+	}
+
+	return nil
 }
