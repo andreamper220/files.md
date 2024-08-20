@@ -58,8 +58,9 @@ func MoveDueTasksToToday(
 		}
 
 		for _, schedule := range userconf.Schedules() {
-			shouldScheduleForToday := schedule.ScheduledAt <= time.Now().Unix()
-			shouldScheduleForLater := (schedule.ScheduledAt - time.Now().Unix()) < int64(daysInAdvanceForLater.Seconds())
+			secondsLeft := schedule.ScheduledAt - time.Now().Unix()
+			shouldScheduleForToday := secondsLeft <= 0
+			shouldScheduleForLater := secondsLeft > 0 && secondsLeft <= int64(daysInAdvanceForLater.Seconds())
 			shouldNotSchedule := !shouldScheduleForToday && !shouldScheduleForLater
 			if shouldNotSchedule {
 				continue
