@@ -9,6 +9,8 @@ import (
 	"unicode/utf16"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
+	"zakirullin/stuffbot/pkg/txt"
 )
 
 var (
@@ -67,7 +69,7 @@ func (u *Upd) Cmd() *Cmd {
 			cmd := NewCmd(strings.TrimPrefix(slashedCommand, "/"), nil)
 
 			text := strings.Replace(u.raw.Message.Text, slashedCommand, "", 1)
-			text = strings.TrimSpace(text)
+			text = txt.Ucfirst(strings.TrimSpace(text))
 			cmd.Params = []string{text}
 
 			return &cmd

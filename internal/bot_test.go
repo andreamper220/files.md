@@ -1373,7 +1373,23 @@ func TestExtractCmd(t *testing.T) {
 
 	r.NotNil(cmd)
 	r.Equal("t", cmd.Name)
-	r.Equal([]string{"task for tomorrow"}, cmd.Params)
+	r.Equal([]string{"Task for tomorrow"}, cmd.Params)
+}
+
+func TestExtractCmdRu(t *testing.T) {
+	r := require.New(t)
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+
+	bot := NewBot(-1, fake.NewTG(), userFS, db.NewFakeDB(), fakeConfig())
+	upd := fake.NewUpd(-1, "/т task for tomorrow")
+	cmd, err := bot.extractCmd(upd)
+	r.NoError(err)
+
+	r.NotNil(cmd)
+	r.Equal("т", cmd.Name)
+	r.Equal([]string{"Task for tomorrow"}, cmd.Params)
 }
 
 func TestExtractCmdSkips(t *testing.T) {
@@ -1403,5 +1419,5 @@ func TestExtractCmdAtTheEnd(t *testing.T) {
 
 	r.NotNil(cmd)
 	r.Equal("t", cmd.Name)
-	r.Equal([]string{"task for tomorrow"}, cmd.Params)
+	r.Equal([]string{"Task for tomorrow"}, cmd.Params)
 }

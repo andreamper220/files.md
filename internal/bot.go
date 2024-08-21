@@ -256,6 +256,7 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		consts.CmdDelFromMoveToBtns:      b.delFromMoveToBtns,
 		consts.CmdShowSchedule:           b.showSchedule,
 		consts.CmdAddToJournalShortcut:   b.addToJournalFromShortcut,
+		consts.CmdAddToJournalShortcutRu: b.addToJournalFromShortcut,
 		// Used for button-like separators
 		consts.CmdDoNothing: func(s []string) error { return nil },
 	}
@@ -294,7 +295,8 @@ func (b *Bot) extractCmd(u UpdInterface) (*tg.Cmd, error) {
 		}
 
 		text := u.MsgText()[:loc[0]] + u.MsgText()[loc[1]:]
-		shortCmd := tg.NewCmd(shortcutCmd, []string{strings.TrimSpace(text)})
+		text = txt.Ucfirst(strings.TrimSpace(text))
+		shortCmd := tg.NewCmd(shortcutCmd, []string{text})
 
 		return &shortCmd, nil
 	}
@@ -316,6 +318,9 @@ func (b *Bot) allowedTextCmds() []string {
 		consts.CmdAddToJournalShortcut,
 		consts.CmdAddToLaterShortcut,
 		consts.CmdAddToTomorrowShortcut,
+		consts.CmdAddToJournalShortcutRu,
+		consts.CmdAddToLaterShortcutRu,
+		consts.CmdAddToTomorrowShortcutRu,
 		//"help" TODO,
 		//"err" TODO,
 	}
@@ -326,6 +331,9 @@ func (b *Bot) AllowedShortcutCmds() []string {
 		consts.CmdAddToJournalShortcut,
 		consts.CmdAddToLaterShortcut,
 		consts.CmdAddToTomorrowShortcut,
+		consts.CmdAddToJournalShortcutRu,
+		consts.CmdAddToLaterShortcutRu,
+		consts.CmdAddToTomorrowShortcutRu,
 	}
 }
 
