@@ -9,6 +9,8 @@ const (
 	CmdShowToday                   = "today"
 	CmdShowFiles                   = "files"
 	CmdShowPostpone                = "postpone"
+	CmdShowMoveFromToday           = "move"
+	CmdShowMoveTo                  = "s_move"
 	CmdShowRename                  = "rename"
 	CmdShowChecklists              = "checklists"
 	CmdShowStats                   = "stats"

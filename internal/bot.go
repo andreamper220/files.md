@@ -202,6 +202,8 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		consts.CmdShowFiles:          b.showFiles,
 		consts.CmdShowChecklists:     b.showChecklists,
 		consts.CmdShowPostpone:       b.showPostpone,
+		consts.CmdShowMoveFromToday:  b.showMove,
+		consts.CmdShowMoveTo:         b.showMoveTo,
 		consts.CmdShowRename:         b.showRename,
 		consts.CmdShowStats:          b.showStats,
 		consts.CmdShowReadChecklist:  b.showRead,
@@ -310,6 +312,7 @@ func (b *Bot) allowedTextCmds() []string {
 		consts.CmdShowStats,
 		consts.CmdShowSchedule,
 		consts.CmdAddToJournalShortcut,
+		consts.CmdShowMoveFromToday,
 		//"help" TODO,
 		//"err" TODO,
 	}
@@ -802,6 +805,31 @@ func (b *Bot) showPostpone(params []string) error {
 	err = b.show(b.tr("🦥 Select a task to postpone:"), &kb, tg.MarkupHTML)
 	if err != nil {
 		return fmt.Errorf("show postpone: %w", err)
+	}
+
+	return nil
+}
+
+func (b *Bot) showMove(params []string) error {
+	files, err := b.fs.FilesAndDirs(fs.DirToday)
+	if err != nil {
+		return fmt.Errorf("show move: can't get files in '%s' dir: %w", fs.DirToday, err)
+	}
+
+	var kb tg.Keyboard
+	for _, file := range files {
+		cmd := tg.NewCmd(consts.CmdShowMoveFromToday, []string{fs.Hash(file.Name)})
+		kb.AddRow(tg.NewBtn(file.Title, cmd))
+	}
+
+	kb.AddRow(tg.NewRow(
+		tg.NewBtn(b.tr(consts.CmdShowRename), tg.NewCmd(consts.CmdShowRename, []string{})),
+		tg.NewBtn(b.tr("OK"), tg.NewCmd(consts.CmdShowToday, []string{})),
+	))
+
+	err = b.show(b.tr("🦥 Select a task to postpone:"), &kb, tg.MarkupHTML)
+	if err != nil {
+		return fmt.Errorf("show move: %w", err)
 	}
 
 	return nil
