@@ -17,7 +17,7 @@ deploy:
     printf "$${YELLOW}Building...$${RESET}\n" && \
     make check && \
     GOOS=linux GOARCH=amd64 go build -o bot ./cmd && \
-    printf "$${GREEN}Built$${RESET}\n" && \
+    printf "$${GREEN}Build Completed$${RESET}\n" && \
     ssh $(host) "killall bot || true" && \
     scp bot $(host):/app/bot && printf "$${GREEN}The binary is copied on the server$${RESET}\n" && \
     rm bot && \

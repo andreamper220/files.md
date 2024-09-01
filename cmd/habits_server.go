@@ -74,7 +74,7 @@ func setupRouter(router *http.ServeMux) {
 	// TODO before release habits_v2 => habits
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Files made to last"))
+		w.Write([]byte(`<p background-color="#FFE1C5" color="#100F0F">Files made to last</p>`))
 	})
 
 	router.HandleFunc("GET /habits_v2/{userID}", func(w http.ResponseWriter, r *http.Request) {
