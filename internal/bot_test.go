@@ -563,7 +563,7 @@ func TestFiles(t *testing.T) {
 			tg.NewBtn("📄 Doc1", tg.NewCmd("file", []string{fs.DirRoot, "c1253521ac7"})),
 			tg.NewBtn("📄 Doc2", tg.NewCmd("file", []string{fs.DirRoot, "64572c3093f"})),
 		},
-		tg.NewBtn("🔎 Search", tg.NewCustomCmd("search", nil, "search")),
+		tg.NewBtn("🔎 Search", tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewBtn("🏠 Today", tg.NewCmd("today", nil)),
 	}), tgram.SentKeyboard)
 }

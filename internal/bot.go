@@ -764,7 +764,7 @@ func (b *Bot) showFiles(_ []string) error {
 	for _, row := range fileBtnsByRows {
 		kb.AddRow(row)
 	}
-	inlineCmd := tg.NewCustomCmd(consts.CmdInlineQuerySearchEveryWhere, nil, consts.CmdInlineQuerySearchEveryWhere)
+	inlineCmd := tg.NewCustomCmd(consts.CmdInlineQuerySearchEveryWhere, nil, tg.CmdTypeInlineQueryCurrentChat)
 	kb.AddRow(tg.NewBtn(i18n.Tr("🔎 Search"), inlineCmd))
 
 	if !b.cfg.FilesOnlyMode() {
