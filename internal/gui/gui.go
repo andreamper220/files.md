@@ -64,29 +64,7 @@ func (c *Chat) Send(userID int64, text string, kb *tg.Keyboard, markup string) (
 	msgContainer := container.NewVBox(
 		widget.NewLabel(text),
 	)
-
-	btnCallback := func(cmd tg.Cmd) func() {
-		return func() {
-			c.updater(tg.NewFakeUpdCmd(1, cmd))
-		}
-	}
-	if kb != nil {
-		for _, row := range kb.Btns {
-			switch row.(type) {
-			case tg.Btn:
-				b := row.(tg.Btn)
-				msgContainer.Add(widget.NewButton(b.Name, btnCallback(b.Cmd)))
-			case []tg.Btn:
-				btns := row.([]tg.Btn)
-				rowContainer := container.New(layout.NewGridLayoutWithColumns(len(btns)))
-				for _, b := range btns {
-					rowContainer.Add(widget.NewButton(b.Name, btnCallback(b.Cmd)))
-				}
-				msgContainer.Add(rowContainer)
-			}
-		}
-
-	}
+	c.attachKeyboard(kb, msgContainer)
 
 	c.input.SetText("")
 	c.messages.Add(msgContainer)
@@ -119,4 +97,31 @@ func (c *Chat) AnswerInlineQuery(queryID string, results []interface{}, cacheTim
 
 func (c *Chat) DownloadFile(fileID string, outFile io.Writer) (string, error) {
 	return "", nil
+}
+
+func (c *Chat) attachKeyboard(kb *tg.Keyboard, msgContainer *fyne.Container) {
+	btnCallback := func(cmd tg.Cmd) func() {
+		return func() {
+			c.updater(tg.NewFakeUpdCmd(1, cmd))
+		}
+	}
+
+	var kbBtns []tg.Row
+	if kb != nil {
+		kbBtns = kb.Btns
+	}
+	for _, row := range kbBtns {
+		switch row.(type) {
+		case tg.Btn:
+			b := row.(tg.Btn)
+			msgContainer.Add(widget.NewButton(b.Name, btnCallback(b.Cmd)))
+		case []tg.Btn:
+			btns := row.([]tg.Btn)
+			rowContainer := container.New(layout.NewGridLayoutWithColumns(len(btns)))
+			for _, b := range btns {
+				rowContainer.Add(widget.NewButton(b.Name, btnCallback(b.Cmd)))
+			}
+			msgContainer.Add(rowContainer)
+		}
+	}
 }
