@@ -100,17 +100,16 @@ func (c *Chat) DownloadFile(fileID string, outFile io.Writer) (string, error) {
 }
 
 func (c *Chat) attachKeyboard(kb *tg.Keyboard, msgContainer *fyne.Container) {
+	if kb == nil {
+		return
+	}
+
 	btnCallback := func(cmd tg.Cmd) func() {
 		return func() {
 			c.updater(tg.NewFakeUpdCmd(1, cmd))
 		}
 	}
-
-	var kbBtns []tg.Row
-	if kb != nil {
-		kbBtns = kb.Btns
-	}
-	for _, row := range kbBtns {
+	for _, row := range kb.Btns {
 		switch row.(type) {
 		case tg.Btn:
 			b := row.(tg.Btn)
