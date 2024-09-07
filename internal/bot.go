@@ -579,6 +579,8 @@ func (b *Bot) showHTML(validHTML string, kb *tg.Keyboard) error {
 // Replace last message + keyboard with the new ones
 // Or show the new one (in case of photo).
 // Read "Markdown to HTML conversion" section in readme's ADRs
+// Telegram allows 1-4096 characters AFTER entities parsing,
+// meaning we can have 4096 plain chars + any amount of tags.
 func (b *Bot) showMD(probablyInvalidMD string, kb *tg.Keyboard) error {
 	mid, hasLastKeyboard := b.db.LastKeyboardMsgID(b.userID)
 	textChunks := txt.SplitTextIntoChunks(probablyInvalidMD, maxMsgLength)
@@ -591,10 +593,10 @@ func (b *Bot) showMD(probablyInvalidMD string, kb *tg.Keyboard) error {
 		lastChunk := textChunks[len(textChunks)-1]
 		textChunks = textChunks[0 : len(textChunks)-1]
 		for _, textChunk := range textChunks {
-			_, _ = b.tg.Send(b.userID, textChunk, nil, tg.MarkupHTML)
+			_, _ = b.tg.Send(b.userID, txt.Html(textChunk), nil, tg.MarkupHTML)
 		}
 
-		mid, err := b.tg.Send(b.userID, lastChunk, kb, tg.MarkupHTML)
+		mid, err := b.tg.Send(b.userID, txt.Html(lastChunk), kb, tg.MarkupHTML)
 		if err != nil {
 			return fmt.Errorf("show: %w", err)
 		}
@@ -604,7 +606,7 @@ func (b *Bot) showMD(probablyInvalidMD string, kb *tg.Keyboard) error {
 		return nil
 	}
 
-	return b.tg.Edit(b.userID, mid, probablyInvalidMD, kb, tg.MarkupHTML)
+	return b.tg.Edit(b.userID, mid, txt.Html(probablyInvalidMD), kb, tg.MarkupHTML)
 }
 
 func (b *Bot) showMoveTo(params []string) error {
@@ -1088,8 +1090,7 @@ func (b *Bot) showFile(params []string) error {
 	})
 
 	md := fmt.Sprintf("%s\n%s", fs.Title(filename), content)
-	html := txt.Html(md)
-	err = b.showHTML(html, kb)
+	err = b.showMD(md, kb)
 	if err != nil {
 		return fmt.Errorf("show file: %w", err)
 	}
