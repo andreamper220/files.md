@@ -9,13 +9,11 @@ An application for your personal stuff:
 - 🌱 Habits  
 - 🍅 Pomodoro  
 
-All these are stored as plain local `*.md` files.  
+It works like a regular chat, so it's easier to use because there's less resistance. We're used to sending messages to friends, now we're going to send stuff to the bot.  
 
-We're used to sending messages to friends, now we're going to send notes to the bot. It works like a regular chat, so it's easier to use because there's less resistance. An all too familiar habit.  
+Unload your brain - send the bot whatever's on your mind. Then choose how you want to store it. It can be a task, a note, or a journal entry.
 
-First, unload your brain - send the bot whatever's on your mind. Then choose what to do with it. It can be a task, a note or a journal entry.  
-
-Can be used as a desktop/mobile app or as a Telegram bot.  
+**Everything is stored as plain local `*.md` files.**  
 
 [Tasks management via bot](https://club.mnogosdelal.ru/post/180/)  
 [Notes taking via bot](https://vas3k.club/post/18815/)
