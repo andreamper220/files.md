@@ -1960,3 +1960,54 @@ func TestAnswerSearchShowOutsideTheRootNoSlash(t *testing.T) {
 	r.Error(err)
 	r.EqualError(err, "inline reply: search notes: exists: unsafe path '/': unsafe path, possible security issue")
 }
+
+func TestShowFileEscapesHTML(t *testing.T) {
+	r := require.New(t)
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	err = userFS.Write("", "File.md", "<b>bold*italic*")
+	r.NoError(err)
+
+	tgram := tg.NewFakeTG()
+
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), fakeConfig())
+
+	err = bot.showFile([]string{"", "File.md"})
+	r.NoError(err)
+	r.Equal("File\n&lt;b&gt;bold*italic*", tgram.LastSentText)
+}
+
+func TestShowFileSkipsHTMLInInlineCode(t *testing.T) {
+	r := require.New(t)
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	err = userFS.Write("", "File.md", "`<b>bold</b>`")
+	r.NoError(err)
+
+	tgram := tg.NewFakeTG()
+
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), fakeConfig())
+
+	err = bot.showFile([]string{"", "File.md"})
+	r.NoError(err)
+	r.Equal("File\n`<b>bold</b>`", tgram.LastSentText)
+}
+
+func TestShowFileSkipsHTMLInCodeBlock(t *testing.T) {
+	r := require.New(t)
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	err = userFS.Write("", "File.md", "```<b>bold</b>```")
+	r.NoError(err)
+
+	tgram := tg.NewFakeTG()
+
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), fakeConfig())
+
+	err = bot.showFile([]string{"", "File.md"})
+	r.NoError(err)
+	r.Equal("File\n```<b>bold</b>```", tgram.LastSentText)
+}
