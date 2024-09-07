@@ -10,7 +10,7 @@ An application for your personal stuff:
 - 🍅 Pomodoro  
 
 Everything is stored locally in plain `*.md` files.  
-Can be used as a Telegram bot or as a desktop or mobile app.
+Can be used as a desktop/mobile app or as a Telegram bot.
 
 [Tasks management bot showcase in Dorofeev's club](https://club.mnogosdelal.ru/post/180/)  
 [Notes taking via bot](https://vas3k.club/post/18815/)
