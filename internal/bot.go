@@ -1067,7 +1067,8 @@ func (b *Bot) showFile(params []string) error {
 
 	md := fmt.Sprintf("%s\n%s", fs.Title(filename), content)
 	md = txt.EscapeHTMLInMarkdown(md)
-	err = b.show(md, kb, tg.MarkupHTML)
+	html := txt.Html(md)
+	err = b.show(html, kb, tg.MarkupHTML)
 	if err != nil {
 		return fmt.Errorf("show file: %w", err)
 	}
