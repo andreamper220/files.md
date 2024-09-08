@@ -232,7 +232,7 @@ func TestMarkdownToHTMLMultilineCodeBlock(t *testing.T) {
 	md := "```\ncode line 1\ncode line 2\n```"
 	html := MarkdownToHTML(md)
 
-	r.Equal("<pre>\ncode line 1\ncode line 2\n</pre>", html)
+	r.Equal("<pre>code line 1\ncode line 2</pre>", html)
 }
 
 func TestMarkdownToHTMLCodeWithBold(t *testing.T) {

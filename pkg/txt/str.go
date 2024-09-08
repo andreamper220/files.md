@@ -126,14 +126,14 @@ func ReplaceWithPlaceholders(str, regex, placeholder string) (string, map[string
 	counter := 0
 
 	// Function to replace each match with a placeholder
-	result := re.ReplaceAllStringFunc(str, func(match string) string {
+	res := re.ReplaceAllStringFunc(str, func(match string) string {
 		p := fmt.Sprintf("#%s%d#", placeholder, counter)
-		placeholders[p] = strings.TrimSpace(match)
+		placeholders[p] = match
 		counter++
 		return p
 	})
 
-	return result, placeholders
+	return res, placeholders
 }
 
 func RestoreFromPlaceholders(str string, placeholders map[string]string) string {

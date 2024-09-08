@@ -70,7 +70,9 @@ func MarkdownToHTML(md string) string {
 	// We do dirty but simple md -> html conversion.
 	// Covert ` and ``` to <pre> and <code> HTML tags
 	reCodeBlock := regexp.MustCompile("(?s)```(.+?)```")
-	mdWithCode = reCodeBlock.ReplaceAllString(mdWithCode, "<pre>$1</pre>")
+	mdWithCode = reCodeBlock.ReplaceAllStringFunc(mdWithCode, func(s string) string {
+		return "<pre>" + strings.TrimSpace(reCodeBlock.FindStringSubmatch(s)[1]) + "</pre>"
+	})
 	reInlineCode := regexp.MustCompile("`([^`]+?)`")
 	mdWithCode = reInlineCode.ReplaceAllString(mdWithCode, "<code>$1</code>")
 
