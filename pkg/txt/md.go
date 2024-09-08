@@ -3,10 +3,8 @@ package txt
 import (
 	"regexp"
 	"strings"
-	"unicode"
 )
 
-// Parser Combinators. Watch an amazing video here: https://youtu.be/dDtZLm7HIJs
 type Parser func(input string) []token
 
 type token struct {
@@ -30,7 +28,8 @@ var closeTags = map[string]string{
 	"`":  "</code>",
 }
 
-// MDtoHTML converts user's markdown to Telegram-supported subset of HTML
+// MDtoHTML naively converts user's markdown to Telegram-supported subset of HTML.
+// We don't need to implement full-blown AST parser because TG only supports a few HTML tags.
 // Telegram supported tags:
 // <b>bold</b>, <strong>bold</strong>
 // <i>italic</i>, <em>italic</em>
@@ -55,35 +54,78 @@ func MDtoHTML(md string) string {
 	// for the cases when our markdown has some html tags.
 	// We try to convert as much markdown as possible to Telegram HTML.
 
-	docs := mdParser()(mdWithoutCode)
-	// TODO only return if remained is empty?
-	if len(docs) > 0 {
-		mdWithoutCode = docs[0].consumed
+	// We split by \n\n, because markdown context is broken by \n\n (excluding code inside ```)
+	segments := strings.Split(mdWithoutCode, "\n\n")
+	processedSegments := make([]string, len(segments))
+	for i, segment := range segments {
+		// Process each segment separately
+		docs := markdown()(segment)
+		if len(docs) > 0 {
+			segment = docs[0].consumed + docs[0].left
+		}
+		processedSegments[i] = segment
 	}
+	mdWithoutCode = strings.Join(processedSegments, "\n\n")
+
 	mdWithCode := RestoreFromPlaceholders(mdWithoutCode, codePlaceholders)
 	mdWithCode = RestoreFromPlaceholders(mdWithCode, inlinePlaceholders)
 
-	// Covert ` and ``` to HTML tags
+	// We do dirty but simple md -> html conversion.
+	// Covert ` and ``` to <pre> and <code> HTML tags
 	reCodeBlock := regexp.MustCompile("(?s)```(.*?)```")
 	mdWithCode = reCodeBlock.ReplaceAllString(mdWithCode, "<pre>$1</pre>")
 	reInlineCode := regexp.MustCompile("`(.*?)`")
 	mdWithCode = reInlineCode.ReplaceAllString(mdWithCode, "<code>$1</code>")
 
-	// Convert ### Header to <b>Header</b>
-	// TODO add tests here
+	// Convert #+ Header to <b>Header</b>
 	reHeader := regexp.MustCompile(`(?m)^#+\s*(.+)`)
 	mdWithCode = reHeader.ReplaceAllString(mdWithCode, "<b>$1</b>")
 
 	return mdWithCode
 }
 
-func term(t string) Parser {
-	return func(input string) []token {
-		if strings.HasPrefix(input, t) {
-			return []token{{"[" + t + "]", input[len(t):]}}
-		}
-		return nil
-	}
+// Parser Combinators. Watch an amazing video here: https://youtu.be/dDtZLm7HIJs
+func markdown() Parser {
+	text := notMarkdown()
+	onlyBold := or(
+		and(openTerm("**"), and(text, closeTerm("**"))),
+		and(openTerm("__"), and(text, closeTerm("__"))),
+	)
+	italicNoCyclic := or(
+		and(openTerm("*"), and(oneOrMore(or(
+			onlyBold,
+			text)),
+			closeTerm("*"))),
+		and(openTerm("_"), and(oneOrMore(or(
+			onlyBold,
+			text)),
+			closeTerm("_"))),
+	)
+	onlyItalic := or(
+		and(openTerm("*"), and(text, closeTerm("*"))),
+		and(openTerm("_"), and(text, closeTerm("_"))),
+	)
+	boldNoCyclic := or(
+		and(openTerm("**"), and(oneOrMore(or(
+			onlyItalic,
+			text)),
+			closeTerm("**"))),
+		and(openTerm("__"), and(oneOrMore(or(
+			onlyItalic,
+			text)),
+			closeTerm("__"))),
+	)
+	italic := or(
+		and(openTerm("*"), and(oneOrMore(or(boldNoCyclic, text)), closeTerm("*"))),
+		and(openTerm("_"), and(oneOrMore(or(boldNoCyclic, text)), closeTerm("_"))),
+	)
+	bold := or(
+		and(openTerm("**"), and(oneOrMore(or(italicNoCyclic, text)), closeTerm("**"))),
+		and(openTerm("__"), and(oneOrMore(or(italicNoCyclic, text)), closeTerm("__"))),
+	)
+	span := or(bold, or(italic, text))
+
+	return oneOrMore(span)
 }
 
 func openTerm(t string) Parser {
@@ -99,33 +141,6 @@ func closeTerm(t string) Parser {
 	return func(input string) []token {
 		if strings.HasPrefix(input, t) {
 			return []token{{closeTags[t], input[len(t):]}}
-		}
-		return nil
-	}
-}
-
-func digit() Parser {
-	return func(input string) []token {
-		if len(input) > 0 && unicode.IsDigit(rune(input[0])) {
-			return []token{{string(input[0]), input[1:]}}
-		}
-		return nil
-	}
-}
-
-func alphaNumeric() Parser {
-	return func(input string) []token {
-		if len(input) > 0 && (unicode.IsLetter(rune(input[0])) || unicode.IsDigit(rune(input[0]))) {
-			return []token{{string(input[0]), input[1:]}}
-		}
-		return nil
-	}
-}
-
-func emptyString() Parser {
-	return func(input string) []token {
-		if input == "" {
-			return []token{{"", input}}
 		}
 		return nil
 	}
@@ -178,66 +193,20 @@ func oneOrMore(parser Parser) Parser {
 	}
 }
 
-func zeroOrMore(parser Parser) Parser {
-	return func(input string) []token {
-		return recursive(input, parser, 1)
-	}
-}
-
-// nonMarkdown incrementally yields when it encounters a *, **, _, __
-func nonMarkdown() Parser {
+// notMarkdown incrementally yields when it encounters a *, **, _, __
+func notMarkdown() Parser {
 	return func(input string) []token {
 		for i, ch := range input {
 			if ch == '*' || ch == '_' {
 				return []token{{input[:i], input[i:]}}
 			}
 		}
+		if len(input) > 0 && (input[len(input)-1] == '*' || input[len(input)-1] != '_' || input[len(input)-1] != '`') {
+			return []token{{input, ""}}
+		}
 		if len(input) > 0 {
 			return []token{{input, ""}}
 		}
 		return nil
 	}
-}
-
-func mdParser() Parser {
-	text := nonMarkdown()
-	onlyBold := or(
-		and(openTerm("**"), and(text, closeTerm("**"))),
-		and(openTerm("__"), and(text, closeTerm("__"))),
-	)
-	italicNoCyclic := or(
-		and(openTerm("*"), and(oneOrMore(or(
-			onlyBold,
-			text)),
-			closeTerm("*"))),
-		and(openTerm("_"), and(oneOrMore(or(
-			onlyBold,
-			text)),
-			closeTerm("_"))),
-	)
-	onlyItalic := or(
-		and(openTerm("*"), and(text, closeTerm("*"))),
-		and(openTerm("_"), and(text, closeTerm("_"))),
-	)
-	boldNoCyclic := or(
-		and(openTerm("**"), and(oneOrMore(or(
-			onlyItalic,
-			text)),
-			closeTerm("**"))),
-		and(openTerm("__"), and(oneOrMore(or(
-			onlyItalic,
-			text)),
-			closeTerm("__"))),
-	)
-	italic := or(
-		and(openTerm("*"), and(oneOrMore(or(boldNoCyclic, text)), closeTerm("*"))),
-		and(openTerm("_"), and(oneOrMore(or(boldNoCyclic, text)), closeTerm("_"))),
-	)
-	bold := or(
-		and(openTerm("**"), and(oneOrMore(or(italicNoCyclic, text)), closeTerm("**"))),
-		and(openTerm("__"), and(oneOrMore(or(italicNoCyclic, text)), closeTerm("__"))),
-	)
-	span := or(bold, or(italic, text))
-
-	return oneOrMore(span)
 }

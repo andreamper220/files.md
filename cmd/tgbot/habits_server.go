@@ -155,7 +155,7 @@ func setupRouter(router *http.ServeMux) {
 		if err != nil {
 			w.Write([]byte("can't write habit emoji to journal"))
 		}
-	
+
 		record := fmt.Sprintf("%s %s", emoji, habitName)
 		err = journal.AddRecord(userFS, record, userConf.Timezone())
 		if err != nil {
