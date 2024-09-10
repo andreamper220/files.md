@@ -494,7 +494,7 @@ func (b *Bot) answerSearch(u UpdInterface) error {
 
 func (b *Bot) answerFileRequest(msg string) error {
 	if strings.Contains(msg, "../") || strings.Contains(msg, "/..") {
-		return fmt.Errorf("insecure input '%s': %w", u.MsgText(), errIvalidRequestFromInline)
+		return fmt.Errorf("insecure input '%s': %w", msg, errIvalidRequestFromInline)
 	}
 
 	dirAndFilename := strings.Split(msg, "/")
