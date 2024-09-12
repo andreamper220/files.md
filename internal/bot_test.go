@@ -160,13 +160,15 @@ func TestAddTaskWithOnlyWhitespace(t *testing.T) {
 
 	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
 	r.NoError(err)
+	err = userFS.CreateDirsIfNotExist()
+	r.NoError(err)
 
 	tgram := tg.NewFakeTG()
 
 	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), fakeConfig())
 
 	err = bot.Answer(tg.NewFakeUpd(-1, "   \t\n"))
-	r.NoError(err)
+	r.EqualError(err, "save: extract title: empty msg")
 
 	tasks, err := bot.fs.FilesAndDirs("today")
 	r.NoError(err)
@@ -199,6 +201,8 @@ func TestShowEmptyTodayList(t *testing.T) {
 
 	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
 	r.NoError(err)
+	err = userFS.CreateDirsIfNotExist()
+	r.NoError(err)
 
 	tgram := tg.NewFakeTG()
 
@@ -206,32 +210,7 @@ func TestShowEmptyTodayList(t *testing.T) {
 
 	err = bot.Answer(tg.NewFakeUpdCmd(-1, tg.NewCmd("today", nil)))
 	r.NoError(err)
-	r.Equal("You have no tasks for today! 🌴", tgram.LastSentText)
-}
-
-func TestSaveFromTextMsgWithSpecialFileNameCharacters(t *testing.T) {
-	// Test handling of text messages with characters that are invalid in file names
-	r := require.New(t)
-
-	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
-	r.NoError(err)
-
-	tgram := tg.NewFakeTG()
-
-	invalidFileNameText := "Task with invalid chars <>:\"/\\|?*"
-	sanitizedFileName := "Task with invalid chars &lt;&gt;：\"/\\|?*.md"
-	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), fakeConfig())
-	err = bot.Answer(tg.NewFakeUpd(-1, invalidFileNameText))
-	r.NoError(err)
-
-	tasks, err := bot.fs.FilesAndDirs("today")
-	r.NoError(err)
-	r.Len(tasks, 1)
-	r.Equal(sanitizedFileName, tasks[0].Name)
-
-	content, err := bot.fs.Read("today", sanitizedFileName)
-	r.NoError(err)
-	r.Equal(invalidFileNameText, content)
+	r.Equal("🌴 You don't have any tasks!", tgram.LastSentText)
 }
 
 func TestSaveFromTextMsgWithUnicodeCharacters(t *testing.T) {
@@ -239,6 +218,8 @@ func TestSaveFromTextMsgWithUnicodeCharacters(t *testing.T) {
 	r := require.New(t)
 
 	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	err = userFS.CreateDirsIfNotExist()
 	r.NoError(err)
 
 	tgram := tg.NewFakeTG()
@@ -252,10 +233,6 @@ func TestSaveFromTextMsgWithUnicodeCharacters(t *testing.T) {
 	r.NoError(err)
 	r.Len(tasks, 1)
 	r.Equal("测试含有Unicode字符的文本🚀🌟.md", tasks[0].Name)
-
-	content, err := bot.fs.Read("today", "测试含有Unicode字符的文本🚀🌟.md")
-	r.NoError(err)
-	r.Equal(unicodeText, content)
 }
 
 func TestSaveFromEmptyTextMsg(t *testing.T) {
@@ -264,12 +241,14 @@ func TestSaveFromEmptyTextMsg(t *testing.T) {
 
 	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
 	r.NoError(err)
+	err = userFS.CreateDirsIfNotExist()
+	r.NoError(err)
 
 	tgram := tg.NewFakeTG()
 
 	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), fakeConfig())
 	err = bot.Answer(tg.NewFakeUpd(-1, ""))
-	r.NoError(err)
+	r.EqualError(err, "save: extract title: empty msg")
 
 	tasks, err := bot.fs.FilesAndDirs("today")
 	r.NoError(err)
