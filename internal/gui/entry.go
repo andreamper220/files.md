@@ -17,8 +17,8 @@ type entry struct {
 func newEntry() *entry {
 	e := &entry{}
 	e.rowsVisible = 3
-	e.Wrapping = fyne.TextWrapBreak
 	e.Scroll = container.ScrollVerticalOnly
+	e.PlaceHolder = "Type here..."
 	e.ExtendBaseWidget(e)
 
 	return e
