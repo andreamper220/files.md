@@ -74,7 +74,7 @@ We differentiate the following types of files (with `/` denoting your root folde
 - Habits: `/habits/2 minute morning workout.md` (`/habits/*.md`)
 - Insights: `/insights/2024 Habits.md` (`/insights/<YEAR> Habits.md`)
 - Images: `/img/*`
-- Pomodoro: `/today/Took a break.md`
+- Pomodoro: `/today/Finished a break.md`
 - Archive: `/archive/*`
 
 ## Performance
