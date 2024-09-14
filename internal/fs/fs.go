@@ -33,7 +33,6 @@ const (
 	DirArchive   = "archive"
 	DirToday     = "today"
 	DirLater     = "later"
-	DirInbox     = "inbox"
 	DirImg       = "img"
 	DirJournal   = "journal"
 	DirHabits    = "habits"
@@ -92,7 +91,6 @@ func (fs FS) CreateDirsIfNotExist() error {
 		DirArchive,
 		DirToday,
 		DirLater,
-		DirInbox,
 		DirImg,
 		DirRead,
 		DirWatch,

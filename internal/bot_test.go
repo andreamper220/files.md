@@ -2315,7 +2315,6 @@ func TestSaveToExistingFileIntegration(t *testing.T) {
 		tg.NewBtn("Or choose a dir:", tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
 			tg.NewBtn("🗂️ Habits", tg.NewCmd("mv", []string{"51fc0", "", "232004794e5"})),
-			tg.NewBtn("🗂️ Inbox", tg.NewCmd("mv", []string{"af1cd", "", "232004794e5"})),
 			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{"232004794e5"})),
 		),
 	})
@@ -2392,7 +2391,6 @@ func TestSaveToNewFileIntegration(t *testing.T) {
 		tg.NewBtn("Or choose a dir:", tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
 			tg.NewBtn("🗂️ Habits", tg.NewCmd("mv", []string{"51fc0", "", "232004794e5"})),
-			tg.NewBtn("🗂️ Inbox", tg.NewCmd("mv", []string{"af1cd", "", "232004794e5"})),
 			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{"232004794e5"})),
 		),
 	})
@@ -2469,7 +2467,6 @@ func TestSaveToNewDirIntegration(t *testing.T) {
 		tg.NewBtn("Or choose a dir:", tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
 			tg.NewBtn("🗂️ Habits", tg.NewCmd("mv", []string{"51fc0", "", "232004794e5"})),
-			tg.NewBtn("🗂️ Inbox", tg.NewCmd("mv", []string{"af1cd", "", "232004794e5"})),
 			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{"232004794e5"})),
 		),
 	})
@@ -2553,7 +2550,6 @@ func TestSaveToNewMultilineFileIntegration(t *testing.T) {
 		tg.NewBtn("Or choose a dir:", tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
 			tg.NewBtn("🗂️ Habits", tg.NewCmd("mv", []string{"51fc0", "", "232004794e5"})),
-			tg.NewBtn("🗂️ Inbox", tg.NewCmd("mv", []string{"af1cd", "", "232004794e5"})),
 			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{"232004794e5"})),
 		),
 	})
@@ -2630,7 +2626,6 @@ func TestSaveToNewCustomFileIntegration(t *testing.T) {
 		tg.NewBtn("Or choose a dir:", tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
 			tg.NewBtn("🗂️ Habits", tg.NewCmd("mv", []string{"51fc0", "", "232004794e5"})),
-			tg.NewBtn("🗂️ Inbox", tg.NewCmd("mv", []string{"af1cd", "", "232004794e5"})),
 			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{"232004794e5"})),
 		),
 	})
@@ -2668,8 +2663,6 @@ func TestSaveToRecentFileIntegration(t *testing.T) {
 	err = userFS.Write("", "Text.md", "Text")
 	r.NoError(err)
 	err = userFS.MakeDir("today")
-	r.NoError(err)
-	err = userFS.MakeDir("inbox")
 	r.NoError(err)
 
 	cfg := userconfig.NewConfig(userFS, -1, "config.json")
@@ -2711,7 +2704,6 @@ func TestSaveToRecentFileIntegration(t *testing.T) {
 		),
 		tg.NewBtn("Or choose a dir:", tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
-			tg.NewBtn("🗂️ Inbox", tg.NewCmd("mv", []string{"af1cd", "", "72e564182be"})),
 			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{"72e564182be"})),
 		),
 	})
