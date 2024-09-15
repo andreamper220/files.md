@@ -177,10 +177,10 @@ func sendMsg() {
 		if (msg[0] == '/') && (len(msg) > 1) {
 			Chat.updater(tg.NewFakeUpdCmd(1, tg.NewCmd(msg[1:], nil)))
 		} else {
-			label := widget.NewLabel(msg)
-			label.Alignment = fyne.TextAlignTrailing
 			removeBotMessages()
-			Chat.messages.Add(label)
+			userMsg := canvas.NewText(msg, color.RGBA{R: 0, G: 0, B: 0, A: 80})
+			userMsg.Alignment = fyne.TextAlignTrailing
+			Chat.messages.Add(userMsg)
 			Chat.updater(tg.NewFakeUpd(1, msg))
 		}
 	}
