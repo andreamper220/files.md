@@ -30,7 +30,7 @@ $ go run ./cmd/bot
 
 Bot's artifacts can be seen in `./storage/<USER_ID>` folder
 
-## Spin the app up 🚀
+## Or spin the local app up 🚀
 1) Install [Go](https://go.dev/doc/install)
 2) Run the app:
 ```bash
