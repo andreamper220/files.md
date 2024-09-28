@@ -154,6 +154,7 @@ func (fs FS) Read(dir, filename string) (string, error) {
 
 func (fs FS) Write(dir, filename, content string) error {
 	filePath := fs.UnsafePath(dir, filename)
+	fmt.Println(filePath)
 	isSafe, err := fs.isSafe(filePath)
 	if err != nil {
 		return fmt.Errorf("fs write: check if file is safe to access '%s': %w", filePath, err)

@@ -463,3 +463,197 @@ func TestExistsRoot(t *testing.T) {
 	r.NoError(err)
 	r.True(exists)
 }
+
+func TestWriteAndReadFile(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	err := fs.Write("today", "test.md", "Test content")
+	r.NoError(err)
+
+	content, err := fs.Read("today", "test.md")
+	r.NoError(err)
+	r.Equal("Test content", content)
+}
+
+func TestWriteUnsafePath(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/1", afero.NewMemMapFs())
+	err := fs.Write("../unsafe", "test.md", "Test content")
+	r.Error(err)
+	r.Contains(err.Error(), "unsafe filePath")
+}
+
+func TestReadNonExistentFile(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	content, err := fs.Read("today", "nonexistent.md")
+	r.Error(err)
+	r.Equal("", content)
+}
+
+func TestDelFile(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	err := fs.Write("today", "delete.md", "To be deleted")
+	r.NoError(err)
+
+	err = fs.Del("today", "delete.md")
+	r.NoError(err)
+
+	exists, err := fs.Exists("today", "delete.md")
+	r.NoError(err)
+	r.False(exists)
+}
+
+func TestDelNonExistentFile(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	err := fs.Del("today", "nonexistent.md")
+	r.Error(err)
+	r.Contains(err.Error(), "can't remove")
+}
+
+func TestRenameFile(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	err := fs.Write("today", "oldname.md", "Old content")
+	r.NoError(err)
+
+	err = fs.Rename("today", "oldname.md", "today", "newname.md")
+	r.NoError(err)
+
+	exists, err := fs.Exists("today", "newname.md")
+	r.NoError(err)
+	r.True(exists)
+
+	content, err := fs.Read("today", "newname.md")
+	r.NoError(err)
+	r.Equal("Old content", content)
+}
+
+func TestRenameUnsafePath(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/1", afero.NewMemMapFs())
+	err := fs.Write("today", "oldname.md", "Old content")
+	r.NoError(err)
+
+	err = fs.Rename("../unsafe", "oldname.md", "today", "newname.md")
+	r.Error(err)
+	r.Contains(err.Error(), "unsafe path")
+}
+
+func TestMakeDir(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	err := fs.MakeDir("newdir")
+	r.NoError(err)
+
+	exists, err := fs.Exists("newdir", "")
+	r.NoError(err)
+	r.True(exists)
+}
+
+func TestMakeDirUnsafePath(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/1", afero.NewMemMapFs())
+	err := fs.MakeDir("../unsafe")
+	r.Error(err)
+	r.Contains(err.Error(), "unsafe path")
+}
+
+func TestUnsafePathSanitization(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/1", afero.NewMemMapFs())
+
+	unsafePath := fs.UnsafePath("../", "test.md")
+	r.Equal("/test.md", unsafePath)
+
+	unsafePath = fs.UnsafePath("safe", "../unsafe.md")
+	r.Equal("/1/unsafe.md", unsafePath)
+}
+
+func TestUnhash(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	err := fs.Touch("today", "hashedfile.md")
+	r.NoError(err)
+
+	hash := fs.md5("hashedfile.md")
+	unhashed, err := fs.Unhash("today", hash)
+	r.NoError(err)
+	r.Equal("hashedfile.md", unhashed)
+}
+
+func TestUnhashNonExistentFile(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	_, err := fs.Unhash("today", "nonexistenthash")
+	r.Error(err)
+	r.Contains(err.Error(), "can't unhash:")
+}
+
+func TestSanitizeAndUnsanitizeFilename(t *testing.T) {
+	r := require.New(t)
+
+	sanitized := SanitizeFilename("test/file:name\\with/special\\chars")
+	r.Equal("test{|}file꞉name{||}with{|}special{||}chars", sanitized)
+
+	unsanitized := UnsanitizeFilename(sanitized)
+	r.Equal("test/file꞉name\\with/special\\chars", unsanitized)
+}
+
+func TestFilesAndDirs(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	err := fs.MakeDir("dir1")
+	r.NoError(err)
+
+	err = fs.Write("dir1", "file1.md", "File content")
+	r.NoError(err)
+
+	files, err := fs.FilesAndDirs("dir1")
+	r.NoError(err)
+	r.Len(files, 1)
+	r.Equal("file1.md", files[0].Name)
+}
+
+func TestDirs(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	err := fs.MakeDir("dir1")
+	r.NoError(err)
+
+	err = fs.Write("dir1", "file1.md", "File content")
+	r.NoError(err)
+
+	dirs, err := fs.Dirs()
+	r.NoError(err)
+	r.Len(dirs, 1)
+	r.Equal("dir1", dirs[0].Name)
+}
+
+func TestTouchFile(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	err := fs.Touch("today", "touchfile.md")
+	r.NoError(err)
+
+	exists, err := fs.Exists("today", "touchfile.md")
+	r.NoError(err)
+	r.True(exists)
+}
