@@ -98,9 +98,11 @@
     }
 
     function addMessage(text, author) {
+        const urlPattern = /(\bhttps?:\/\/[^\s]+)/g;
+        text = text.replace(urlPattern, '<a href="$1">$1</a>');
+
         const messageBubble = document.createElement('div');
-        let side = author === 'user' ? 'right' : 'left';
-        messageBubble.classList.add('message', side, author);
+        messageBubble.classList.add('message', author);
         messageBubble.innerHTML = text.replace(/\n/g, '<br>');
         messagesContainer.appendChild(messageBubble);
 
@@ -265,6 +267,21 @@
     });
 
     sendButton.addEventListener('click', sendMessage);
+
+    document.body.addEventListener('click', function(e) {
+        if (e.target && e.target.nodeName == 'A' && e.target.href) {
+            const url = e.target.href;
+            if (
+                !url.startsWith('http://#') &&
+                !url.startsWith('https://#') &&
+                !url.startsWith('file://') &&
+                !url.startsWith('http://wails.localhost:')
+            ) {
+                e.preventDefault();
+                window.runtime.BrowserOpenURL(url);
+            }
+        }
+    });
 </script>
 </body>
 </html>

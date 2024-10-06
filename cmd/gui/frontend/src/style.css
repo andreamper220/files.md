@@ -51,7 +51,6 @@ body {
 }
 
 .message {
-    max-width: 70%;
     padding: 10px;
     border-radius: 10px;
     text-align: left;
@@ -64,12 +63,13 @@ body {
     overflow-wrap: anywhere;
 }
 
-.message.right {
+.message.user {
+    max-width: 70%;
     background-color: #dcf8c6;
     align-self: flex-end;
 }
 
-.message.left {
+.message.bot {
     background-color: #f1f1f1;
     align-self: flex-start;
 }
