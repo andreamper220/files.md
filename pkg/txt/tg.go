@@ -129,7 +129,7 @@ func ExtractTextImgsLinks(text string) (string, []string, map[string]string) {
 		matches := linkRegexp.FindStringSubmatch(match)
 		if len(matches) == 3 {
 			links[matches[2]] = matches[1]
-			return "<code>" + matches[2] + "<code>"
+			return "`" + matches[2] + "`"
 		}
 		return match
 	})
