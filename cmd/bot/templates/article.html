@@ -473,14 +473,15 @@ stuff // 🧠+
             if (isMoreContent) {
                 if (currentValue >= 2) {
                     document.querySelectorAll('l2').forEach(el => el.style.display = 'inline');
-                    if (previousValue < 2) {
+                    if (previousValue !== 0 && previousValue < 2) {
                         highlightNewBlocks('l2');
                     }
                 }
                 if (currentValue === 3) {
-                    console.log("LEVEL3")
                     document.querySelectorAll('l3').forEach(el => el.style.display = 'inline');
-                    highlightNewBlocks('l3');
+                    if (previousValue !== 0) {
+                        highlightNewBlocks('l3');
+                    }
                 }
             } else {
                 if (currentValue < 3) {
