@@ -852,9 +852,9 @@ func TestSettingsMainPanel(t *testing.T) {
 	r.NoError(err)
 	r.Equal("Settings:", tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
-		tg.NewBtn("📌 Notes only", tg.NewCmd("notes_only", nil)),
-		tg.NewBtn("✅ Tasks only", tg.NewCmd("tasks_only", nil)),
-		tg.NewBtn("🧠 Everything", tg.NewCmd("full", nil)),
+		tg.NewBtn("📌 Notes only mode", tg.NewCmd("notes_only", nil)),
+		tg.NewBtn("✅ Tasks only mode", tg.NewCmd("tasks_only", nil)),
+		tg.NewBtn("🧠 Full mode", tg.NewCmd("full", nil)),
 		tg.NewBtn("⚡️ Quick buttons", tg.NewCmd("c_quick_btns", nil)),
 		tg.NewBtn("➡️ Move to buttons", tg.NewCmd("c_move_btns", nil)),
 		tg.NewBtn("🏠 Today", tg.NewCmd("today", nil)),

@@ -18,9 +18,9 @@ const (
 
 func (b *Bot) showSettings(params []string) error {
 	var kb tg.Keyboard
-	kb.AddRow(tg.NewBtn(txt.Emoji(i18n.Emoji("notes"), b.tr("Notes only")), tg.NewCmd(consts.CmdNotesOnlyMode, nil)))
-	kb.AddRow(tg.NewBtn(txt.Emoji(i18n.Emoji("tasks"), b.tr("Tasks only")), tg.NewCmd(consts.CmdTasksOnlyMode, nil)))
-	kb.AddRow(tg.NewBtn(txt.Emoji(i18n.Emoji("brain"), b.tr("Everything")), tg.NewCmd(consts.CmdFullMode, nil)))
+	kb.AddRow(tg.NewBtn(txt.Emoji(i18n.Emoji("notes"), b.tr("Notes only mode")), tg.NewCmd(consts.CmdNotesOnlyMode, nil)))
+	kb.AddRow(tg.NewBtn(txt.Emoji(i18n.Emoji("tasks"), b.tr("Tasks only mode")), tg.NewCmd(consts.CmdTasksOnlyMode, nil)))
+	kb.AddRow(tg.NewBtn(txt.Emoji(i18n.Emoji("brain"), b.tr("Full mode")), tg.NewCmd(consts.CmdFullMode, nil)))
 	kb.AddRow(tg.NewBtn(i18n.StrQuickBtns, tg.NewCmd(consts.CmdShowQuickBtnsSettings, nil)))
 	kb.AddRow(tg.NewBtn(i18n.StrMoveToBtns, tg.NewCmd(consts.CmdShowMoveToBtnsSettings, nil)))
 	kb.AddRow(tg.NewBtn(i18n.StrToday, tg.NewCmd(consts.CmdShowToday, nil)))
