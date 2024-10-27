@@ -34,6 +34,9 @@ var favicon string
 //go:embed templates/styles.css
 var styles string
 
+//go:embed templates/tomassanchez.jpg
+var img string
+
 // TODO release graceful shutdown etc
 func habitsServer(habitsHost, certDir, logFilename string) {
 	autocertManager := autocert.Manager{
@@ -112,6 +115,12 @@ func setupRouter(router *http.ServeMux, logger *log.Logger) {
 		w.Header().Set("Content-Type", "image/x-icon")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(favicon))
+	})
+
+	router.HandleFunc("/tomassanchez.jpg", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/jpeg")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(img))
 	})
 
 	router.HandleFunc("/styles.css", func(w http.ResponseWriter, r *http.Request) {
