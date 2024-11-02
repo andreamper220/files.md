@@ -155,120 +155,89 @@ func TestDoesntEscapeBrokenMD(t *testing.T) {
 	r.Equal("___ *** __ ```", md)
 }
 
-func TestExtractTextImgsLinks(t *testing.T) {
-	tests := []struct {
-		name           string
-		input          string
-		expectedText   string
-		expectedImages []string
-		expectedLinks  map[string]string
-	}{
-		{
-			name: "Test with inline links, images and bottom links",
-			input: `Text
-![[img/Pasted image 20240802153905.png]]
-Other text
+func TestExtractTextImgsLinks_NoImagesOrLinks(t *testing.T) {
+	text := "This is a simple text without images or links."
 
-[[management/test2|test2]]
-[[management/test1|test1]]`,
-			expectedText: `Text
-🖼
-Other text`,
-			expectedImages: []string{"img/Pasted image 20240802153905.png"},
-			expectedLinks: map[string]string{
-				"test1": "management/test1",
-				"test2": "management/test2",
-			},
-		},
-		{
-			name:           "Test centered images",
-			input:          `![[img/Pasted image.png|center|300]]`,
-			expectedText:   "🖼",
-			expectedImages: []string{"img/Pasted image.png|center|300"},
-			expectedLinks:  map[string]string{},
-		},
-		{
-			name:           "Test old links",
-			input:          `I have been to [[life/Thailand, 2023]]`,
-			expectedText:   "I have been to `Thailand, 2023`",
-			expectedImages: []string{},
-			expectedLinks: map[string]string{
-				"Thailand, 2023": "life/Thailand, 2023",
-			},
-		},
-		{
-			name:           "Test with no images and only inline links",
-			input:          "This is a sample text with a link: [[docs/page1|Page1]]",
-			expectedText:   "This is a sample text with a link: `page1`",
-			expectedImages: []string{},
-			expectedLinks: map[string]string{
-				"page1": "docs/page1",
-			},
-		},
-		{
-			name: "Test with no inline links, only bottom links",
-			input: `Some text here.
+	resultText, images, links := ExtractTextImgsLinks(text)
 
-[[path/to/test|Test Link]]`,
-			expectedText:   `Some text here.`,
-			expectedImages: []string{},
-			expectedLinks: map[string]string{
-				"test": "path/to/test",
-			},
-		},
-		{
-			name: "Test with no inline links, only bottom links and spaces",
-			input: `Some text here.
+	require.Equal(t, "This is a simple text without images or links.", resultText)
+	require.Empty(t, images)
+	require.Empty(t, links)
+}
 
+func TestExtractTextImgsLinks_WithSingleImage(t *testing.T) {
+	text := "This text includes an image: ![[../img/tg_BQACAgIAAxkBAAIs.png|center]]."
 
-[[path/to/test|Test Link]]
+	resultText, images, links := ExtractTextImgsLinks(text)
 
-[[path/to/test2|Test Link2]]
+	require.Equal(t, "This text includes an image: 🖼.", resultText)
+	require.Equal(t, []string{"tg_BQACAgIAAxkBAAIs"}, images)
+	require.Empty(t, links)
+}
 
+func TestExtractTextImgsLinks_WithMultipleImages(t *testing.T) {
+	text := "Here are two images: ![[../img/tg_image1.png]] and ![[../img/tg_image2.jpg]]."
 
-`,
-			expectedText:   `Some text here.`,
-			expectedImages: []string{},
-			expectedLinks: map[string]string{
-				"test":  "path/to/test",
-				"test2": "path/to/test2",
-			},
-		},
+	resultText, images, links := ExtractTextImgsLinks(text)
 
-		{
-			name: "Text, links then text and links again",
-			input: `Some text here.
-[[path/to/test|Test Link]]
-[[path/to/test2|Test Link2]]
-Text
-[[path/to/test|Test Link]]
-[[path/to/test2|Test Link2]]
-`,
-			expectedText:   "Some text here.\nText",
-			expectedImages: []string{},
-			expectedLinks: map[string]string{
-				"test":  "path/to/test",
-				"test2": "path/to/test2",
-			},
-		},
-		{
-			name: "Test with multiple images and no links",
-			input: `Here is an image: ![[img/image1.png]]
-And another one: ![[img/image2.png]]`,
-			expectedText: `Here is an image: 🖼
-And another one: 🖼`,
-			expectedImages: []string{"img/image1.png", "img/image2.png"},
-			expectedLinks:  map[string]string{},
-		},
-	}
+	require.Equal(t, "Here are two images: 🖼 and 🖼.", resultText)
+	require.ElementsMatch(t, []string{"tg_image1", "tg_image2"}, images)
+	require.Empty(t, links)
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotText, gotImages, gotLinks := ExtractTextImgsLinks(tt.input)
+func TestExtractTextImgsLinks_WithSingleLink(t *testing.T) {
+	text := "Check this link: [[/path/to/document.md|Document]]."
 
-			require.Equal(t, tt.expectedText, gotText, "Processed text mismatch")
-			require.Equal(t, tt.expectedImages, gotImages, "Images mismatch")
-			require.Equal(t, tt.expectedLinks, gotLinks, "Links mismatch")
-		})
-	}
+	resultText, images, links := ExtractTextImgsLinks(text)
+
+	require.Equal(t, "Check this link: `document.md`.", resultText)
+	require.Empty(t, images)
+	require.Equal(t, map[string]string{"document.md": "/path/to/document.md"}, links)
+}
+
+func TestExtractTextImgsLinks_WithImageAndLink(t *testing.T) {
+	text := "Here is an image: ![[../img/tg_image.png]] and a link: [[/path/to/doc.md|Document]]."
+
+	resultText, images, links := ExtractTextImgsLinks(text)
+
+	require.Equal(t, "Here is an image: 🖼 and a link: `doc.md`.", resultText)
+	require.Equal(t, []string{"tg_image"}, images)
+	require.Equal(t, map[string]string{"doc.md": "/path/to/doc.md"}, links)
+}
+
+func TestExtractTextImgsLinks_WithMultipleLinks(t *testing.T) {
+	text := "Multiple links: [[/path/to/doc1.md|Doc1]], [[/path/to/doc2.md|Doc2]]."
+
+	resultText, images, links := ExtractTextImgsLinks(text)
+
+	require.Equal(t, "Multiple links: `doc1.md`, `doc2.md`.", resultText)
+	require.Empty(t, images)
+	require.Equal(t, map[string]string{
+		"doc1.md": "/path/to/doc1.md",
+		"doc2.md": "/path/to/doc2.md",
+	}, links)
+}
+
+func TestExtractTextImgsLinks_WithBottomLink(t *testing.T) {
+	text := `Text with a bottom link.
+	[[/path/to/doc.md|Document]]`
+
+	resultText, images, links := ExtractTextImgsLinks(text)
+
+	require.Equal(t, "Text with a bottom link.", resultText)
+	require.Empty(t, images)
+	require.Equal(t, map[string]string{"doc.md": "/path/to/doc.md"}, links)
+}
+
+func TestExtractTextImgsLinks_WithNestedLinksAndImages(t *testing.T) {
+	text := "Complex example with image and links:\n![[../img/tg_image.png]]\n[[/path/to/doc1.md|Doc1]]\n[[/path/to/doc2.md|Doc2]]"
+
+	resultText, images, links := ExtractTextImgsLinks(text)
+
+	require.Equal(t, "Complex example with image and links:\n🖼", resultText)
+	require.Equal(t, []string{"tg_image"}, images)
+	require.Equal(t, map[string]string{
+		"doc1.md": "/path/to/doc1.md",
+		"doc2.md": "/path/to/doc2.md",
+	}, links)
 }

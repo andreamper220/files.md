@@ -99,12 +99,10 @@ func TelegramEntitiesToMarkdown(text string, messageEntities []tgbotapi.MessageE
 	return string(output)
 }
 
-func ExtractTextImgsLinks(text string) (string, []string, map[string]string) {
-	images := []string{}
-	links := make(map[string]string)
+func ExtractTextImgsLinks(text string) (txt string, images []string, links map[string]string) {
+	links = make(map[string]string)
 
-	// Regular expressions
-	imgRegexp := regexp.MustCompile(`!\[\[(.+?)\]\]`)
+	imgRegexp := regexp.MustCompile(`!\[\[.*?(tg_[^.]+)\..*?\]\]`)
 	linkRegexp := regexp.MustCompile(`\[\[(.+?)\]\]`)
 
 	// Eat bottom links

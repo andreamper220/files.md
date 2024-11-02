@@ -43,6 +43,23 @@ func (tg *TG) Send(userID int64, text string, kb *Keyboard, markup string) (int,
 	return resp.MessageID, nil
 }
 
+func (tg *TG) SendImages(userID int64, text string, images []string) (int, error) {
+	var files []interface{}
+	for _, img := range images {
+		files = append(files, tgbotapi.NewInputMediaPhoto(tgbotapi.FileID(img)))
+	}
+
+	msg := tgbotapi.NewMediaGroup(userID, files)
+
+	resp, err := tg.api.Send(msg)
+	if err != nil {
+		js, _ := json.Marshal(msg)
+		return 0, fmt.Errorf("tg send images: can't send json %s: %w", js, err)
+	}
+
+	return resp.MessageID, nil
+}
+
 func (tg *TG) Edit(userID int64, msgID int, text string, kb *Keyboard, markup string) error {
 	msg := tgbotapi.NewEditMessageText(userID, msgID, text)
 

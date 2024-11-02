@@ -74,6 +74,7 @@ type Update interface {
 // Chat provides a simple interface to chat API like Telegram
 type Chat interface {
 	Send(userID int64, text string, kb *tg.Keyboard, markup string) (int, error)
+	SendImages(userID int64, text string, images []string) (int, error)
 	Edit(userID int64, msgID int, text string, kb *tg.Keyboard, markup string) error
 	Del(userID int64, msgID int) error
 	AnswerCallbackQuery(queryID string, text string) error
@@ -650,7 +651,7 @@ func (b *Bot) showHTML(validHTML string, kb *tg.Keyboard) error {
 // Chat allows 1-4096 characters AFTER entities parsing,
 // meaning we can have 4096 plain chars + any amount of tags.
 func (b *Bot) showMD(probablyInvalidMD string, kb *tg.Keyboard) error {
-	probablyInvalidMD, _, links := txt.ExtractTextImgsLinks(probablyInvalidMD)
+	probablyInvalidMD, images, links := txt.ExtractTextImgsLinks(probablyInvalidMD)
 
 	for label, link := range links {
 		dir := fs.DirRoot
@@ -668,8 +669,14 @@ func (b *Bot) showMD(probablyInvalidMD string, kb *tg.Keyboard) error {
 
 	mid, hasLastKeyboard := b.db.LastKeyboardMsgID(b.userID)
 	textChunks := txt.SplitTextIntoChunks(probablyInvalidMD, maxMsgLength)
-	if !hasLastKeyboard || len(textChunks) > 1 {
+	if !hasLastKeyboard || len(textChunks) > 1 || len(images) > 0 {
 		b.delAllKeyboards()
+
+		// Sending a gallery of images if there are any
+		if len(images) > 0 {
+			// We tolerate errors with the image gallery for now, text is more important
+			_, _ = b.tg.SendImages(b.userID, "", images)
+		}
 
 		// If our msg is too long, we send maxMsgsToSendAtOnce first messages.
 		// Keyboard is attached to the last one
