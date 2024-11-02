@@ -631,6 +631,8 @@ func (b *Bot) tr(str string, args ...any) string {
 // Replace last message + keyboard with the new one
 // Or show the new one (in case of photo).
 func (b *Bot) showHTML(validHTML string, kb *tg.Keyboard) error {
+	b.delAllImages()
+	
 	mid, hasLastKeyboard := b.db.LastKeyboardMsgID(b.userID)
 	if !hasLastKeyboard {
 		b.delAllKeyboards()
