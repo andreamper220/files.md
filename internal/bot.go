@@ -305,13 +305,23 @@ func (b *Bot) extractCmd(u Update) (*tg.Cmd, error) {
 			re := regexp.MustCompile(fmt.Sprintf(`(?i)^%s\s+|\s+%s$`, escapedShortcut, escapedShortcut))
 
 			doesntMatchText := !re.MatchString(u.MsgText())
-			// TODO handle images
-			//doesntMatchCaption := !re.MatchString(u.Caption())
-			if doesntMatchText {
+			doesntMatchCaption := !re.MatchString(u.Caption())
+			if doesntMatchText && doesntMatchCaption {
 				continue
 			}
 
-			text := extractMarkdown(u)
+			text := ""
+			_, hasPhoto := u.PhotoOrImageID()
+			if hasPhoto {
+				var errPhoto error
+				text, errPhoto = b.savePhoto(u)
+				if errPhoto != nil {
+					return nil, fmt.Errorf("save photo: %w", errPhoto)
+				}
+			} else {
+				text = extractMarkdown(u)
+			}
+
 			text = string(re.ReplaceAll([]byte(text), []byte("")))
 			text = txt.Ucfirst(strings.TrimSpace(text))
 			shortCmd := tg.NewCmd(canonicalCMD, []string{text})
@@ -368,26 +378,9 @@ func (b *Bot) saveFromRegularMsg(u Update) error {
 }
 
 func (b *Bot) saveFromPhoto(u Update) error {
-	photoID, _ := u.PhotoOrImageID()
-
-	var buf bytes.Buffer
-	extension, err := b.tg.DownloadFile(photoID, &buf)
+	content, err := b.savePhoto(u)
 	if err != nil {
-		return fmt.Errorf("can't download file: %w", err)
-	}
-
-	imgFilename := fmt.Sprintf("tg_%s%s", photoID, extension)
-	err = b.fs.Write(fs.DirImg, imgFilename, buf.String())
-	if err != nil {
-		return fmt.Errorf("can't save photo: %w", err)
-	}
-
-	imgPath := fmt.Sprintf("../%s/%s", fs.DirImg, imgFilename)
-	content := fmt.Sprintf("![[%s|center|%d]]", imgPath, imgWidth)
-	if u.Caption() != "" {
-		caption := txt.TelegramEntitiesToMarkdown(u.Caption(), u.CaptionEntities())
-		caption = strings.TrimSpace(txt.NormNewLines(caption))
-		content = fmt.Sprintf("%s\n%s", content, txt.Ucfirst(caption))
+		return fmt.Errorf("save from photo: %w", err)
 	}
 
 	// Adding to an existing file
@@ -408,10 +401,37 @@ func (b *Bot) saveFromPhoto(u Update) error {
 	filename := fs.Filename(sanitizedTitle)
 	err = b.createOrAdd(fs.DirToday, filename, content)
 	if err != nil {
-		return fmt.Errorf("save: %w", err)
+		return fmt.Errorf("save from photo: %w", err)
 	}
 
 	return b.showMoveTo([]string{fs.Hash(filename)})
+}
+
+// savePhoto saves a photo to the filesystem and returns a markdown link to it
+func (b *Bot) savePhoto(u Update) (string, error) {
+	photoID, _ := u.PhotoOrImageID()
+
+	var buf bytes.Buffer
+	extension, err := b.tg.DownloadFile(photoID, &buf)
+	if err != nil {
+		return "", fmt.Errorf("can't download file: %w", err)
+	}
+
+	imgFilename := fmt.Sprintf("tg_%s%s", photoID, extension)
+	err = b.fs.Write(fs.DirImg, imgFilename, buf.String())
+	if err != nil {
+		return "", fmt.Errorf("can't save photo: %w", err)
+	}
+
+	imgPath := fmt.Sprintf("../%s/%s", fs.DirImg, imgFilename)
+	content := fmt.Sprintf("![[%s|center|%d]]", imgPath, imgWidth)
+	if u.Caption() != "" {
+		caption := txt.TelegramEntitiesToMarkdown(u.Caption(), u.CaptionEntities())
+		caption = strings.TrimSpace(txt.NormNewLines(caption))
+		content = fmt.Sprintf("%s\n%s", content, txt.Ucfirst(caption))
+	}
+
+	return content, nil
 }
 
 func (b *Bot) addToRepliedFile(replyToMsgID int, newContent string) error {
@@ -2305,12 +2325,7 @@ func (b *Bot) fullMode(_ []string) error {
 }
 
 func extractMarkdown(u Update) string {
-	content := ""
-	if u.Caption() != "" {
-		content = txt.TelegramEntitiesToMarkdown(u.Caption(), u.CaptionEntities())
-	} else {
-		content = txt.TelegramEntitiesToMarkdown(u.MsgText(), u.MsgEntities())
-	}
+	content := txt.TelegramEntitiesToMarkdown(u.MsgText(), u.MsgEntities())
 	content = strings.TrimSpace(txt.NormNewLines(content))
 
 	return txt.Ucfirst(content)
