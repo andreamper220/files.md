@@ -66,7 +66,6 @@
     })
     editor.hmdReadLink = function(path, t) {
         path = path.replace('[', '').replace(']', '');
-        path = path.split('|')[0]
         let parts = path.split('/');
         editor.getDoc().setValue(zettel[parts[0]][parts[1] + '.md']);
         setTimeout(function () {
@@ -162,7 +161,7 @@
     async function loadDirectory(directoryHandle, path = "", depth = 1) {
         for await (const entry of directoryHandle.values()) {
             if (entry.kind === 'directory') {
-                if (entry.name.startsWith('.')) continue;
+                if (entry.name.startsWith('.') || entry.name === "img") continue;
 
                 if (depth < 2) {
                     const folder = `${path}${entry.name}/`;
@@ -171,11 +170,12 @@
                 }
             } else if (entry.kind === 'file' && entry.name.endsWith('.md')) {
                 const header = entry.name.replace('.md', '').replace(/^\w/, (c) => c.toUpperCase());
-                const fileContent = await readFile(entry);
-                const fileContentWithHeader = `# ${header}\n\n${fileContent}`;
+                let fileContent = await readFile(entry);
+                fileContent = `# ${header}\n\n${fileContent}`;
+                fileContent = fileContent.replace(/\[\[(.+?)\|.*?\]\]/g, '[[$1]]');
                 const folder = path.split('/').filter(Boolean).join('/');
                 if (!zettel[folder]) zettel[folder] = {};
-                zettel[folder][entry.name] = fileContentWithHeader;
+                zettel[folder][entry.name] = fileContent;
             }
         }
     }

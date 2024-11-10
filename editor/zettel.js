@@ -12,4 +12,7 @@ zettel = {
         "Abundant mediation.md": "Once you are relaxed, picture yourself living in an abundant world. In this abundant world, there are no restraints or limitations. Good things flow past you continuously. Imagine every abundant thing you have ever desired–car, home, friends, love, joy, wealth, success, peace of mind, challenge. Visualize yourself living your life surrounded by this abundance. Repeat this visualization several times a day until it begins to feel real to you. Open your arms, your heart, and your mind. Get out of the way, and let it happen.\n\n[[happiness/Boredom is just an emotion]]",
         "Boredom is just an emotion.md": "It's not an indicator that you're doing something wrong in your life\n\nBefore we had phones and technologies we would just sit around the fire and we would talk and we wouldn't call that boring that was just life\n\nAnd bow we have that endless need for entertainment, anything when nothing is happening we think it's wrong and we need to fix it\n\nNon eventfulness is just a part of our life and you can embrace it as\npeace or you can frantically try to create more chaos\n\n[[happiness/Abundant mediation]]",
     },
+    ".": {
+        "File":"content",
+    }
 }
