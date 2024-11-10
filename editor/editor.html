@@ -184,11 +184,16 @@
     }
 
     async function saveFile(folder, filename) {
-        console.log(zettel);
         const fileData = zettel[folder][filename];
         if (fileData && fileData.handle) {
+            let content = editor.getValue();
+            const header = filename.replace('.md', '').replace(/^\w/, (c) => c.toUpperCase());
+            console.log(header);
+            const headerRegex = new RegExp(`^\\s*# ${header}`);
+            content = content.replace(headerRegex, "").trimStart();
+
             const writable = await fileData.handle.createWritable();
-            await writable.write(editor.getValue());
+            await writable.write(content);
             await writable.close();
         } else {
             alert(`Cannot save ${filename}. No file handle found.`);
