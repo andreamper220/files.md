@@ -32,7 +32,12 @@
 <div id="editor">
     <div id="editor-sidebar">
     </div>
-    <div id="editor-content"><textarea id="editor-textarea"></textarea></div>
+    <div id="editor-content">
+        <div id="welcome" style="display: none; justify-content: center;align-items: center; height: 100vh">
+            <button onclick="openDirectory()" id="openDirectory">Open Directory</button>
+        </div>
+        <textarea id="editor-textarea"></textarea>
+    </div>
     <ninja-keys placeholder="Quick panel" class="dark" openHotkey="cmd+m" noAutoLoadMdIcons="true"
                 hideBreadcrumbs="true">
         <slot name="footer"></slot>
@@ -192,8 +197,10 @@
     async function openDirectory() {
         zettel = {};
         let dirHandle = await window.showDirectoryPicker();
+        document.getElementById('welcome').style.display = 'none';
         await saveDirectoryHandle(dirHandle);
         await loadDirectory(dirHandle)
+        await openRandomFile();
     }
 
     async function loadDirectory(dirHandle, path = "", depth = 1) {
@@ -328,6 +335,8 @@
             zettel = {};
             await loadDirectory(savedDirectoryHandle);
             await openRandomFile();
+        } else {
+            document.getElementById('welcome').style.display = 'flex';
         }
     }
 
@@ -469,6 +478,5 @@
 
     init();
 </script>
-<button onclick="openDirectory()">Open Directory</button>
 </body>
 </html>
