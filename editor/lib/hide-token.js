@@ -146,7 +146,6 @@
                             // good. this token can be changed
                             var domParent = domNode.parentElement;
                             if (shallHideTokens ? addClass(domParent, hideClassName) : rmClass(domParent, hideClassName)) {
-                                console.log(hideClassName);
                                 // if (DEBUG) console.log("HEAD DOM CHANGED")
                                 changed = true;
                             }

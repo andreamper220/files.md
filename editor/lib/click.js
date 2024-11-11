@@ -215,7 +215,13 @@
                             (tmp = text.lastIndexOf('](')) !== -1 // xxxx](url)     image / link without ref
                         ) {
                             // remove title part (if exists)
-                            url = read_link_1.splitLink(text.slice(tmp + 2, -1)).url;
+                            if (typeof read_link_1 === 'undefined') {
+                                url = "[" + text.match(/\(([^)]+)\)/)[1] + "]"; // CUSTOMIZED for non-wiki links
+                                url = url.replace(/\.md]$/, "]")
+                                cm.hmdReadLink(cm.hmdResolveURL(url));
+                            } else {
+                                url = read_link_1.splitLink(text.slice(tmp + 2, -1)).url;
+                            }
                         }
                         else if ((mat = text.match(/[^\\]\]\s?\[([^\]]+)\]$/)) || // .][ref]     image / link with ref
                             (mat = text.match(/^\[(.+)\]\s?\[\]$/)) || // [ref][]

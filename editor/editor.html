@@ -273,7 +273,7 @@
         filename = filename.normalize("NFC");
         const fileData = zettel[folder][filename];
         const file = await fileData.handle.getFile();
-        const header = filename.replace('.md', '').replace(/^\w/, (c) => c.toUpperCase());
+        const header = filename.replace(/\.md$/, "").replace(/^\w/, (c) => c.toUpperCase());
         let content = await file.text();
         content = `# ${header}\n${content}`;
         content = content.replace(/\[\[(.+?)\|.*?\]\]/g, '[[$1]]');
@@ -282,7 +282,7 @@
         editor.currentFolder = folder;
         editor.currentFile = filename;
         editor.getDoc().setValue(content);
-        editor.focus();
+        // editor.focus();
     }
 
     async function saveFile() {
