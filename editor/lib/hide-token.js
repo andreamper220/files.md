@@ -133,7 +133,6 @@
              * @returns if there are Span Nodes changed
              */
             function changeVisibilityForSpan(span, shallHideTokens, iNodeHint) {
-                console.log(span, shallHideTokens, iNodeHint);
                 var changed = false;
                 iNodeHint = iNodeHint || 0;
                 // iterate the map

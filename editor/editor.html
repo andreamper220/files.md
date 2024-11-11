@@ -216,26 +216,27 @@
         entries.sort((a, b) => a.name.localeCompare(b.name));
 
         for await (const entry of entries) {
+            const filename = entry.name.normalize("NFC");
             if (entry.kind === 'directory') {
-                if (entry.name.startsWith('.')) continue;
+                if (filename.startsWith('.')) continue;
 
                 if (depth < 2) {
-                    const folder = `${path}${entry.name}/`;
-                    zettel[entry.name] = {};
+                    const folder = `${path}${filename}/`;
+                    zettel[filename] = {};
                     await loadDirectory(entry, folder, depth + 1);
                 }
-            } else if (entry.kind === 'file' && entry.name.endsWith('.png') ||
-                entry.name.endsWith('.jpg') ||
-                entry.name.endsWith('.jpeg') ||
-                entry.name.endsWith('.gif') ||
-                entry.name.endsWith('.md')
+            } else if (entry.kind === 'file' && filename.endsWith('.png') ||
+                filename.endsWith('.jpg') ||
+                filename.endsWith('.jpeg') ||
+                filename.endsWith('.gif') ||
+                filename.endsWith('.md')
             ) {
                 const folder = path.split('/').filter(Boolean).join('/');
                 if (!zettel[folder]) zettel[folder] = {};
                 if (folder === 'img') {
-                    zettel[folder][entry.name] = {handle: entry, url: await getImageUrl(entry)};
+                    zettel[folder][filename] = {handle: entry, url: await getImageUrl(entry)};
                 } else {
-                    zettel[folder][entry.name] = {handle: entry};
+                    zettel[folder][filename] = {handle: entry};
                 }
             }
         }
@@ -269,6 +270,7 @@
     }
 
     async function showFile(folder, filename) {
+        filename = filename.normalize("NFC");
         const fileData = zettel[folder][filename];
         const file = await fileData.handle.getFile();
         const header = filename.replace('.md', '').replace(/^\w/, (c) => c.toUpperCase());
