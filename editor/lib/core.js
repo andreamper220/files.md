@@ -854,7 +854,7 @@
             var types = this$1.getTokenTypes(token, tokens[i - 1]);
             for (var type in types) {
                 var span = unclosed[type];
-                if (types[type] & 1 /* IS_THIS_TYPE */) { // style is active
+                if (types[type] & 1 /* IS_THIS_TYPE */ || lineText === '```') { // style is active CUSTOMIZED
                     if (!span) { // create a new span if needed
                         span = {
                             type: type,

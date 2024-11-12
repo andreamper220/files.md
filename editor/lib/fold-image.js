@@ -17,8 +17,6 @@
         var imgRE = /\bimage-marker\b/;
         var urlRE = /\bformatting-link-string\b/; // matches the parentheses
         if (imgRE.test(token.type) && token.string === "!") {
-            console.log('tried loading', title);
-
             var lineNo = stream.lineNo;
             // find the begin and end of url part
             var url_begin = stream.findNext(urlRE);

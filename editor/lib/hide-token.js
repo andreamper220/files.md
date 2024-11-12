@@ -167,6 +167,11 @@
                                     if (domNode_1.nodeType === Node.TEXT_NODE) {
                                         // good. this token can be changed
                                         var domParent = domNode_1.parentElement;
+                                        if (domNode.textContent === "```") {
+                                            if (shallHideTokens ? addClass(domParent, hideClassName) : rmClass(domParent, hideClassName)) {
+                                                changed = true;
+                                            }
+                                        }
                                         if (shallHideTokens ? addClass(domParent, hideClassName) : rmClass(domParent, hideClassName)) {
                                             changed = true;
                                         }
