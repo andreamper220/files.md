@@ -195,7 +195,7 @@
             for (let file in zettel[dir]) {
                 let fileNode = new TreeNode(file.replace(/\.md$/, ''), {expanded: false});
                 fileNode.on('click', async function (n, node) {
-                    await showFile(node.parent.toString(), node.toString());
+                    await showFile(node.parent.toString(), node.toString() + ".md");
                 });
                 dirNode.addChild(fileNode);
             }
@@ -207,7 +207,7 @@
             for (let file in zettel[""]) {
                 let fileNode = new TreeNode(file.replace(/\.md$/, ''), {expanded: false});
                 fileNode.on('click', async function (n, node) {
-                    await showFile("", node.toString());
+                    await showFile("", node.toString()  + ".md");
                 });
                 root.addChild(fileNode)
             }
@@ -301,7 +301,7 @@
         }
     }
 
-    async function showFile(folder, filename) {
+    async function showFile(folder, filename, saveToHistory = true) {
         filename = filename.normalize("NFC");
         const fileData = zettel[folder][filename];
         const file = await fileData.handle.getFile();
@@ -312,6 +312,12 @@
 
         editor.currentFolder = folder;
         editor.currentFile = filename;
+        if (saveToHistory) {
+            const state = { folder: folder, file: filename};
+            console.log(state);
+            history.pushState(state, '');
+        }
+
         editor.getDoc().setValue(content);
         editor.clearHistory();
 
@@ -569,6 +575,15 @@
             } else {
                 sidebar.style.display = 'none'; // Hide the sidebar
             }
+        }
+    });
+
+    window.addEventListener('popstate', (event) => {
+        // event.preventDefault();
+        const state = event.state; // Get the state object
+        if (state) {
+            console.log("POP", state)
+            showFile(state['folder'], state['file'], false);
         }
     });
 
