@@ -18,6 +18,13 @@ It works like a regular chat, so it's easier to use because there's less resista
 [Tasks management via bot](https://club.mnogosdelal.ru/post/180/)  
 [Notes taking via bot](https://vas3k.club/post/18815/)
 
+## App
+[app.files.md](https://app.files.md)  
+
+`/app` - self-sufficient PWA html app for viewing/editing files, alpha version
+
+All other directories and files are part of the Golang bot.
+
 ## Spin the Telegram bot up 🤖
 1) Install [Go](https://go.dev/doc/install)
 2) Register new telegram bot via [@BotFather](https://t.me/BotFather)
@@ -29,7 +36,7 @@ $ go run ./cmd/bot
 
 Bot's artifacts can be seen in `./storage/<USER_ID>` folder
 
-## Or spin the local app up 🚀
+## Or spin the local bot up 🚀
 1) Install [Go](https://go.dev/doc/install) and [Wails](https://wails.io/docs/gettingstarted/installation)
 2) Run the app:
 ```bash

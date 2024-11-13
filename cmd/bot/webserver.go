@@ -130,7 +130,7 @@ func setupRouter(router *http.ServeMux, logger *log.Logger) {
 		host := r.Host
 		if strings.HasPrefix(host, "app.") {
 			if r.URL.Path == "" || r.URL.Path == "/" {
-				http.ServeFile(w, r, "./app/index.html")
+				http.ServeFile(w, r, "./app/app.html")
 				return
 			}
 
