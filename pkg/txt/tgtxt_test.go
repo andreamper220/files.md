@@ -241,3 +241,11 @@ func TestExtractTextImgsLinks_WithNestedLinksAndImages(t *testing.T) {
 		"doc2.md": "/path/to/doc2.md",
 	}, links)
 }
+
+func TestHasImage(t *testing.T) {
+	text := "Text with an image: ![](img/tg_image.png)"
+	require.True(t, HasImage(text))
+
+	text = "Text without an image."
+	require.False(t, HasImage(text))
+}
