@@ -317,11 +317,12 @@ func (b *Bot) extractCmd(u Update) (*tg.Cmd, error) {
 				if errImage != nil {
 					return nil, fmt.Errorf("save image: %w", errImage)
 				}
+				text = string(reCaption.ReplaceAll([]byte(text), []byte("")))
 			} else {
 				text = extractMarkdown(u)
+				text = string(reText.ReplaceAll([]byte(text), []byte("")))
 			}
 
-			text = string(re.ReplaceAll([]byte(text), []byte("")))
 			text = txt.Ucfirst(strings.TrimSpace(text))
 			shortCmd := tg.NewCmd(canonicalCMD, []string{text})
 
