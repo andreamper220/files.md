@@ -27,7 +27,10 @@ import (
 )
 
 //go:embed templates/index.html
-var html string
+var index string
+
+//go:embed templates/notes.html
+var notes string
 
 //go:embed templates/favicon.ico
 var favicon string
@@ -99,12 +102,12 @@ func Serve(habitsHost, certDir, logFilename string) {
 
 func setupRouter(router *http.ServeMux, logger *log.Logger) {
 	router.HandleFunc("/app", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./editor/editor.html")
+		http.ServeFile(w, r, "./editor/editor.index")
 	})
 
 	router.HandleFunc("/app/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/app/" {
-			http.ServeFile(w, r, "./editor/editor.html")
+			http.ServeFile(w, r, "./editor/editor.index")
 			return
 		}
 
@@ -118,7 +121,7 @@ func setupRouter(router *http.ServeMux, logger *log.Logger) {
 		host := r.Host
 		if strings.HasPrefix(host, "app.") {
 			if r.URL.Path == "" || r.URL.Path == "/" {
-				http.ServeFile(w, r, "./app/app.html")
+				http.ServeFile(w, r, "./app/app.index")
 				return
 			}
 
@@ -128,7 +131,15 @@ func setupRouter(router *http.ServeMux, logger *log.Logger) {
 
 		// Serving the site
 		w.WriteHeader(http.StatusOK)
-		_, err := w.Write([]byte(html))
+		_, err := w.Write([]byte(index))
+		if err != nil {
+			logger.Printf("failed to write site response: %v", err)
+		}
+	})
+
+	router.HandleFunc("/notes", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(notes))
 		if err != nil {
 			logger.Printf("failed to write site response: %v", err)
 		}
