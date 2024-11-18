@@ -1360,7 +1360,7 @@ func (b *Bot) showStart(params []string) error {
 		tg.NewRow(tg.NewBtn(txt.Emoji(i18n.Emoji("brain"), b.tr("Everything")), tg.NewCmd(consts.CmdFullMode, nil))),
 	})
 
-	return b.showHTML("Welcome 👋! What do you need??", kb)
+	return b.showHTML("Welcome 👋! What do you need?", kb)
 }
 
 func (b *Bot) moveToDir(params []string) error {
