@@ -156,6 +156,7 @@ func supervisor(userID int64, updates <-chan tgbotapi.Update, telegram *tg.TG, i
 			}()
 			processUserUpdates(updates, telegram, infolog)
 		}()
+		time.Sleep(time.Second)
 		slog.Info("Restarting worker", "userID", userID)
 	}
 }
