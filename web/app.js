@@ -26,7 +26,7 @@ const allowedFileTypes = [
     'gif',
 ];
 
-// Codemirror editor
+// HyperMD/Codemirror editor
 let editor = null;
 
 let focusedItemIndex = -1;
@@ -70,7 +70,7 @@ function initEditor(el) {
             return path;
         }
 
-        const match = path.match(/^img\/(.+\.(png|jpg|jpeg|gif))$/i);
+        const match = path.match(/^img\/(.+\.(png|jpg|jpeg|gif|webp))$/i);
 
         if (match && files['img'] && files['img'][match[1]]) {
             return files['img'][match[1]].imageUrl;
@@ -211,7 +211,7 @@ async function getImageUrl(fileHandle) {
 }
 
 function buildSidebar() {
-    let root = new TreeNode("zettel"); // Create the root-node
+    let root = new TreeNode("files");
     for (dir in files) {
         if (dir === '' || dir === 'img') {
             continue;
@@ -245,7 +245,6 @@ function buildSidebar() {
 }
 
 async function openDirectory() {
-    zettel = {};
     let dirHandle = await window.showDirectoryPicker();
     document.getElementById('welcome').style.display = 'none';
     await saveDirectoryHandle(dirHandle);
@@ -380,7 +379,7 @@ async function saveFile() {
 
 function initDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open('zettelApp', 1);
+        const request = indexedDB.open('files', 1);
         request.onerror = () => reject(request.error);
         request.onsuccess = () => resolve(request.result);
         request.onupgradeneeded = () => {
@@ -419,7 +418,6 @@ async function init(el) {
         if (permission !== 'granted') {
             document.getElementById('welcome').style.display = 'flex';
         }
-        zettel = {};
         await loadDirectory(savedDirectoryHandle);
         await showRandomFile();
     } else {
@@ -470,20 +468,23 @@ function closeSearchModal() {
 
 function loadRecentFiles() {
     const ignoredDirs = ["archive", "_read_", "_watch_", "_shop_", "habits", "triggers", "journal", "today", "later", "insights"];
-    let searchableFiles = Object.keys(files)
-        .filter(folder => folder !== 'img')
-        .flatMap(folder =>
-            Object.keys(files[folder]).map(filename => ({
-                folder,
-                filename,
-                lastModified: files[folder][filename].lastModified,
-            }))
-        );
+    let results = [];
+    for (const folder of Object.keys(files)) {
+        if (folder !== 'img' && !ignoredDirs.includes(folder)) {
+            for (const filename of Object.keys(files[folder])) {
+                results.push({
+                    folder,
+                    filename,
+                    lastModified: files[folder][filename].lastModified,
+                });
+            }
+        }
+    }
 
-    let results = [...searchableFiles]
-        .filter(file => !ignoredDirs.includes(file.folder))
+    results = results
         .sort((a, b) => b.lastModified - a.lastModified)
         .slice(0, 8);
+
     showResults(results);
 }
 
