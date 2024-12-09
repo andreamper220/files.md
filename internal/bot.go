@@ -2262,6 +2262,9 @@ func (b *Bot) addToFile(dir, filename, content string) error {
 		return fmt.Errorf("add to file: can't save file: %w", err)
 	}
 
+	// We can tolerate this, as this is informative logging
+	_ = journal.AddRecord(b.fs, fmt.Sprintf("➕ %s", fs.Title(filename)), b.cfg.Timezone())
+
 	return nil
 }
 

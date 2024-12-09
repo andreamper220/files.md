@@ -501,22 +501,9 @@ function filterFiles() {
     list.innerHTML = '';
 
 
-    let searchableFiles = [];
+    // TODO get files with ignored img dir
+
     let ignoredDirs = ['img'];
-    for (const folder of Object.keys(files)) {
-        if (ignoredDirs.includes(folder)) {
-            continue;
-        }
-
-        for (const filename of Object.keys(files[folder])) {
-            searchableFiles.push({
-                folder,
-                filename,
-                lastModified: files[folder][filename].lastModified,
-            });
-        }
-    }
-
     let results = [];
     const lowPriorityFolders = ["archive", "_read_", "_watch_", "_shop_", "habits", "triggers", "today", "later"];
 
