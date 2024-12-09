@@ -1,6 +1,6 @@
 // Files structure:
 // {
-//   folder: [
+//   dir: [
 //     {
 //       filename: [
 //         {
@@ -17,8 +17,8 @@
 // }
 let files = [];
 const allowedFileTypes = ['md', 'txt', 'png', 'jpg', 'jpeg', 'webp', 'gif',];
-const nonTextFolders = ['img'];
-const systemFolders = ["img", "archive", "_read_", "_watch_", "_shop_", "today", "later", "journal", "habits", "triggers", "places", ""];
+const nonTextDirs = ['img'];
+const systemDirs = ["img", "archive", "_read_", "_watch_", "_shop_", "today", "later", "journal", "habits", "triggers", "places", ""];
 
 // HyperMD/Codemirror editor
 let editor = null;
@@ -158,10 +158,10 @@ function initEditor(el) {
 function createAutocompleteDict() {
     const dict = {};
 
-    Object.keys(excludeFolders(nonTextFolders)).forEach(folder => {
-        Object.keys(files[folder]).forEach(filename => {
+    Object.keys(excludeDirs(nonTextDirs)).forEach(dir => {
+        Object.keys(files[dir]).forEach(filename => {
             const key = `${filename.replace(/\.md$/, "")}`;
-            const filePath = `${filename.replace(/\.md$/, "")}](${folder}/${filename})`;
+            const filePath = `${filename.replace(/\.md$/, "")}](${dir}/${filename})`;
             dict[key] = filePath;
         });
     });
@@ -212,7 +212,7 @@ function buildSidebar() {
     }
 
     if (files['']) {
-        // Adding root files after folders
+        // Adding root files after dirs
         for (let file in files[""]) {
             let fileNode = new TreeNode(file.replace(/\.md$/, ''), {expanded: false});
             fileNode.on('click', async function (n, node) {
@@ -248,26 +248,26 @@ async function loadDirectory(dirHandle, path = "", depth = 1) {
             if (filename.startsWith('.')) continue;
 
             if (depth < 5) {
-                const folder = `${path}${filename}/`;
+                const dir = `${path}${filename}/`;
                 files[filename] = {};
-                await loadDirectory(entry, folder, depth + 1);
+                await loadDirectory(entry, dir, depth + 1);
             }
         } else if (entry.kind === 'file' && allowedFileTypes.includes(filename.split('.').pop())) {
-            const folder = path.split('/').filter(Boolean).join('/');
-            if (!files[folder]) files[folder] = {};
+            const dir = path.split('/').filter(Boolean).join('/');
+            if (!files[dir]) files[dir] = {};
             let file = await entry.getFile();
 
-            files[folder][filename] = {handle: entry, lastModified: file.lastModified};
-            if (folder === 'img') {
-                files[folder][filename].imageUrl = await getImageUrl(entry)
+            files[dir][filename] = {handle: entry, lastModified: file.lastModified};
+            if (dir === 'img') {
+                files[dir][filename].imageUrl = await getImageUrl(entry)
             }
         }
     }
 
-    // Remove empty folders
-    for (const folder in files) {
-        if (Object.keys(files[folder]).length === 0) {
-            delete files[folder];
+    // Remove empty dirs
+    for (const dir in files) {
+        if (Object.keys(files[dir]).length === 0) {
+            delete files[dir];
         }
     }
     buildSidebar();
@@ -275,9 +275,9 @@ async function loadDirectory(dirHandle, path = "", depth = 1) {
 
 async function showRandomFile() {
     const allFiles = [];
-    for (let folder in excludeFolders(systemFolders)) {
-        for (let file in files[folder]) {
-            allFiles.push({folder, file});
+    for (let dir in excludeDirs(systemDirs)) {
+        for (let file in files[dir]) {
+            allFiles.push({dir, file});
         }
     }
 
@@ -289,25 +289,25 @@ async function showRandomFile() {
     const randomFile = allFiles[Math.floor(Math.random() * allFiles.length)];
 
     try {
-        await showFile(randomFile.folder, randomFile.file);
+        await showFile(randomFile.dir, randomFile.file);
     } catch (error) {
         console.error("Failed to open random file:", error);
     }
 }
 
-async function showFile(folder, filename, saveToHistory = true) {
+async function showFile(dir, filename, saveToHistory = true) {
     filename = filename.normalize("NFC");
-    const fileData = files[folder][filename];
+    const fileData = files[dir][filename];
     const file = await fileData.handle.getFile();
     const header = filename.replace(/\.md$/, "").replace(/^\w/, (c) => c.toUpperCase());
     let content = await file.text();
     content = `# ${header}\n${content}`;
     content = content.replace(/\[\[(.+?)\|.*?\]\]/g, '[[$1]]');
 
-    editor.currentFolder = folder;
+    editor.currentDir = dir;
     editor.currentFile = filename;
     if (saveToHistory) {
-        const state = {folder: folder, file: filename};
+        const state = {dir: dir, file: filename};
         history.pushState(state, '');
     }
 
@@ -336,9 +336,9 @@ async function showFile(folder, filename, saveToHistory = true) {
 }
 
 async function saveFile() {
-    const folder = editor.currentFolder;
+    const dir = editor.currentDir;
     const filename = editor.currentFile;
-    const fileData = files[folder][filename];
+    const fileData = files[dir][filename];
     if (fileData && fileData.handle) {
         let content = editor.getValue();
         const header = filename.replace('.md', '').replace(/^\w/, (c) => c.toUpperCase());
@@ -445,16 +445,11 @@ function closeSearchModal() {
 }
 
 function loadRecentFiles() {
-    const ignoredDirs = ["img", "archive", "_read_", "_watch_", "_shop_", "habits", "triggers", "journal", "today", "later", "insights"];
     let results = [];
-    for (const folder of Object.keys(files)) {
-        if (ignoredDirs.includes(folder)) {
-            continue;
-        }
-
-        for (const filename of Object.keys(files[folder])) {
+    for (const dir of Object.keys(excludeDirs(systemDirs))) {
+        for (const filename of Object.keys(files[dir])) {
             results.push({
-                folder, filename, lastModified: files[folder][filename].lastModified,
+                dir, filename, lastModified: files[dir][filename].lastModified,
             });
         }
     }
@@ -463,10 +458,10 @@ function loadRecentFiles() {
         .sort((a, b) => b.lastModified - a.lastModified)
         .slice(0, 8);
 
-    showResults(results);
+    showSearchResults(results);
 }
 
-function filterFiles() {
+function search() {
     const search = document.getElementById('goToFileInput').value.toLowerCase();
     if (search.trim() === '') {
         loadRecentFiles();
@@ -478,28 +473,28 @@ function filterFiles() {
 
 
     let results = [];
-    const lowPriorityFolders = ["archive", "_read_", "_watch_", "_shop_", "habits", "triggers", "today", "later"];
+    const lowPriorityDirs = ["archive", "_read_", "_watch_", "_shop_", "habits", "triggers", "today", "later"];
 
     // Levenshtein distance
-    for (const folder in excludeFolders(nonTextFolders)) {
-        for (const filename in files[folder]) {
+    for (const dir in excludeDirs(nonTextDirs)) {
+        for (const filename in files[dir]) {
             const potentialMatch = filename.replace(/\.md$/, "");
             let similarityScore = similarity(search, potentialMatch);
 
             if (similarityScore >= 70) {
-                if (lowPriorityFolders.includes(folder)) {
+                if (lowPriorityDirs.includes(dir)) {
                     similarityScore -= 30;
                 }
                 results.push({
-                    filename: filename, folder: folder, score: similarityScore
+                    filename: filename, dir: dir, score: similarityScore
                 });
             }
         }
     }
 
     // Substring
-    for (const folder in files) {
-        for (const filename in files[folder]) {
+    for (const dir in files) {
+        for (const filename in files[dir]) {
             const potentialMatch = filename.replace(/\.md$/, "");
             const isSubstringMatch = potentialMatch.toLowerCase().includes(search.toLowerCase());
 
@@ -510,7 +505,7 @@ function filterFiles() {
             let matchedPercent = (search.length / potentialMatch.length) * 100;
 
             results.push({
-                filename: filename, folder: folder, score: Math.round(matchedPercent)
+                filename: filename, dir: dir, score: Math.round(matchedPercent)
             });
         }
     }
@@ -518,30 +513,30 @@ function filterFiles() {
     const uniqueResultsMap = new Map();
     for (let i = 0; i < results.length; i++) {
         const item = results[i];
-        const key = `${item.filename}-${item.folder}`;
+        const key = `${item.filename}-${item.dir}`;
 
         if (!uniqueResultsMap.has(key) || uniqueResultsMap.get(key).score < item.score) {
             uniqueResultsMap.set(key, item);
         }
     }
     results = Array.from(uniqueResultsMap.values()).sort((a, b) => b.score - a.score);
-    showResults(results);
+    showSearchResults(results);
 }
 
-function showResults(results) {
+function showSearchResults(results) {
     const list = document.getElementById('goToFileResults');
-    results.forEach(({folder, filename}, index) => {
+    results.forEach(({dir, filename}, index) => {
         const listItem = document.createElement('li');
         let title = filename.replace(/\.md$/, "")
-        if (folder !== '') {
-            listItem.textContent = `${folder}/${title}`;
+        if (dir !== '') {
+            listItem.textContent = `${dir}/${title}`;
         } else {
             listItem.textContent = title;
         }
-        listItem.setAttribute('data-path', `${folder}/${filename}`);
+        listItem.setAttribute('data-path', `${dir}/${filename}`);
         listItem.setAttribute('data-index', index);
         listItem.onclick = () => {
-            showFile(folder, filename);
+            showFile(dir, filename);
             closeSearchModal();
         };
         listItem.onmouseenter = () => {
@@ -583,7 +578,7 @@ window.addEventListener('popstate', (event) => {
     // event.preventDefault();
     const state = event.state; // Get the state object
     if (state) {
-        showFile(state['folder'], state['file'], false);
+        showFile(state['dir'], state['file'], false);
     }
 });
 
@@ -593,8 +588,8 @@ document.getElementById('goToFile').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
         event.preventDefault();
         if (resultsList[focusedItemIndex]) {
-            const [folder, filename] = resultsList[focusedItemIndex].getAttribute('data-path').split('/');
-            showFile(folder, filename);
+            const [dir, filename] = resultsList[focusedItemIndex].getAttribute('data-path').split('/');
+            showFile(dir, filename);
             closeSearchModal();
         }
     }
@@ -610,12 +605,12 @@ document.getElementById('goToFile').addEventListener('keydown', (event) => {
     }
 });
 
-function excludeFolders(excludedFolders) {
+function excludeDirs(excludedDirs) {
     const filteredFiles = {};
 
-    for (const folder in files) {
-        if (!excludedFolders.includes(folder)) {
-            filteredFiles[folder] = files[folder];
+    for (const dir in files) {
+        if (!excludedDirs.includes(dir)) {
+            filteredFiles[dir] = files[dir];
         }
     }
 
