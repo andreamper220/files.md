@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/spf13/afero"
@@ -3290,14 +3291,14 @@ func TestExtractTitleAndContent_TitleExceedsMaxLength(t *testing.T) {
 
 	bot := NewBot(-1, nil, nil, nil, nil)
 
-	longTitle := strings.Repeat("a", maxTitleLength+10)
+	longTitle := strings.Repeat("a", 100+1)
 	msg := longTitle + "\nContent below"
-	expectedTitle := txt.Substr(txt.Ucfirst(longTitle), 0, maxTitleLength) + "..."
+	expectedTitle := txt.Substr(txt.Ucfirst(longTitle), 0, 100) + "..."
 
 	title, content, err := bot.extractTitleAndContent(msg)
 	r.NoError(err)
 	r.Equal(expectedTitle, title)
-	r.Equal("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nContent below", content)
+	r.Equal("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nContent below", content)
 }
 
 func TestExtractTitleAndContent_TitleSameAsContent(t *testing.T) {
@@ -3495,7 +3496,7 @@ func FuzzSaveFromTextMsg(f *testing.F) {
 		r.Len(tasks, 1, "No tasks created for input %q", input)
 		filename := strings.SplitN(strings.TrimSpace(input), "\n", 2)[0]
 		filename = strings.TrimSpace(filename)
-		if len(filename) > 100 {
+		if utf8.RuneCountInString(filename) > 100 {
 			filename = txt.Substr(filename, 0, 100) + "..."
 		}
 
@@ -3504,6 +3505,5 @@ func FuzzSaveFromTextMsg(f *testing.F) {
 
 		_, err = bot.fs.Read("today", filename)
 		r.NoError(err)
-		//r.Equal(input, content)
 	})
 }

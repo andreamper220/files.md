@@ -341,7 +341,9 @@ func (fs FS) Dirs() ([]File, error) {
 // attacks due to the race condition. The only real way to prevent this is to disallow symlinks
 // at the OS level. We can do this by mounting a folder with nosymfollow flag, see README.md.
 func (fs FS) isSafe(path string) (bool, error) {
-	// Path traversal attack
+	path = filepath.Clean(path)
+
+	// Path traversal attack (filepath.Clean only cleans absolute paths from ../)
 	// https://owasp.org/www-community/attacks/Path_Traversal
 	// A better way would be to convert the path to absolute path, but AferoFS doesn't support that
 	if strings.Contains(path, "../") || strings.Contains(path, "/..") {
