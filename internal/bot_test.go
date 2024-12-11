@@ -3471,7 +3471,7 @@ func FuzzSaveFromTextMsg(f *testing.F) {
 		if len(input) > 100 {
 			input = txt.Substr(input, 0, 100) + "..."
 		}
-		filename := strings.SplitN(input, "\n", 2)[0]
+		filename := strings.SplitN(strings.TrimSpace(input), "\n", 2)[0]
 		filename = strings.TrimSpace(filename)
 		filename = fs.Filename(fs.SanitizeFilename(filename))
 		r.Equal(filename, tasks[0].Name)
