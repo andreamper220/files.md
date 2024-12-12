@@ -19,6 +19,7 @@ async function openDirectory() {
     document.getElementById('welcome').style.display = 'none';
     await saveDirectoryHandle(dirHandle);
     await loadDirectory(dirHandle)
+    buildSidebar();
     await showRandomFile();
 }
 
@@ -38,6 +39,7 @@ async function loadDirectory(dirHandle, path = "", depth = 1) {
                 const dir = `${path}${filename}/`;
                 files[filename] = {};
                 await loadDirectory(entry, dir, depth + 1);
+                buildSidebar();
             }
         } else if (entry.kind === 'file' && allowedFileTypes.includes(filename.split('.').pop())) {
             const dir = path.split('/').filter(Boolean).join('/');
@@ -57,7 +59,6 @@ async function loadDirectory(dirHandle, path = "", depth = 1) {
             delete files[dir];
         }
     }
-    buildSidebar();
 }
 
 async function saveFile() {

@@ -34,6 +34,7 @@ async function init(el) {
             document.getElementById('welcome').style.display = 'flex';
         }
         await loadDirectory(savedDirectoryHandle);
+        buildSidebar();
         await showRandomFile();
     } else {
         document.getElementById('welcome').style.display = 'flex';
