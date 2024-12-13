@@ -841,7 +841,11 @@ func (b *Bot) ShowToday(_ []string) error {
 	}
 
 	if b.cfg.JournalOnlyMode() {
-		return b.showHTML("What's on your mind?", nil)
+		_, err := b.tg.Send(b.userID, "What's on your mind?", nil, tg.MarkupHTML)
+		if err != nil {
+			return fmt.Errorf("show today: can't send journal message: %w", err)
+		}
+		return nil
 	}
 
 	files, err := b.fs.FilesAndDirs(fs.DirToday)
