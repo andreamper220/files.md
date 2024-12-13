@@ -593,16 +593,20 @@ async function loadFiles(dirHandle) {
                 const dir = path.replace(/\/+$/, '');
                 if (!newFiles[dir]) newFiles[dir] = {};
 
+                // Don't load the file if already exists
+                // We're going to lose lastModified for existing files, but
+                // we can sacrifice it, as the operation is slow
                 if (files?.[dir]?.[filename] !== undefined) {
                     newFiles[dir][filename] = files[dir][filename];
                     continue;
                 }
 
-                let file = await entry.getFile();
-                newFiles[dir][filename] = {
-                    handle: entry,
-                    lastModified: file.lastModified
-                };
+                newFiles[dir][filename] = {handle: entry};
+                if (dir !== 'archive') {
+                    // This operation is slow, so we don't run it on archived files
+                    let file = await entry.getFile();
+                    newFiles[dir][filename].lastModified = file.lastModified;
+                }
                 if (dir === 'img') {
                     newFiles[dir][filename].imageUrl = await getImageUrl(entry);
                 }
@@ -622,7 +626,6 @@ async function loadFiles(dirHandle) {
 }
 
 async function saveFile() {
-    console.log("2 TRYING TO SAVE");
     const dir = editor.currentDir;
     const filename = editor.currentFile;
     const fileData = files[dir][filename];
@@ -630,9 +633,7 @@ async function saveFile() {
         let content = getCurrentContent();
         const writable = await fileData.handle.createWritable();
         await writable.write(content);
-        console.log("3 WROTE");
         await writable.close(); // Buffer is flushed on disk at this moment, it could be interrupted by the event pool, so maintain a flag
-        console.log("4 FLUSHED");
     } else {
         alert(`Cannot save ${filename}. No file handle found.`);
     }
