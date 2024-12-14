@@ -250,7 +250,7 @@ func TestFSGetAllNotesInMatchingDir(t *testing.T) {
 	err = fs.Touch("non-matching-dir", "c.md")
 	r.NoError(err)
 
-	notes, err := fs.SearchNotes("BRAIN")
+	notes, err := fs.SearchFiles("BRAIN")
 	r.NoError(err)
 	r.Len(notes, 1)
 	r.Equal("a.md", notes[0].Name)
@@ -267,7 +267,7 @@ func TestFSGetAllMatchingNotesInMatchingDir(t *testing.T) {
 	err = fs.Touch("today", "c.md")
 	r.NoError(err)
 
-	notes, err := fs.SearchNotes("BRAIN A")
+	notes, err := fs.SearchFiles("BRAIN A")
 	r.NoError(err)
 	r.Len(notes, 1)
 	r.Equal("a.md", notes[0].Name)
@@ -283,7 +283,7 @@ func TestFSGetAllNotesInAllMatchingDirs(t *testing.T) {
 	err = fs.Touch("today", "c.md")
 	r.NoError(err)
 
-	notes, err := fs.SearchNotes("brain")
+	notes, err := fs.SearchFiles("brain")
 	r.NoError(err)
 	r.Len(notes, 2)
 
@@ -307,7 +307,7 @@ func TestFSGetAllMatchingNotesInAllMatchingDirs(t *testing.T) {
 	err = fs.Touch("today", "c.md")
 	r.NoError(err)
 
-	notes, err := fs.SearchNotes("brain a")
+	notes, err := fs.SearchFiles("brain a")
 	r.NoError(err)
 	r.Len(notes, 2)
 
@@ -329,7 +329,7 @@ func TestFSGetAllNotesInAllDirsForEmptyQuery(t *testing.T) {
 	err = fs.Touch("today", "c.md")
 	r.NoError(err)
 
-	notes, err := fs.SearchNotes("")
+	notes, err := fs.SearchFiles("")
 	r.NoError(err)
 	r.Len(notes, 2)
 

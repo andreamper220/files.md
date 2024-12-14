@@ -382,13 +382,13 @@ func IsChecklistItem(filename string) bool {
 	return validChecklistItem.MatchString(filename)
 }
 
-// SearchNotes performs search among all user notes
+// SearchFiles performs search among all user files
 // Allowed query formats:
 // "directory" - return all notes from directories prefixed by this directory
 // "directory note_name" - search for this note_name in all matching directories
 // "note_name" - search for this note_name across all directories
 // "" - return all the notes
-func (fs FS) SearchNotes(query string) ([]File, error) {
+func (fs FS) SearchFiles(query string) ([]File, error) {
 	query = strings.ToLower(strings.TrimSpace(query))
 	// Check for directory traversal attack
 	if strings.Contains(query, "/") {

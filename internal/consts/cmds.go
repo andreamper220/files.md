@@ -57,6 +57,7 @@ const (
 	CmdShowWatchChecklist          = "watch"
 	CmdShowShopChecklist           = "shop"
 	CmdShowSchedule                = "schedule"
+	CmdDownload                    = "download"
 	CmdTasksOnlyMode               = "tasks_only"
 	CmdNotesOnlyMode               = "notes_only"
 	CmdJournalOnlyMode             = "journal_only"

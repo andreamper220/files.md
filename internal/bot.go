@@ -218,6 +218,7 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		consts.CmdShowSchedule:       b.showSchedule,
 		consts.CmdShowSettings:       b.showSettings,
 		consts.CmdShowHelp:           b.showHelp,
+		consts.CmdDownload:           b.download,
 		// Button's commands (callbacks)
 		consts.CmdShowRenameFile:              b.showRenameFile,
 		consts.CmdShowMultilineTask:           b.showMultilineTask,
@@ -489,7 +490,7 @@ func (b *Bot) answerSearch(u Update) error {
 		return fmt.Errorf("insecure input '%s': %w", query, errInvalidInlineQuery)
 	}
 
-	matchedNotes, err := b.fs.SearchNotes(query)
+	matchedNotes, err := b.fs.SearchFiles(query)
 	if err != nil {
 		return fmt.Errorf("inline reply: %w", err)
 	}
@@ -2306,6 +2307,13 @@ func (b *Bot) addToFile(dir, filename, content string) error {
 // TODO release add help
 func (b *Bot) showHelp(_ []string) error {
 	_, err := b.tg.Send(b.userID, "Under construction", nil, tg.MarkupHTML)
+
+	return err
+}
+
+// TODO
+func (b *Bot) download(_ []string) error {
+	_, err := b.tg.Send(b.userID, "Not yet implemented 🏗! Wanna contribute some code? https://github.com/zakirullin/files.md", nil, tg.MarkupHTML)
 
 	return err
 }
