@@ -649,7 +649,9 @@ async function saveFile() {
         await writable.write(content);
         await writable.close(); // Buffer is flushed on disk at this moment, it could be interrupted by the event pool, so maintain a flag
     } else {
-        alert(`Cannot save ${filename}. No file handle found.`);
+        if (fileData.handle) {
+            alert(`Cannot save ${filename}. No file handle found.`);
+        }
     }
 }
 
