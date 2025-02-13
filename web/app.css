@@ -80,10 +80,16 @@ body {
 }
 
 #content, CodeMirror-wrap {
-    box-sizing: border-box;
-    overflow: auto;
-    width: 100%;
+        box-sizing: border-box;
+        overflow: auto;
+        /*max-width: var(--wide-width);*/
+        /*width: var(--normal-width);*/
+        /*margin: 0 auto;*/
+        flex-grow: 1;
+        padding: 2em 0;
+        width: 100%;
 }
+
 
 #content table, th, td {
     border-collapse: collapse;
