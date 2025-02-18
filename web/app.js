@@ -138,7 +138,6 @@ function initEditor(el) {
     })
 
     editor.on("change", async function (cm, changeObj) {
-        console.log("1 CHANGED");
         // Save on user input only
         if (changeObj.origin && changeObj.origin !== "setValue") {
             editor.currentFileSaving = true;
@@ -347,18 +346,13 @@ async function showFile(dir, filename, saveToHistory = true) {
     editor.getDoc().setValue(content);
     editor.clearHistory();
 
-    // Why 300? Setting to 0 makes #header blinking. Setting at the end of the page takes rendering time.
-    // Setting cursor somewhere after 300th line (supposedly below screen) helps.
-    editor.setCursor({line: 300, ch: 0});
-    editor.scrollTo(null, 0);
-
     // Set cursor at the end of the page.
     // We need to execute this code after some rendering loop. If we don't do that,
     // Images and other heavy stuff won't be loaded
     // P.S. Is it try after we set infinite loading?
     setTimeout(() => {
         focusLastLine();
-    }, 200);
+    }, 300);
 
 }
 
