@@ -18,7 +18,8 @@ const defaultTestCfg = `{
     "quickCommands": [],
     "twoEmojisEnabled": false,
     "mode": "tasks",
-    "quickHabitsEnabled": false
+    "quickHabitsEnabled": false,
+    "channels": []
 }`
 
 const timezoneTestCfg = `{

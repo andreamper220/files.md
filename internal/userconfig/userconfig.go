@@ -31,6 +31,7 @@ var defaultConfig = config{
 	TwoEmojisEnabled:          false,
 	Mode:                      "tasks",
 	QuickHabitsEnabled:        false,
+	Channels:                  []string{},
 }
 
 var (
@@ -61,6 +62,7 @@ type config struct {
 	TwoEmojisEnabled          bool       `json:"twoEmojisEnabled"`
 	Mode                      string     `json:"mode"`
 	QuickHabitsEnabled        bool       `json:"quickHabitsEnabled"`
+	Channels                  []int64    `json:"channels"`
 }
 
 func NewConfig(userFS *fs.FS, userID int64, filename string) *Config {
@@ -248,6 +250,12 @@ func (c *Config) QuickHabitsEnabled() bool {
 	cfg, _ := c.read(c.filename)
 
 	return cfg.QuickHabitsEnabled
+}
+
+func (c *Config) Channels() []int64 {
+	cfg, _ := c.read(c.filename)
+
+	return cfg.Channels
 }
 
 func (c *Config) read(path string) (config, error) {

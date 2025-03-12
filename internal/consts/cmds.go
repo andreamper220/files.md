@@ -68,6 +68,7 @@ const (
 	CmdAddToJournalShortcut        = "j"
 	CmdAddToRecentFileShortcut     = "+"
 	CmdCompleteHabit               = "ch"
+	CmdShare                       = "share"
 )
 
 var Shortcuts = map[string][]string{

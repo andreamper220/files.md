@@ -20,7 +20,8 @@ const defaultTestCfgWithNewMoveCmd = `{
     "quickCommands": [],
     "twoEmojisEnabled": false,
     "mode": "tasks",
-    "quickHabitsEnabled": false
+    "quickHabitsEnabled": false,
+    "channels": []
 }`
 
 func TestAddAndDelMoveCmd(t *testing.T) {

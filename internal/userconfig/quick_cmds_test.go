@@ -20,7 +20,8 @@ const defaultTestCfgWithNewQuickCmd = `{
     ],
     "twoEmojisEnabled": false,
     "mode": "tasks",
-    "quickHabitsEnabled": false
+    "quickHabitsEnabled": false,
+    "channels": []
 }`
 
 func TestAddAndDelQuickCmd(t *testing.T) {

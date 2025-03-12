@@ -181,6 +181,8 @@ func (b *Bot) Answer(u Update) error {
 			// We can tolerate an error here, that won't affect UX
 			if cmd.Name == consts.CmdComplete || cmd.Name == consts.CmdCompleteHabit {
 				_ = b.tg.AnswerCallbackQuery(callbackQueryID, completedMsg())
+			} else if cmd.Name == consts.CmdShare {
+				_ = b.tg.AnswerCallbackQuery(callbackQueryID, "Shared 💚!")
 			} else {
 				_ = b.tg.AnswerCallbackQuery(callbackQueryID, "")
 			}
@@ -264,6 +266,7 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		consts.CmdJournalOnlyMode:             b.journalOnlyMode,
 		consts.CmdFullMode:                    b.fullMode,
 		consts.CmdCompleteHabit:               b.completeHabit,
+		consts.CmdShare:                       b.shareNote,
 		// Used for button-like separators
 		consts.CmdDoNothing: func(s []string) error { return nil },
 	}
@@ -1336,7 +1339,15 @@ func (b *Bot) showFile(params []string) error {
 		return fmt.Errorf("show file: %w", err)
 	}
 
-	kb := tg.NewKeyboard([]tg.Row{tg.NewBtn(i18n.StrToday, tg.NewCmd(consts.CmdShowToday, nil))})
+	kb := tg.NewKeyboard(nil)
+
+	isNotesDir := len(fs.OnlyNoteDirs([]fs.File{{Name: dir}})) > 0
+	hasChannelsToPrint := len(b.cfg.Channels()) > 0
+	if isNotesDir && hasChannelsToPrint {
+		kb.AddRow(tg.NewBtn(i18n.Tr("🖨 Share"), tg.NewCmd(consts.CmdShare, []string{dirHash, filenameHash})))
+	}
+	kb.AddRow(tg.NewBtn(i18n.StrToday, tg.NewCmd(consts.CmdShowToday, nil)))
+
 	md := fmt.Sprintf("**%s**\n\n%s", fs.Title(filename), content)
 	err = b.showMD(md, kb)
 	if err != nil {
@@ -2456,6 +2467,60 @@ func (b *Bot) completeHabit(params []string) error {
 	}
 
 	return b.ShowToday(nil)
+}
+
+func (b *Bot) shareNote(params []string) error {
+	dirHash := params[0]
+	filenameHash := params[1]
+
+	dir, err := b.fs.Unhash(fs.DirRoot, dirHash)
+	if err != nil {
+		return fmt.Errorf("share note: can't find dir: %w", err)
+	}
+
+	filename, err := b.fs.Unhash(dir, filenameHash)
+	if err != nil {
+		return fmt.Errorf("share note: can't find file: %w", err)
+	}
+
+	content, err := b.fs.Read(dir, filename)
+	if err != nil {
+		return fmt.Errorf("share note: %w", err)
+	}
+
+	for _, channel := range b.cfg.Channels() {
+		probablyInvalidMD := fmt.Sprintf("**%s**\n\n%s", fs.Title(filename), content)
+		probablyInvalidMD, images, _ := txt.ExtractTextImgsLinks(probablyInvalidMD)
+		// Sending a gallery of images if there are any
+		if len(images) > 0 {
+			// We tolerate errors with the image gallery for now, text is more important
+			mids, imgErr := b.tg.SendImages(b.userID, images)
+			if imgErr == nil {
+				for _, imgMid := range mids {
+					b.db.AddImgMsgID(imgMid)
+				}
+			} else {
+				slog.Error("Can't send images", "error", imgErr)
+			}
+		}
+
+		// If our msg is too long, we send maxMsgsToSendAtOnce first messages.
+		// Keyboard is attached to the last one
+		textChunks := txt.SplitTextIntoChunks(probablyInvalidMD, maxMsgLength)
+		textChunks = textChunks[0:min(maxMsgsToSendAtOnce, len(textChunks))]
+		lastChunk := textChunks[len(textChunks)-1]
+		textChunks = textChunks[0 : len(textChunks)-1]
+		for _, textChunk := range textChunks {
+			_, _ = b.tg.Send(b.userID, txt.MarkdownToHTML(textChunk), nil, tg.MarkupHTML)
+		}
+
+		_, err := b.tg.Send(channel, txt.MarkdownToHTML(lastChunk), nil, tg.MarkupHTML)
+		if err != nil {
+			return fmt.Errorf("share: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func extractMarkdown(u Update) string {
