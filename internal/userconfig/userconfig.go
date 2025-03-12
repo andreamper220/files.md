@@ -31,7 +31,7 @@ var defaultConfig = config{
 	TwoEmojisEnabled:          false,
 	Mode:                      "tasks",
 	QuickHabitsEnabled:        false,
-	Channels:                  []string{},
+	Channels:                  []int64{},
 }
 
 var (
