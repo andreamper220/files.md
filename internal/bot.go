@@ -1574,7 +1574,7 @@ func (b *Bot) moveToExistingFile(params []string) error {
 
 	fromDir, err := b.fs.Unhash(fs.DirRoot, fromDirHash)
 	if err != nil {
-		return fmt.Errorf("move to file: can't unhash from dir '%s': %w", fromFilenameHash, err)
+		return fmt.Errorf("move to file: can't unhash from dir '%s': %w", fromDirHash, err)
 	}
 
 	fromFilename, err := b.fs.Unhash(fromDir, fromFilenameHash)
@@ -2126,7 +2126,7 @@ func (b *Bot) showMoveToFileOrDir(params []string) error {
 		}
 
 		b.db.SetRecentCommand(consts.CmdMoveToExistingFile)
-		b.db.SetRecentCommandParams([]string{fs.ShortHash(filename), fs.ShortHash(fs.DirRoot)})
+		b.db.SetRecentCommandParams([]string{fs.ShortHash(filename), fs.ShortHash(fs.DirToday)})
 	}
 
 	kb := tg.NewKeyboard(nil)
