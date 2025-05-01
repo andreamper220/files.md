@@ -24,7 +24,6 @@ var (
 type File struct {
 	Path         string `json:"path"`
 	LastModified int64  `json:"lastModified"`
-	IsDir        bool   `json:"isDir"`
 	Content      string `json:"content"`
 }
 
@@ -183,7 +182,6 @@ func Sync(w http.ResponseWriter, r *http.Request) {
 			missingFiles = append(missingFiles, File{
 				Path:         path,
 				LastModified: serverTime,
-				IsDir:        false,
 				Content:      string(content),
 			})
 		}

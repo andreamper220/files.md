@@ -72,8 +72,7 @@ async function syncWithServer() {
         const server = await response.json();
         for (const fileInfo of server.files) {
             console.log(`Syncing file: ${fileInfo.path}`);
-            const { path, content, lastModified, isDir } = fileInfo;
-            if (isDir) continue;
+            const { path, content, lastModified} = fileInfo;
 
             let dir, filename;
             if (path.includes('/')) {
