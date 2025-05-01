@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/afero"
 
@@ -118,8 +119,8 @@ func Sync(w http.ResponseWriter, r *http.Request) {
 	// 4) Respond with last modification timestamps for every dir
 
 	// Save client-modified files to the server
-	var mergedFiles []string
 	for _, clientFile := range request.Files {
+		logSync(fmt.Sprintf("Got client file: %s", clientFile.Path))
 		fullPath := filepath.Join(StorageDir, clientFile.Path)
 
 		serverModTime := int64(0)
@@ -135,6 +136,7 @@ func Sync(w http.ResponseWriter, r *http.Request) {
 			// All-or-nothing sync?
 			continue
 		} else if os.IsNotExist(err) {
+			logSync(fmt.Sprintf("Creating: %s", clientFile.Path))
 			clientContent = clientFile.Content
 		} else {
 			// File locks?
@@ -145,10 +147,11 @@ func Sync(w http.ResponseWriter, r *http.Request) {
 					log.Printf("Error reading file %s: %v", fullPath, err)
 					continue
 				}
+				logSync(fmt.Sprintf("Merging on conflict: %s", clientFile.Path))
 				clientContent = Merge(string(serverContent), clientFile.Content)
-				mergedFiles = append(mergedFiles, clientFile.Path)
 			} else {
 				// Server file hasn't changed since client's last sync
+				logSync(fmt.Sprintf("Modifying existing: %s", clientFile.Path))
 				clientContent = clientFile.Content
 			}
 		}
@@ -165,6 +168,7 @@ func Sync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Prepare the list of files to send to the client
+	// TODO optimize don't send files known to client (for now we save client file to server, and the code below would include it again)
 	files := make([]File, 0)
 	dirTimestamps := make(map[string]int64)
 	for path, serverFileTime := range serverTimestamps {
@@ -262,4 +266,19 @@ func timestamps(rootPath string) (map[string]int64, error) {
 	}
 
 	return timestamps, nil
+}
+
+func logSync(msg string) {
+	file, err := os.OpenFile("/tmp/sync", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println("Error opening log file:", err)
+		return
+	}
+	defer file.Close()
+
+	time := time.Now().Format("2006-01-02 15:04:05")
+	if _, err := file.WriteString(time + ": " + msg + "\n"); err != nil {
+		fmt.Println("Error writing to log file:", err)
+		return
+	}
 }
