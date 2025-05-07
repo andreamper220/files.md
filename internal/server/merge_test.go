@@ -42,18 +42,18 @@ func TestMergeDivergentBody(t *testing.T) {
 	original := "header\noriginal A\noriginal B\nfooter"
 	modified := "header\nmodified X\nmodified Y\nfooter"
 	merged := Merge(original, modified)
-	r.Equal("header\noriginal A\noriginal B\nmodified X\nmodified Y\nfooter", merged, "Should merge divergent content")
+	r.Equal("header\noriginal A\noriginal B\nmodified X\nmodified Y\nfooter", merged)
 }
 
-//func TestMergeDivergentContent(t *testing.T) {
-//	r := require.New(t)
-//
-//	// Complete divergence with small common prefix
-//	original := "header\noriginal A\noriginal B"
-//	modified := "header\nmodified X\nmodified Y"
-//	merged := Merge(original, modified)
-//	r.Equal("header\noriginal A\noriginal B\nmodified X\nmodified Y", merged, "Should merge divergent content")
-//}
+func TestMergeDivergentContent(t *testing.T) {
+	r := require.New(t)
+
+	// Complete divergence with small common prefix
+	original := "header\noriginal A\noriginal B"
+	modified := "header\nmodified X\nmodified Y"
+	merged := Merge(original, modified)
+	r.Equal("header\noriginal A\noriginal B\nmodified X\nmodified Y", merged)
+}
 
 func TestMergeEmptyStrings(t *testing.T) {
 	r := require.New(t)

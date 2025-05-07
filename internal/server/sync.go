@@ -146,6 +146,7 @@ func Sync(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Error reading file %s: %v", fullPath, err)
 				continue
 			}
+			logSync(fmt.Sprintf("Sending file: '%s'", path))
 
 			files = append(files, File{
 				Path:         path,
