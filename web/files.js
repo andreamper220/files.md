@@ -139,7 +139,6 @@ async function syncWithServer() {
     for (const fileInfo of server.files) {
         const {path, content, lastModified} = fileInfo;
 
-        // TODO create dirs if not exist?
         console.log("Syncing " + path);
         let fileHandle = await getFileHandle(path);
         let file = await fileHandle.getFile()
@@ -281,6 +280,36 @@ async function getFileHandle(path) {
     return fileHandle;
 }
 
+function getMetadata(path) {
+    const parts = path.split('/');
+    const filename = parts.pop();
+    const dir = parts.join('/');
+
+    if (filesMetadata['files']?.[dir]?.[filename]) {
+        return filesMetadata['files'][dir][filename];
+    } else {
+        return null;
+    }
+}
+
+function addMetadata(path, content, lastModified) {
+    filesMetadata['files'] = filesMetadata['files'] ?? {};
+    filesMetadata['files'][dir] = filesMetadata['files'][dir] ?? {};
+
+    const parts = path.split('/');
+    const filename = parts.pop();
+
+    filesMetadata['files'][dir][filename] = {
+        hash: hash(content),
+        lastModified: lastModified,
+        path: path
+    };
+}
+
+function saveMetadata() {
+    localStorage.setItem(SYNC_STORAGE_KEY, JSON.stringify(filesMetadata));
+}
+
 async function saveCurrentFile() {
     if (!unsavedChanges) return;
 
@@ -321,6 +350,7 @@ function hash(str) {
         hash = (hash << 5) - hash + chr;
         hash |= 0;
     }
+
     return hash;
 }
 
@@ -355,9 +385,6 @@ window.addEventListener('beforeunload', function () {
     clearInterval(window.saver);
 });
 
-function processSaveQueue() {
-
-}
 
 // Worker to process the saving queue
-window.saver = setInterval(async, saverInterval);
+window.saver = setInterval(saveCurrentFile, saverInterval);
