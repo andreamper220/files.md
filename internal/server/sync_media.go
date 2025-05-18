@@ -12,8 +12,9 @@ import (
 )
 
 var syncMediasRequest struct {
-	Dir       string `json:"dir"`
-	Timestamp int64  `json:"timestamp"`
+	Dir           string `json:"dir"`
+	Timestamp     int64  `json:"timestamp"`
+	FilenamesHash string `json:"filenamesHash"`
 }
 
 type media struct {

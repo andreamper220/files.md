@@ -251,7 +251,7 @@ async function syncMediaFilesFromServer() {
 
                 const blob = await response.blob();
                 console.log(path, blob);
-                await saveMediaFile(`img/${path}`, blob);
+                await saveMediaFile(`img/${path}`, blob, lastModified);
                 // setMetadata(path, null, lastModified);
                 filesProcessed++;
             } catch (error) {
@@ -259,18 +259,13 @@ async function syncMediaFilesFromServer() {
             }
         }
 
-        // // Update the media folder timestamp in our metadata
-        // if (serverData.timestamp) {
-        //     filesMetadata['timestamps'][mediaFolder] = serverData.timestamp;
-        //     saveMetadata();
-        // }
         console.log(`Media sync completed in ${(performance.now() - startTime).toFixed(2)}ms. Downloaded ${filesProcessed} files.`);
     } catch (error) {
         console.error("Network error during media sync:", error.message);
     }
 }
 
-async function saveMediaFile(path, blob) {
+async function saveMediaFile(path, blob, lastModified) {
     const fileHandle = await getFileHandle(path);
     if (fileHandle === null) {
         console.log(`Malformed name for ${path}, skipping file...`);
@@ -289,12 +284,16 @@ async function saveMediaFile(path, blob) {
     }
 
     try {
-        const writable = await fileHandle.createWritable();
         console.log(path, blob);
+        // const writable = await fileHandle.createWritable();
         // await writable.write(blob);
         // await writable.close();
         console.log(`Successfully wrote media file: ${path}`);
-        // Save media timestamp if mine is bigger?
+        // TODO we assume that we got no fails. Instead save filenames hashes, same for text
+        if (lastModified > filesMetadata['mediaTimestamp'] || 0) {
+            filesMetadata['mediaTimestamp'] = lastModified;
+            saveMetadata();
+        }
     } catch (error) {
         console.error(`Error writing media file ${path}:`, error);
         throw error;
