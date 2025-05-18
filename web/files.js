@@ -372,6 +372,11 @@ async function saveCurrentFile() {
         await new Promise(r => setTimeout(r, 50));
     }
 
+    // TODO better way would be this:
+    // Read file from fs with it's timestamp
+    // If in our memory we have actual TS, just write file back
+    // If fs has fresher change, merge.
+    // Sync with server.
     isSaving = true;
     try {
         const dir = editor.currentDir;
@@ -391,7 +396,12 @@ async function saveCurrentFile() {
         }
     } catch (error) {
         console.error("Error during save:", error);
+        isSaving = false;
+        hasUnsavedChanges = false;
+        return;
     }
+
+    await syncFileWithServer(editor.currentDir, editor.currentFile);
 
     isSaving = false;
     hasUnsavedChanges = false;
@@ -417,19 +427,19 @@ async function initFiles() {
     await syncAllWithServer();
 
     // Refresh current file
-    window.loader = setInterval(async function () {
-        // Check if current file has been modified
-        let path = `${editor.currentDir}/${editor.currentFile}`;
-        let contentWithNormalizedLinks = getCurrentContent().replace(/\[\[(.+?)\|.*?\]\]/g, '[[$1]]');
-        if (!hasUnsavedChanges && !await isContentEqual(path, contentWithNormalizedLinks)) {
-            console.log('showing file');
-            await showFile(editor.currentDir, editor.currentFile, false);
-        }
-    }, loaderInterval)
+    // window.loader = setInterval(async function () {
+    //     // Check if current file has been modified
+    //     let path = `${editor.currentDir}/${editor.currentFile}`;
+    //     let contentWithNormalizedLinks = getCurrentContent().replace(/\[\[(.+?)\|.*?\]\]/g, '[[$1]]');
+    //     if (!hasUnsavedChanges && !await isContentEqual(path, contentWithNormalizedLinks)) {
+    //         console.log('showing file');
+    //         await showFile(editor.currentDir, editor.currentFile, false);
+    //     }
+    // }, loaderInterval)
 }
 
 window.addEventListener('beforeunload', function () {
-    clearInterval(window.loader);
+    // clearInterval(window.loader);
     clearInterval(window.saver);
 });
 
