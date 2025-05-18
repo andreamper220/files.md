@@ -356,12 +356,8 @@ function saveLastModified(path, lastModified) {
     const filename = parts.pop();
     const dir = parts.join('/');
 
-    // TODO what if metadata doesn't exist yet?Can it be that file is not created
-    filesMetadata['files'] = filesMetadata['files'] ?? {};
-    filesMetadata['files'][dir] = filesMetadata['files'][dir] ?? {};
-    filesMetadata['files'][dir][filename] = {
-        lastModified: lastModified,
-    };
+    // TODO what if missing?
+    filesMetadata['files'][dir][filename][lastModified] = lastModified;
     saveMetadata();
 }
 
