@@ -228,18 +228,29 @@ async function syncMediaFilesFromServer() {
         // Process and save media files
         let filesProcessed = 0;
         for (const fileInfo of serverData.files) {
-            const { path, lastModified, url } = fileInfo;
+            const { path, lastModified} = fileInfo;
             console.log(`Downloading media file: ${path}`);
 
             try {
                 // Fetch the binary file
-                const fileResponse = await fetch(url);
-                if (!fileResponse.ok) {
-                    console.error(`Failed to download ${path}: ${fileResponse.status}`);
+                const response = await fetch('https://habits.files.md/syncMedia', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': localStorage.getItem('token')
+                    },
+                    body: JSON.stringify({
+                        path: path,
+                        timestamp: mediaTimestamp
+                    })
+                });
+                if (!response.ok) {
+                    console.error(`Failed to download ${path}: ${response.status}`);
                     continue;
                 }
 
-                const blob = await fileResponse.blob();
+                const blob = await response.blob();
+                console.log(path, blob);
                 await saveMediaFile(path, blob);
                 // setMetadata(path, null, lastModified);
                 filesProcessed++;
