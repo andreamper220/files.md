@@ -142,6 +142,11 @@ async function syncAllWithServer() {
     // Write files received from the server
     for (const fileInfo of server.files) {
         const {path, content, lastModified} = fileInfo;
+        // If it is current file, skip, because we sync it separately
+        if (path === `${editor.currentDir}/${editor.currentFile}`) {
+            console.log("Skip current " + path);
+            continue;
+        }
 
         console.log("Syncing " + path);
         await write(path, content)
