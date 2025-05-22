@@ -113,7 +113,6 @@ async function loadLocalFiles(rootDirHandle) {
 
 async function syncAllWithServer() {
     if (isSyncing) return;
-
     isSyncing = true;
 
     const startTime = performance.now();
@@ -156,6 +155,7 @@ async function syncAllWithServer() {
         for (const fileInfo of server.files) {
             const {path, content, lastModified} = fileInfo;
             // If it is current file, skip, because we sync it separately
+            // TODO if we skip current, don't take it's timestamp? We had a bug when sync was broken for 1 file
             if (path === `${editor.currentDir}/${editor.currentFile}`) {
                 console.log("Skip current " + path);
                 continue;
@@ -497,8 +497,6 @@ function saveMetadata() {
 // 2) Sync it with the server
 // TODO add hash of last read file comparision, merge on conflict (in which scenarious in can happen tho?)
 async function syncCurrentFile() {
-    if (!hasUnsavedChanges) return;
-
     // Wait until not saving
     while (isSaving) {
         await new Promise(r => setTimeout(r, 50));
@@ -509,39 +507,40 @@ async function syncCurrentFile() {
     // If in our memory we have actual TS, just write file back
     // If fs has fresher change, merge.
     // Sync with server.
-    isSaving = true;
-    try {
-        const dir = editor.currentDir;
-        const filename = editor.currentFile;
-        const fileData = files[dir][filename];
-        if (fileData && fileData.handle) {
-            let content = getCurrentContent();
-            // We need to atomically reset the flag once we captured a snapshot of particular version of the content.
-            // This flag can be changed in the event loop, as a result of user making changes to the text in the middle
-            // of our saving process. The new unsaved changes would be then handled by a subsequent saveCurrentFile() call.
-            // Initially, this flag assignment was erroneously placed at the end of the function, resulting in a race condition.
-            // If we override flag in the end, we would lose any changes that occurred during the 3 await calls.
-            hasUnsavedChanges = false
-            const writable = await fileData.handle.createWritable();
-            await writable.write(content);
-            // Buffer is flushed on disk at this moment. It could be interrupted
-            // by the event loop, so we use isSaving guard.
-            await writable.close();
-        } else {
-            if (fileData.handle) {
-                alert(`Cannot save ${filename}. No file handle found.`);
+    if (hasUnsavedChanges) {
+        isSaving = true;
+        try {
+            const dir = editor.currentDir;
+            const filename = editor.currentFile;
+            const fileData = files[dir][filename];
+            if (fileData && fileData.handle) {
+                let content = getCurrentContent();
+                // We need to atomically reset the flag once we captured a snapshot of particular version of the content.
+                // This flag can be changed in the event loop, as a result of user making changes to the text in the middle
+                // of our saving process. The new unsaved changes would be then handled by a subsequent saveCurrentFile() call.
+                // Initially, this flag assignment was erroneously placed at the end of the function, resulting in a race condition.
+                // If we override flag in the end, we would lose any changes that occurred during the 3 await calls.
+                hasUnsavedChanges = false
+                const writable = await fileData.handle.createWritable();
+                await writable.write(content);
+                // Buffer is flushed on disk at this moment. It could be interrupted
+                // by the event loop, so we use isSaving guard.
+                await writable.close();
+            } else {
+                if (fileData.handle) {
+                    alert(`Cannot save ${filename}. No file handle found.`);
+                }
             }
+        } catch (error) {
+            console.error("Error during save:", error);
+            isSaving = false;
+            hasUnsavedChanges = true;
+            return;
         }
-    } catch (error) {
-        console.error("Error during save:", error);
         isSaving = false;
-        hasUnsavedChanges = true;
-        return;
     }
 
     await syncFileWithServer(editor.currentDir, editor.currentFile);
-
-    isSaving = false;
 }
 
 function hash(str) {
