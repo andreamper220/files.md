@@ -239,7 +239,7 @@ func SyncText(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fileWasModifiedOnServer = serverModTime > clientFile.LastModified
 		if fileWasModifiedOnServer {
-			logSync(fmt.Sprintf("Server clientFile '%s' was modified at %d, client timestamp is %d", fullPath, serverModTime, clientFile.LastModified))
+			logSync(fmt.Sprintf("Server one clientFile '%s' was modified at %d, client timestamp is %d", fullPath, serverModTime, clientFile.LastModified))
 			logSync(fmt.Sprintf("Merging and writing one clientFile: '%s'", clientFile.Path))
 			content = Merge(string(serverContent), clientFile.Content)
 		} else {
@@ -268,10 +268,9 @@ func SyncText(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		serverModTime = info.ModTime().Unix()
 	}
-	log.Printf("Server timestamp for '%s': %d", fullPath, serverModTime)
+	logSync(fmt.Sprintf("Server timestamp for '%s': %d", fullPath, serverModTime))
 
 	if !fileWasModifiedOnServer {
-		logSync(fmt.Sprintf("clientFile '%s' is already up to date", clientFile.Path))
 		response := map[string]interface{}{
 			"status":       StatusUpdatedOnServer,
 			"lastModified": serverModTime,
