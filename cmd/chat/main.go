@@ -158,7 +158,7 @@ func (a *App) Send(update Update) Response {
 	var r Response
 	r.Messages = chat.Messages
 	if chat.EditedMessages != nil {
-		r.Messages = chat.EditedMessages
+		r.Messages = append(r.Messages, chat.EditedMessages...)
 	}
 
 	chat.Messages = nil

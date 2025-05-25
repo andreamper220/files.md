@@ -409,6 +409,7 @@ async function getFileHandle(path) {
     return fileHandle;
 }
 
+// TODO split into two, sometimes we need just compare
 async function isContentEqual(path, content) {
     let fileHandle = await getFileHandle(path);
     if (fileHandle === null) {
@@ -494,21 +495,29 @@ function saveMetadata() {
     localStorage.setItem(SYNC_STORAGE_KEY, JSON.stringify(filesMetadata));
 }
 
+// 0) Read content from local fs
 // 1) Save current content to local filesystem
 // 2) Sync it with the server
-// TODO add hash of last read file comparision, merge on conflict (in which scenarious in can happen tho?)
+// TODO add hash of last read file comparison, merge on conflict (in which scenarious in can happen tho?)
 async function syncCurrentFile() {
     // Wait until not saving
     while (isSaving) {
         await new Promise(r => setTimeout(r, 50));
     }
 
+    const path = `${editor.currentDir}/${editor.currentFile}`;
+    const contentWasModifiedLocally = !await isContentEqual(path, getCurrentContent());
+
     // TODO better way would be this:
     // Read file from fs with it's timestamp
     // If in our memory we have actual TS, just write file back
     // If fs has fresher change, merge.
     // Sync with server.
-    if (hasUnsavedChanges) {
+
+    if (contentWasModifiedLocally && !hasUnsavedChanges) {
+        // Changes only from local system
+        await showFile(editor.currentDir, editor.currentFile);
+    } else if (hasUnsavedChanges) {
         isSaving = true;
         try {
             const dir = editor.currentDir;
@@ -516,12 +525,18 @@ async function syncCurrentFile() {
             const fileData = files[dir][filename];
             if (fileData && fileData.handle) {
                 let content = getCurrentContent();
+                if (hasUnsavedChanges && contentWasModifiedLocally) {
+                    // Changes from both sides: editor and local fs, need merging
+                    alert('Merging is needed! For now I use editor content');
+
+                }
                 // We need to atomically reset the flag once we captured a snapshot of particular version of the content.
                 // This flag can be changed in the event loop, as a result of user making changes to the text in the middle
                 // of our saving process. The new unsaved changes would be then handled by a subsequent saveCurrentFile() call.
                 // Initially, this flag assignment was erroneously placed at the end of the function, resulting in a race condition.
                 // If we override flag in the end, we would lose any changes that occurred during the 3 await calls.
                 hasUnsavedChanges = false
+
                 const writable = await fileData.handle.createWritable();
                 await writable.write(content);
                 // Buffer is flushed on disk at this moment. It could be interrupted

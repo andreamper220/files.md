@@ -2,7 +2,7 @@ tgbot:
 	go run ./cmd/tgbot
 
 chat:
-	cd ./cmd/chat && wails dev
+	cd ./cmd/chat && wails build
 
 test:
 	go test ./...
