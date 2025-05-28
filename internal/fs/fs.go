@@ -289,7 +289,7 @@ func (fs FS) FilesAndDirs(dir string) ([]File, error) {
 
 	var files []File
 	// TODO remove gitignore
-	ignoredFiles := []string{".", "..", ".obsidian", ".gitignore", ".DS_Store"}
+	ignoredFiles := []string{".", "..", ".obsidian", ".gitignore", ".DS_Store", ".git"}
 	for _, entry := range entries {
 		if slices.Contains(ignoredFiles, entry.Name()) {
 			continue
