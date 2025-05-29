@@ -605,7 +605,9 @@
     background: #eeeeee url(hypermd-image-spin.gif) no-repeat center center;
 }
 .cm-s-hypermd-light img.hmd-image.hmd-image-error {
-    background-image: url(hypermd-image-error.png);
+    /*CHANGED*/
+    background: none;
+    /*background-image: url(hypermd-image-error.png);*/
 }
 .cm-s-hypermd-light span.cm-math-2 {
     font-size: 13.2pt;

@@ -1,5 +1,6 @@
 /* Whatever this file does, it seems to be adding automatic lists formatting.
  * Also, it seems to have some effect on images. Originally that was ai1.js file.
+ * I only included this file for automastic list formatting, consider extracting this functionality.
  *
  * HyperMD, copyright (c) by laobubu
  * Distributed under an MIT license: http://laobubu.net/HyperMD/LICENSE
