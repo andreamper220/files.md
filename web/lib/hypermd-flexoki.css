@@ -513,7 +513,7 @@
 .cm-s-hypermd-light.HyperMD-with-ctrl span.cm-link,
 .cm-s-hypermd-light.HyperMD-with-ctrl .cm-link + .CodeMirror-widget,
 .cm-s-hypermd-light.HyperMD-with-ctrl span.cm-hashtag,
-.cm-s-hypermd-light span.cm-link, /* customized */
+.cm-s-hypermd-light span.cm-link, /* CHANGED */
 .cm-s-hypermd-light .cm-link + .CodeMirror-widget,
 .cm-s-hypermd-light span.cm-hashtag {
   cursor: pointer;
@@ -535,7 +535,7 @@
 .cm-s-hypermd-light img.hmd-image {
   vertical-align: middle;
   width: auto;
-  max-width: 400px; /* CUSTOMIZED */
+  max-width: 400px; /* CHANGED */
   height: auto;
   display: block;
   margin: 0 auto;

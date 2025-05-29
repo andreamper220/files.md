@@ -570,6 +570,7 @@
 .cm-s-hypermd-light.HyperMD-with-alt span.cm-hashtag, .cm-s-hypermd-light.HyperMD-with-ctrl span.cm-url,
 .cm-s-hypermd-light.HyperMD-with-ctrl span.cm-link,
 .cm-s-hypermd-light.HyperMD-with-ctrl .cm-link + .CodeMirror-widget,
+.cm-s-hypermd-light span.cm-link, /* CHANGED */
 .cm-s-hypermd-light.HyperMD-with-ctrl span.cm-hashtag {
     cursor: pointer;
 }
@@ -587,11 +588,14 @@
 .cm-s-hypermd-light span.hmd-link-icon:after {
     content: "";
 }
+
 .cm-s-hypermd-light img.hmd-image {
     vertical-align: middle;
     width: auto;
-    max-width: 100%;
+    max-width: 400px; /* CHANGED */
     height: auto;
+    display: block;
+    margin: 0 auto;
 }
 .cm-s-hypermd-light img.hmd-image.hmd-image-loading, .cm-s-hypermd-light img.hmd-image.hmd-image-error {
     min-width: 24px;
@@ -854,4 +858,43 @@
 }
 .cm-s-hypermd-light pre.hmd-inactive-line span.cm-hmd-list-indent {
     border-right: 0;
+}
+
+/*CHANGED*/
+.cm-s-hypermd-light pre.HyperMD-header-line:after, .cm-s-hypermd-light pre.HyperMD-header.HyperMD-header-1:after, .cm-s-hypermd-light pre.HyperMD-header.HyperMD-header-2:after {
+    display: none;
+    content: " ";
+    margin-top: 2px;
+    height: 0;
+    background: #eee;
+}
+.cm-s-hypermd-light pre.HyperMD-header {
+    line-height: 1.5 !important;
+    font-family: inherit !important;
+    padding-left: 5px !important;
+    margin-left: 0 !important;
+    border-left: 0 !important;
+    padding-bottom: 0.25em;
+}
+
+.cm-s-hypermd-light pre.HyperMD-header:not(:first-child) {
+    padding-top: 1em !important; /* Applies padding only to elements except the first */
+}
+.cm-s-hypermd-light pre.HyperMD-header > span > span:first-child {
+    margin-left: 0 !important;
+}
+.cm-s-hypermd-light pre.HyperMD-header.HyperMD-header-1 {
+    font-weight: 600;
+    font-size: 24pt;
+}
+.cm-s-hypermd-light pre.HyperMD-header.HyperMD-header-2 {
+    font-weight: 600;
+    font-size: 18pt;
+}
+.cm-s-hypermd-light pre.HyperMD-header.HyperMD-header-3 {
+    font-size: 14.4pt;
+}
+.cm-s-hypermd-light pre.HyperMD-header-line {
+    color: rgba(0, 0, 0, 0.3);
+    line-height: 8px;
 }

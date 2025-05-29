@@ -143,3 +143,6 @@ Refer to [the following document](https://github.com/zakirullin/cognitive-load) 
 - No iterators for client code
 - We prefer real implementations or at least fakes over mocks and stubs
 - Imports should only be renamed to avoid a name collision with other imports
+
+## Front
+- Use CHANGED keyword if you modify assets in-place
