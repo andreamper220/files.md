@@ -231,7 +231,7 @@ a:hover {
 }
 
 .CodeMirror-hint-active {
-    background-color: var(--color-bg-alt) !important;
+    background-color: var(--color-tx-sel) !important;
     color: var(--color-tx-muted) !important;
 }
 

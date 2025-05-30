@@ -350,8 +350,6 @@ func timestamps(rootPath string) (map[string]int64, error) {
 	if err != nil {
 		log.Printf("Warning: Could not resolve symlink: %v. Using original path.", err)
 		realPath = rootPath
-	} else {
-		log.Printf("Resolved symlink: %s -> %s", rootPath, realPath)
 	}
 
 	err = filepath.Walk(realPath, func(path string, info os.FileInfo, err error) error {
