@@ -4,11 +4,9 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -47,7 +45,7 @@ type syncResponse struct {
 	Deletions  []string         `json:"deletions"`
 }
 
-func SyncAllTextFiles(w http.ResponseWriter, r *http.Request) {
+func SyncAllTexts(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -74,31 +72,25 @@ func SyncAllTextFiles(w http.ResponseWriter, r *http.Request) {
 
 	// Save client-modified files to the server
 	for _, clientFile := range request.Files {
-		fullPath := filepath.Join(StorageDir, clientFile.Path)
+		path := clientFile.Path
 
-		serverModTime := int64(0)
-		// Check for any .../ attacks
-		info, err := os.Stat(fullPath)
-		if err == nil {
-			serverModTime = info.ModTime().Unix()
-		}
+		serverModifiedTime, err := userFS.Ctime("", path)
 		var clientContent string
-
 		if err != nil && !os.IsNotExist(err) {
-			log.Printf("Error reading file '%s': %v", fullPath, err)
-			logSync(fmt.Sprintf("Error reading file '%s': %v", fullPath, err))
-			// All-or-nothing sync?
+			log.Printf("Error reading file '%s': %v", path, err)
+			logSync(fmt.Sprintf("Error reading file '%s': %v", path, err))
+			// TODO All-or-nothing sync?
 			continue
 		} else if os.IsNotExist(err) {
 			logSync(fmt.Sprintf("Creating: '%s'", clientFile.Path))
 			clientContent = clientFile.Content
 		} else {
 			// file locks?
-			fileWasModifiedOnServer := serverModTime > clientFile.LastModified
+			fileWasModifiedOnServer := serverModifiedTime > clientFile.LastModified
 			if fileWasModifiedOnServer {
-				serverContent, err := ioutil.ReadFile(fullPath)
+				serverContent, err := userFS.Read("", path)
 				if err != nil {
-					log.Printf("Error reading file '%s': %v", fullPath, err)
+					log.Printf("Error reading file '%s': %v", path, err)
 					continue
 				}
 				logSync(fmt.Sprintf("Merging and writing: '%s'", clientFile.Path))
@@ -110,17 +102,11 @@ func SyncAllTextFiles(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
-			log.Printf("Error creating directory for file '%s': %v", fullPath, err)
-			logSync(fmt.Sprintf("Error creating directory for file '%s': %v", fullPath, err))
-			continue
-		}
-
 		// Write the clientContent to the server at path
-		err = os.WriteFile(fullPath, []byte(clientContent), 0644)
+		err = userFS.Write("", path, clientContent)
 		if err != nil {
-			log.Printf("Error writing file '%s': %v", fullPath, err)
-			logSync(fmt.Sprintf("Error writing file '%s': %v", fullPath, err))
+			log.Printf("Error writing file '%s': %v", path, err)
+			logSync(fmt.Sprintf("Error writing file '%s': %v", path, err))
 			continue
 		}
 	}
@@ -138,6 +124,7 @@ func SyncAllTextFiles(w http.ResponseWriter, r *http.Request) {
 	files := make([]file, 0)
 	dirTimestamps := make(map[string]int64)
 	for path, serverFileTime := range serverTimestamps {
+		// TOOD make it not as ugly?
 		parts := strings.Split(path, string(os.PathSeparator))
 		dir := parts[0]
 		isInRoot := len(parts) == 1
@@ -148,10 +135,10 @@ func SyncAllTextFiles(w http.ResponseWriter, r *http.Request) {
 		requestDirTime, exists := request.Timestamps[dir]
 		if !exists || serverFileTime > requestDirTime {
 			// Client needs this file - read its content
-			fullPath := filepath.Join(StorageDir, path)
-			content, err := ioutil.ReadFile(fullPath)
+			content, err := userFS.Read("", path)
 			if err != nil {
-				log.Printf("Error reading file %s: %v", fullPath, err)
+				log.Printf("Error reading file %s: %v", path, err)
+				logSync(fmt.Sprintf("Error reading file %s: %v", path, err))
 				continue
 			}
 			logSync(fmt.Sprintf("Sending file: '%s'", path))

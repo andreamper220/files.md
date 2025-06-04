@@ -13,8 +13,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -145,68 +143,6 @@ func (fs FS) Exists(dir, filename string) (bool, error) {
 	}
 
 	return exists, nil
-}
-
-func (fs FS) Ctime(dir, filename string) (int64, error) {
-	filePath := fs.UnsafePath(dir, filename)
-	isSafe, err := fs.isSafe(filePath)
-	if err != nil {
-		return 0, fmt.Errorf("fs file: can't check if the file is safe to access '%s': %w", filePath, err)
-	}
-	if !isSafe {
-		return 0, fmt.Errorf("fs file: unsafe filePath '%s': %w", filePath, errUnsafePath)
-	}
-
-	info, err := fs.backend.Stat(filePath)
-	if err != nil {
-		return 0, fmt.Errorf("fs file: can't stat file '%s': %w", filePath, err)
-	}
-
-	return Ctime(info), nil
-}
-
-// Ctimes recursively scans a directory and returns the ctime
-// for all .md files as Unix timestamps.
-func (fs FS) Ctimes() (map[string]int64, error) {
-	timestamps := make(map[string]int64)
-
-	err := afero.Walk(fs.backend, fs.RootPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-
-		base := filepath.Base(path)
-		if strings.HasPrefix(base, ".") && path != fs.RootPath {
-			if info.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		// Only process .md files
-		if !strings.HasSuffix(strings.ToLower(path), FileExt) {
-			return nil
-		}
-
-		relPath, err := filepath.Rel(fs.RootPath, path)
-		if err != nil {
-			return nil
-		}
-
-		if relPath == "" {
-			relPath = "."
-		}
-
-		timestamps[relPath] = Ctime(info)
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return timestamps, nil
 }
 
 func (fs FS) Read(dir, filename string) (string, error) {
@@ -562,193 +498,64 @@ func (fs FS) UnsafePath(dir, filename string) string {
 	return p
 }
 
-func SanitizeFilename(filename string) string {
-	// Under Linux and other Unix-related systems,
-	// there are only two characters that cannot
-	// appear in the name of a file or directory,
-	// and those are NUL '\0' and slash '/'.
-	// For Windows we only handle '\',
-	// consider sanitazing other characters
-	filename = strings.ReplaceAll(filename, "\x00", "")
-	filename = strings.ReplaceAll(filename, "/", escapedForwardSlash)
-	filename = strings.ReplaceAll(filename, "\\", escapedBackwardSlash)
-
-	// colon is a reserved character in Windows, so we need to replace it with Modifier Letter Colon (U+A789)
-	// Let's not care about Windows for now, becuase linux/macos users suffer from this
-	//filename = strings.ReplaceAll(filename, ":", "꞉")
-
-	return filename
-}
-
-func UnsanitizeFilename(filename string) string {
-	filename = strings.ReplaceAll(filename, escapedForwardSlash, "/")
-	filename = strings.ReplaceAll(filename, escapedBackwardSlash, "\\")
-
-	return filename
-}
-
-func Title(filename string) string {
-	return txt.Ucfirst(strings.TrimSuffix(strings.TrimSpace(filename), FileExt))
-}
-
-func Hash(filename string) string {
-	hash := md5.Sum([]byte(filename))
-	return hex.EncodeToString(hash[:])[:11]
-}
-
-// ShortHash returns a short hash of the filename
-// Telegram only allows 64 bytes in callback_data,
-// so if we have 3 params we should use shortHash.
-// More collisions are possible, but it's a trade-off.
-func ShortHash(filename string) string {
-	hash := md5.Sum([]byte(filename))
-	return hex.EncodeToString(hash[:])[:5]
-}
-
-func ExcludeChecklists(dirs []File) []File {
-	var newDirs []File
-	for _, dir := range dirs {
-		isChecklist := strings.HasPrefix(dir.Name, "_") && strings.HasSuffix(dir.Name, "_")
-		if isChecklist {
-			continue
-		}
-
-		newDirs = append(newDirs, dir)
+func (fs FS) Ctime(dir, filename string) (int64, error) {
+	filePath := fs.UnsafePath(dir, filename)
+	isSafe, err := fs.isSafe(filePath)
+	if err != nil {
+		return 0, fmt.Errorf("fs file: can't check if the file is safe to access '%s': %w", filePath, err)
+	}
+	if !isSafe {
+		return 0, fmt.Errorf("fs file: unsafe filePath '%s': %w", filePath, errUnsafePath)
 	}
 
-	return newDirs
-}
-
-func ExcludeSystemDirs(dirs []File) []File {
-	var newDirs []File
-	for _, dir := range dirs {
-		if slices.Contains([]string{DirImg, DirArchive, DirJournal, DirInsights}, dir.Name) {
-			continue
-		}
-
-		newDirs = append(newDirs, dir)
+	info, err := fs.backend.Stat(filePath)
+	if err != nil {
+		return 0, fmt.Errorf("fs file: can't stat file '%s': %w", filePath, err)
 	}
 
-	return newDirs
+	return Ctime(info), nil
 }
 
-func ExcludeTaskDirs(dirs []File) []File {
-	var newDirs []File
-	for _, dir := range dirs {
-		if slices.Contains([]string{DirToday, DirLater}, dir.Name) {
-			continue
+// Ctimes recursively scans a directory and returns the ctime
+// for all .md files as Unix timestamps.
+func (fs FS) Ctimes() (map[string]int64, error) {
+	timestamps := make(map[string]int64)
+
+	err := afero.Walk(fs.backend, fs.RootPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
 		}
 
-		newDirs = append(newDirs, dir)
-	}
-
-	return newDirs
-}
-
-func ExcludePomodoro(files []File) []File {
-	var newFiles []File
-	for _, file := range files {
-		if file.Name == FilePomodoro {
-			continue
+		base := filepath.Base(path)
+		if strings.HasPrefix(base, ".") && path != fs.RootPath {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 
-		newFiles = append(newFiles, file)
-	}
-
-	return newFiles
-}
-
-func ExcludeConfig(files []File) []File {
-	var newFiles []File
-	for _, file := range files {
-		if file.Name == FileConfig && file.ParentDir == DirRoot {
-			continue
+		// Only process .md files
+		if !strings.HasSuffix(strings.ToLower(path), FileExt) {
+			return nil
 		}
 
-		newFiles = append(newFiles, file)
-	}
-
-	return newFiles
-}
-
-func OnlyNoteDirs(dirs []File) []File {
-	return ExcludeSystemDirs(ExcludeTaskDirs(ExcludeChecklists(dirs)))
-}
-
-func OnlyChecklists(dirs []File) []File {
-	entries := OnlyDirs(ExcludeSystemDirs(ExcludeTaskDirs(dirs)))
-
-	var dirsWithChecklists []File
-	for _, entry := range entries {
-		isChecklist := strings.HasPrefix(entry.Name, "_") && strings.HasSuffix(entry.Name, "_")
-		if isChecklist {
-			dirsWithChecklists = append(dirsWithChecklists, entry)
-		}
-	}
-
-	return dirsWithChecklists
-}
-
-func OnlyMDFiles(entries []File) []File {
-	var files []File
-	for _, file := range entries {
-		if file.IsDir {
-			continue
+		relPath, err := filepath.Rel(fs.RootPath, path)
+		if err != nil {
+			return nil
 		}
 
-		if filepath.Ext(file.Name) != FileExt {
-			continue
+		if relPath == "" {
+			relPath = "."
 		}
 
-		files = append(files, file)
-	}
+		timestamps[relPath] = Ctime(info)
 
-	return files
-}
-
-func OnlyDirs(entries []File) []File {
-	var dirs []File
-	for _, file := range entries {
-		if !file.IsDir {
-			continue
-		}
-
-		dirs = append(dirs, file)
-	}
-
-	return dirs
-}
-
-// OnlyUserDirs returns only directories that look like user IDs
-func OnlyUserDirs(entries []File) []File {
-	var dirs []File
-	for _, file := range entries {
-		if !file.IsDir {
-			continue
-		}
-		if _, err := strconv.Atoi(file.Name); err != nil {
-			continue
-		}
-
-		dirs = append(dirs, file)
-	}
-
-	return dirs
-}
-
-func OnlyFilenames(entries []File) []string {
-	var filenames []string
-	for _, entry := range entries {
-		filenames = append(filenames, entry.Name)
-	}
-
-	return filenames
-}
-
-func SortByCtimeDesc(entries []File) []File {
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].Ctime > entries[j].Ctime
+		return nil
 	})
 
-	return entries
+	if err != nil {
+		return nil, err
+	}
+
+	return timestamps, nil
 }
