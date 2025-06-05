@@ -160,9 +160,7 @@ async function syncAllWithServer() {
     try {
         // Write files received from the server
         for (const fileInfo of server.files) {
-            console.log(fileInfo);
             const {path, content, lastModified} = fileInfo;
-            console.log(path);
             // If it is current file, skip, because we sync it separately
             // TODO if we skip current, don't take it's timestamp? We had a bug when sync was broken for 1 file
             // TODO fix missing / for root files
@@ -505,7 +503,7 @@ async function saveTextFile(path, content) {
 }
 
 async function rename(oldPath, newPath) {
-    let fileHandle = await getFileHandle(path);
+    let fileHandle = await getFileHandle(oldPath);
     if (fileHandle === null) {
         // TODO fix once Chromium fixes the bug
         console.log("Malformed name, skipping file...");
