@@ -194,7 +194,7 @@ async function syncTextsWithServer() {
 }
 
 async function syncFileWithServer(dir, filename) {
-    const path = `${dir}/${filename}`;
+    const path = path(dir, filename);
     let file = await (await getFileHandle(path)).getFile();
     // TODO we might only need to send content when modifying
     let content = await file.text();
@@ -207,7 +207,7 @@ async function syncFileWithServer(dir, filename) {
             headers: {'Content-Type': 'application/json', 'Authorization': localStorage.getItem('token')},
             body: JSON.stringify({
                 userId: getUserId(),
-                path: `${dir}/${filename}`,
+                path: path(dir, filename),
                 lastModified: serverTimestamp,
                 content: content,
             })
@@ -395,9 +395,9 @@ async function collectLocallyModifiedTextFiles() {
             if  (/[<>:"|?*\\/\x00-\x1F\x7F]/.test(file)) {
                 continue;
             }
-            if (!existingFiles[toPath(dir, file)]) {
+            if (!existingFiles[path(dir, file)]) {
                 console.log(dir, file);
-                console.log("DELETED " + toPath(dir, file));
+                console.log("DELETED " + path(dir, file));
             }
         }
     }
@@ -405,7 +405,7 @@ async function collectLocallyModifiedTextFiles() {
     return filesToSend;
 }
 
-function toPath(dir, file) {
+function path(dir, file) {
     if (dir === "") {
         return file;
     }
@@ -435,7 +435,7 @@ async function getFileStatus(dir, filename) {
         return {
             status: 'new',
             content: content,
-            path: `${dir}/${filename}`, // WHY?
+            path: path(dir, filename), // WHY?
             lastModified: 0 // new file
         }
     }
