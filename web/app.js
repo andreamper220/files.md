@@ -118,9 +118,24 @@ function initEditor(el) {
         }
     });
 
+    // Editor keybindings
     editor.addKeyMap({
         'Cmd-Y': function (cm) {
-            cm.replaceSelection('✅ ');
+            var cursor = cm.getCursor();
+            var lineStart = {line: cursor.line, ch: 0};
+            cm.replaceRange('✅ ', lineStart);
+            cm.focus();
+        },
+        'Ctrl-Y': function (cm) {
+            var cursor = cm.getCursor();
+            var lineStart = {line: cursor.line, ch: 0};
+            cm.replaceRange('✅ ', lineStart);
+            cm.focus();
+        },
+        'Alt-Y': function (cm) {
+            var cursor = cm.getCursor();
+            var lineStart = {line: cursor.line, ch: 0};
+            cm.replaceRange('✅ ', lineStart);
             cm.focus();
         },
         'Cmd-B': function (cm) {

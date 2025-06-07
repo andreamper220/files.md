@@ -620,6 +620,10 @@ async function syncCurrentFile() {
         return;
     }
 
+    if (editor.currentFile === undefined) {
+        return
+    }
+
     // Wait until not saving
     // TODO what if lots of saving calls are stuck?
     // I decided to go from loop to insta return
