@@ -51,15 +51,6 @@ let defaultFiles = {
                 "#### Inline Code\n" +
                 "Use `console.log()` for debugging.\n" +
                 "\n" +
-                "#### Code Blocks\n" +
-                "```go\n" +
-                "function greetUser(name) {\n" +
-                "    return `Hello, ${name}!`;\n" +
-                "}\n" +
-                "\n" +
-                "console.log(greetUser(\"World\"));\n" +
-                "```\n" +
-                "\n" +
                 "#### Tables\n" +
                 "| Title | Main Character |\n" +
                 "| ------- | --------------- |\n" +
@@ -78,8 +69,7 @@ let defaultFiles = {
                 "\n" +
                 "![Why taking notes](https://app.files.md/lib/notes.jpg)\n" +
                 "\n" +
-                "*Caption: This is a sample image with alt text*\n" +
-                "#### Links\n" +
+                "*Caption: This is a sample image with alt text*\n\n" +
                 "[Welcome](/Welcome.md)\n" +
                 "[My amazing project](/My amazing project.md)"
         },
