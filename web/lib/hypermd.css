@@ -230,7 +230,7 @@
     color: #999;
 }
 .cm-s-hypermd-light pre.HyperMD-header {
-    line-height: 1.5 !important;
+    /*line-height: 1.5 !important;*/
     /*PATCHED*/
     /*font-family: inherit !important;*/
     padding-left: 5px !important;
@@ -871,8 +871,10 @@
 }
 .cm-s-hypermd-light pre.hmd-inactive-line span.cm-hmd-escape-backslash,
 .cm-s-hypermd-light pre.hmd-inactive-line span.cm-formatting-header {
-    font-size: 0 !important;
-    display: inline;
+    /*PATCHED, otherwise padding/margin/line height of the header is affected */
+    display: none;
+    /*font-size: 0 !important;*/
+    /*display: inline;*/
 }
 .cm-s-hypermd-light pre.hmd-inactive-line span.cm-hmd-list-indent {
     border-right: 0;
@@ -887,7 +889,7 @@
     background: #eee;
 }
 .cm-s-hypermd-light pre.HyperMD-header {
-    line-height: 1.5 !important;
+    /*line-height: 1.5 !important;*/
     font-family: inherit !important;
     padding-left: 5px !important;
     margin-left: 0 !important;
