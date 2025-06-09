@@ -403,7 +403,7 @@ async function collectModifiedAndDeletedFiles() {
     let deleted = [];
     for (const dir in filesMetadata.files) {
         for (const file in filesMetadata.files[dir]) {
-            if  (/[<>:"|?*\\/\x00-\x1F\x7F]/.test(file)) {
+            if (/[<>:"|?*\\/\x00-\x1F\x7F]/.test(file)) {
                 continue;
             }
             if (editor.currentDir === dir && editor.currentFile === file) {
@@ -666,6 +666,13 @@ async function syncCurrentFile() {
         const newFilename = fromHeader(firstLine);
         await removeFile(`${editor.currentDir}/${editor.currentFile}`);
         console.log('Removed', `${editor.currentDir}/${editor.currentFile}`);
+        // Way to verbose, to we want to mess with it like this?
+        files[editor.currentDir][editor.currentFile] = undefined;
+        files[editor.currentDir][newFilename] = {
+            content: getCurrentContent(),
+            lastModified: 0,
+            handle: await getFileHandle(toPath(editor.currentDir, newFilename)),
+        }
         editor.currentFile = newFilename;
 
         const path = `${editor.currentDir}/${editor.currentFile}`;
@@ -676,11 +683,10 @@ async function syncCurrentFile() {
         console.log('Created', `${editor.currentDir}/${editor.currentFile}`);
     }
 
-   let contentWasModifiedLocally = false;
+    let contentWasModifiedLocally = false;
     try {
         const path = `${editor.currentDir}/${editor.currentFile}`;
         contentWasModifiedLocally = !await isContentEqual(path, getCurrentContent());
-        console.log(getCurrentContent());
     } catch (error) {
         console.error("Error checking content equality:", error);
         isSyncingCurrent = false;
