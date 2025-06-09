@@ -3173,12 +3173,14 @@
     return result
   }
 
-  function hasImageAtCursor(cm, head) {
+  // Currently it's either table or img
+  function hasWidgetAtCursor(cm, head) {
     let lineView = findViewForLine(cm, head.line);
     if (!lineView || !lineView.text) return false;
 
-    let widgets = lineView.text.querySelectorAll('.CodeMirror-widget img');
-    return widgets.length > 0;
+    let tables = lineView.text.querySelectorAll('.hmd-table-column');
+    let images = lineView.text.querySelectorAll('.CodeMirror-widget img');
+    return tables.length > 0 || images.length > 0;
   }
 
   // Draws a cursor for the given range
@@ -3194,7 +3196,7 @@
     let lineElement = lineView && lineView.text;
 
     // Old way of doing things
-    if (hasImageAtCursor(cm, head)) {
+    if (hasWidgetAtCursor(cm, head)) {
       cursor.style.top = pos.top + "px";
       cursor.style.height = Math.max(0, pos.bottom - pos.top) * cm.options.cursorHeight + "px";
       return;

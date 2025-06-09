@@ -239,6 +239,8 @@ a:hover {
 
 .cm-s-hypermd-light span.cm-link {
     color: var(--color-link) !important;
+    font-weight:500;
+    border-bottom:0.04em solid rgba(50,50,50,.25);
 }
 
 .cm-s-hypermd-light span.cm-link:hover {
