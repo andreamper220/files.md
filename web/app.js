@@ -419,7 +419,7 @@ function isModifierKey(event) {
     return event.metaKey || event.ctrlKey || event.altKey;
 }
 
-window.addEventListener('keydown', (event) => {
+window.addEventListener('keydown', async (event) => {
     if (isModifierKey(event) && event.key === 'p') {
         event.preventDefault();
         event.stopPropagation();
@@ -439,9 +439,14 @@ window.addEventListener('keydown', (event) => {
         document.getElementById('search-input').value = ''
         openSearchModal();
     }
-});
 
-document.getElementById("new-file").addEventListener('click', newFile);
+    if (isModifierKey(event) && event.key === 'n') {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        await newFile();
+    }
+}, true);
 
 window.addEventListener('focus', () => {
     console.log('got focus');
