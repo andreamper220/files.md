@@ -22,7 +22,6 @@
     "Consolas", "Source Code Pro", monospace;
 
     --normal-width: 800px;
-    --line-height: 1.5;
 }
 
 html {
@@ -239,7 +238,7 @@ a:hover {
 
 .cm-s-hypermd-light span.cm-link, .cm-s-hypermd-light .cm-string.cm-url.cm-hmd-barelink {
     color: var(--color-link) !important;
-    font-weight: 460;
+    font-weight: 450;
     border-bottom:0.04em solid rgba(50,50,50,.25);
 }
 

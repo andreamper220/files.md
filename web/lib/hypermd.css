@@ -81,7 +81,7 @@
 .cm-s-hypermd-light {
     font-family: -apple-system, BlinkMacSystemFont, "Open Sans", "Helvetica Neue", Helvetica, Arial, "Hiragino Sans GB", "WenQuanYi Micro Hei", "Noto Sans CJK SC", "Microsoft YaHei", STHeiti, "Microsoft Jhenghei", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     -webkit-font-smoothing: antialiased;
-    line-height: 1.5;
+    line-height: 1.5 !important;
     font-size: 12pt;
     background: #FFF;
     color: #000;

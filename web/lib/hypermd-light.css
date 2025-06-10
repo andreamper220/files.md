@@ -83,3 +83,7 @@
     color: var(--color-url) !important;
     font-weight: 400;
 }
+
+.cm-s-hypermd-light .cm-link, .cm-s-hypermd-light .cm-string.cm-url.cm-hmd-barelink {
+    line-height: 1.8 !important;
+}
