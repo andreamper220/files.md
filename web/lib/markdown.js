@@ -73,6 +73,7 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
     linkInline: "link",
     linkEmail: "link",
     linkText: "link",
+    wikiLinkText: "wiki-link",
     linkHref: "string",
     em: "em",
     strong: "strong",
@@ -401,6 +402,8 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
       styles.push("trailing-space-" + (state.trailingSpace % 2 ? "a" : "b"));
     }
 
+    if (state.wikiLink) { styles.push(tokenTypes.wikiLinkText); }
+
     return styles.length ? styles.join(' ') : null;
   }
 
@@ -504,6 +507,22 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
       state.imageAltText = false;
       state.image = false;
       state.inline = state.f = linkHref;
+      return type;
+    }
+
+    if (ch === '[' && stream.peek() === '[' && !state.image) {
+      // Wiki-style link [[page]]
+      stream.next(); // consume second [
+      state.wikiLink = true;
+      if (modeCfg.highlightFormatting) state.formatting = "link";
+      return getType(state);
+    }
+
+    if (ch === ']' && state.wikiLink && stream.peek() === ']') {
+      stream.next(); // consume second ]
+      if (modeCfg.highlightFormatting) state.formatting = "link";
+      var type = getType(state);
+      state.wikiLink = false;
       return type;
     }
 
@@ -774,7 +793,8 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
         trailingSpaceNewLine: false,
         strikethrough: false,
         emoji: false,
-        fencedEndRE: null
+        fencedEndRE: null,
+        wikiLink: false,
       };
     },
 
@@ -814,7 +834,8 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
         trailingSpace: s.trailingSpace,
         trailingSpaceNewLine: s.trailingSpaceNewLine,
         md_inside: s.md_inside,
-        fencedEndRE: s.fencedEndRE
+        fencedEndRE: s.fencedEndRE,
+        wikiLink: s.wikiLink
       };
     },
 

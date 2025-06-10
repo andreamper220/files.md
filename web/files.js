@@ -626,9 +626,9 @@ function getUserId() {
 // 2) Sync it with the server
 // TODO add hash of last read file comparison, merge on conflict (in which scenarious in can happen tho?)
 async function syncCurrentFile() {
-    // if (debug) {
-    //     return;
-    // }
+    if (debug) {
+        return;
+    }
 
     if (editor.currentFile === undefined) {
         return

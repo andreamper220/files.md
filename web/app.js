@@ -1,8 +1,8 @@
 // HyperMD/Codemirror editor
 let editor;
 let focusedItemIndex = -1;
-let debug = false;
-// let debug = {dir: "", file: "Sim.md", loaded: false};
+// let debug = false;
+let debug = {dir: "", file: "Sim.md", loaded: false};
 
 async function init(el) {
     initEditor(el);
@@ -310,6 +310,8 @@ async function openFile(dir, filename, saveToHistory = true) {
     editor.getDoc().setValue(content);
     editor.clearHistory();
     editor.markClean();
+
+    console.log(editor.getLineTokens(4));
 
     if (cursorPos !== null) {
         console.log('cursor not null');
