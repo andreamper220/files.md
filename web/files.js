@@ -250,7 +250,7 @@ async function syncFileWithServer(dir, filename) {
     console.log("File synced with server");
 }
 
-async function syncMediaFilesFromServer() {
+async function syncMediaFilesWithServer() {
     if (localStorage.getItem('token') === null) {
         return;
     }
@@ -570,6 +570,42 @@ async function saveTextFile(path, content) {
     }
 }
 
+async function saveImageFile(fileName, file) {
+    try {
+        const rootDirHandle = await getRootDirHandle();
+
+        let mediaDirHandle;
+        try {
+            mediaDirHandle = await rootDirHandle.getDirectoryHandle('media', { create: true });
+        } catch (error) {
+            console.error("Error creating media directory:", error);
+            throw new Error("Could not create media directory");
+        }
+
+        const fileHandle = await mediaDirHandle.getFileHandle(fileName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(file);
+        await writable.close();
+
+        return fileHandle;
+    } catch (error) {
+        console.error("Error in saveImageFile:", error);
+        throw error;
+    }
+}
+
+function getImageExtension(mimeType) {
+    const extensions = {
+        'image/png': 'png',
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/gif': 'gif',
+        'image/webp': 'webp'
+    };
+    return extensions[mimeType] || 'png';
+}
+
+
 // TODO del from memory?
 async function removeFile(path) {
     let fileHandle = await getFileHandle(path);
@@ -815,7 +851,7 @@ async function initFiles() {
     files = await loadLocalFiles(rootDirHandle);
     console.log(`Files loaded in ${performance.now() - startTime}ms`);
     await syncTextsWithServer();
-    await syncMediaFilesFromServer();
+    await syncMediaFilesWithServer();
 }
 
 window.addEventListener('beforeunload', function () {

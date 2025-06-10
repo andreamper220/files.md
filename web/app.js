@@ -2,8 +2,8 @@
 let editor;
 let focusedSearchItemIndex = -1;
 let focusedMoveItemIndex = -1;
-let debug = false;
-// let debug = {dir: "", file: "Sim.md", loaded: false};
+// let debug = false;
+let debug = {dir: "", file: "Sim.md", loaded: false};
 
 async function init(el) {
     initEditor(el);
@@ -86,6 +86,18 @@ function initEditor(el) {
         path = path.replace(/\|.*]$/, '');
         path = path.replace('[', '').replace(']', '');
 
+        // If starts with media/, open via native file opener.
+        // It is not possible to open files in OS via browser.
+        // console.log(path);
+        // if (path.startsWith('media/')) {
+        //     const fileName = path.slice(6);
+        //     const fileHandle = await getFileHandle(path);
+        //     const file = await fileHandle.getFile();
+        //     const url = URL.createObjectURL(file);
+        //     window.open(url);
+        //     return;
+        // }
+
         // If it is a web link open window blank
         if (/^(http|https):\/\//.test(path)) {
             window.open(path, '_blank');
@@ -112,25 +124,38 @@ function initEditor(el) {
     editor.setOption("viewportMargin", Infinity);
     initAutoscroll(editor);
 
-    // TODO Image uploading
     editor.on("paste", async (_, event) => {
         const items = (event.clipboardData || event.originalEvent.clipboardData).items;
         for (const item of items) {
             if (item.kind === "file" && item.type.startsWith("image/")) {
-                const file = item.getAsFile();
-                const fileName = `${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
-                // await saveImageToDirectory(file, fileName);
+                event.preventDefault(); // Prevent default paste behavior
 
-                const markdownImageSyntax = `![](media/${fileName})`;
-                editor.replaceSelection(markdownImageSyntax);
-                // if (fileHandle) {
-                //     // Insert the Markdown image syntax into the editor
-                //     const markdownImageSyntax = `![[${fileName}]]`;
-                //     editor.replaceSelection(markdownImageSyntax);
-                //     console.log(`Image saved as: ${fileName}`);
-                // } else {
-                //     console.error("Failed to save the image.");
-                // }
+                const file = item.getAsFile();
+                const fileName = `${new Date().toISOString().replace(/[:.]/g, '-')}.${getImageExtension(item.type)}`;
+
+                try {
+                    const fileHandle = await saveImageFile(fileName, file);
+                    if (fileHandle) {
+                        if (!files['media']) {
+                            files['media'] = {};
+                        }
+                        files['media'][fileName] = {
+                            handle: fileHandle,
+                            lastModified: Date.now(),
+                            imageUrl: URL.createObjectURL(file)
+                        };
+
+                        const markdownImageSyntax = `![](media/${fileName})`;
+                        editor.replaceSelection(markdownImageSyntax);
+                        console.log(`Image saved as: ${fileName}`);
+                    } else {
+                        console.error("Failed to save the image.");
+                        alert("Failed to save the image. Please try again.");
+                    }
+                } catch (error) {
+                    console.error("Error saving image:", error);
+                    alert("Error saving image: " + error.message);
+                }
             }
         }
     });
@@ -857,7 +882,7 @@ window.addEventListener("focus", async () => {
     }
 
     // Sync media first, so that new images for current file would be loaded
-    await syncMediaFilesFromServer();
+    await syncMediaFilesWithServer();
     await syncCurrentFile();
 
     const savedDirectoryHandle = await getRootDirHandle();
