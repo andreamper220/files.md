@@ -11,11 +11,12 @@
       </defs>
 
       <rect x="1" y="1" width="30" height="30" rx="0" ry="0" fill="url(#backgroundGradient)"/>
-      <path stroke="url(#telegramGradient)" stroke-linecap="round" stroke-width="2"
-            d="M28 11v13a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h6c3 0 3 3 5 3h9.003C27.108 9 28 9.895 28 11z"
-            fill="url(#telegramGradient)"
-      />
-      <text x="50%" y="55%" font-size="14" font-family="BlinkMacSystemFont" font-weight="bold"
-            fill="white" text-anchor="middle" alignment-baseline="middle">✎</text>
+      <g transform="translate(16, 16) scale(0.75) translate(-16, -16)">
+            <path stroke="url(#telegramGradient)" stroke-linecap="round" stroke-width="2"
+                  d="M28 11v13a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h6c3 0 3 3 5 3h9.003C27.108 9 28 9.895 28 11z"
+                  fill="url(#telegramGradient)"
+            />
+            <text x="50%" y="55%" font-size="14" font-family="BlinkMacSystemFont" font-weight="bold"
+                  fill="white" text-anchor="middle" alignment-baseline="middle">✎</text>
+      </g>
 </svg>
-<!--Convert to PNG here: https://vincerubinetti.github.io/svg-to-png/ -->

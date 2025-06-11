@@ -7,15 +7,15 @@
   "theme_color": "#F8F8F7",
   "icons": [
     {
-      "src": "https://app.files.md/icon.png",
+      "src": "https://app.files.md/icon.svg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml"
     },
     {
       "purpose": "maskable",
-      "src": "https://app.files.md/icon.png",
+      "src": "https://app.files.md/icon.svg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml"
     }
   ]
 }
