@@ -449,3 +449,7 @@ body.dragging * {
 .cm-formatting.cm-formatting-link-string.cm-string.cm-url, .cm-formatting.cm-formatting-link.cm-link {
     color: var(--color-tx-alt) !important;
 }
+
+.hmd-image-preview {
+    border: var(--color-border);
+}

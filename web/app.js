@@ -21,7 +21,7 @@ async function init(el) {
 
     const permission = await savedDirHandle.queryPermission({mode: 'read'});
     if (permission !== 'granted') {
-        document.getElementById('open-dir').style.display = 'inline';
+        document.getElementById('open-folder').style.display = 'inline';
         document.getElementById('new-file').style.display = 'none';
     }
 

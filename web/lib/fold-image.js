@@ -84,14 +84,14 @@
                     modal.style.alignItems = "center";
                     modal.style.zIndex = "1000";
 
-                    let fullSizeImg = document.createElement("img");
-                    fullSizeImg.src = img.src;
-                    fullSizeImg.style.maxWidth = "90%";
-                    fullSizeImg.style.maxHeight = "90%";
-                    fullSizeImg.style.border = "1px solid #E6E4DA";
-                    fullSizeImg.style.borderRadius = "8px";
+                    let imgPreview = document.createElement("img");
+                    imgPreview.src = img.src;
+                    imgPreview.className = "hmd-image-preview";
+                    imgPreview.style.maxWidth = "90%";
+                    imgPreview.style.maxHeight = "90%";
+                    imgPreview.style.borderRadius = "8px";
 
-                    modal.appendChild(fullSizeImg);
+                    modal.appendChild(imgPreview);
 
                     const closeModal = () => {
                         document.body.removeChild(modal);
