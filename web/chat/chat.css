@@ -1,5 +1,4 @@
 html {
-    background-color: rgba(27, 38, 54, 1);
     text-align: center;
     color: white;
 }
@@ -35,6 +34,7 @@ body {
 #messages {
     flex: 1;
     padding: 10px;
+    padding-right: 20px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -70,6 +70,8 @@ body {
     display: flex;
     position: relative;
     padding: 5px 8px 8px 8px;
+    padding-right: 15px;
+
     border-top: 1px solid #ccc;
     gap: 5px;
     align-items: flex-end;
