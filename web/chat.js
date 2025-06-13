@@ -267,6 +267,22 @@ window.addEventListener("focus", async () => {
     input.focus();
 });
 
+function isModifierKey(event) {
+    return event.metaKey || event.ctrlKey || event.altKey;
+}
+
+document.addEventListener('keydown', function (event) {
+    if (isModifierKey(event) && event.key === 'Enter') {
+        event.preventDefault();
+
+        window.location.href = '/';
+        // setTimeout(() => {
+        window.resizeTo(screen.availWidth, screen.availHeight);
+        window.moveTo(0, 0);
+        // }, 100);
+    }
+});
+
 function initDB() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open('files', 1);

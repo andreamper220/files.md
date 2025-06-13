@@ -718,21 +718,9 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('keydown', function (event) {
     if (isModifierKey(event) && event.key === 'Enter') {
         event.preventDefault();
-        // Check for Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux)
-        const currentPath = window.location.pathname;
 
-        if (currentPath === '/' || currentPath === '') {
-            window.location.href = '/chat';
-            // setTimeout(() => {
-                window.resizeTo(500, 500);
-            // }, 100);
-        } else if (currentPath === '/chat') {
-            window.location.href = '/';
-            // setTimeout(() => {
-                window.resizeTo(screen.availWidth, screen.availHeight);
-                window.moveTo(0, 0);
-            // }, 100);
-        }
+        window.location.href = '/chat';
+        window.resizeTo(500, 500);
         // const sidebar = document.getElementById('sidebar');
         // if (sidebar.style.display === 'none') {
         //     sidebar.style.display = 'block';
