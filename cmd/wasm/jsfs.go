@@ -228,7 +228,7 @@ func jsArrayToFileInfo(jsArray js.Value) []os.FileInfo {
 
 		name := jsObj.Get("name").String()
 		isDir := jsObj.Get("isDir").Bool()
-		modTimeJS := jsObj.Get("modTime").Int()
+		modTimeJS := jsObj.Get("modTime").Int() / 1000 // JS have timestamps in milliseconds
 
 		fileInfo := NewFile(name, modTimeJS, isDir)
 
