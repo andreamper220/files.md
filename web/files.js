@@ -4,6 +4,7 @@ const loaderInterval = 3000; // ms, how often to load current file from local fi
 
 let isSaving = false;
 let isSyncing = false;
+let isSyncingMedia = false;
 let isSyncingCurrent = false;
 
 // In-memory mapping of local file system:
@@ -252,6 +253,9 @@ async function syncFileWithServer(dir, filename) {
 }
 
 async function syncMedia() {
+    if (isSyncingMedia) {
+        return;
+    }
     if (localStorage.getItem('token') === null) {
         return;
     }
@@ -259,51 +263,50 @@ async function syncMedia() {
         return;
     }
 
-    // TODO skip if already syncing
+    isSyncingMedia = true;
 
-    console.log(`Starting media sync from img folder...`);
     const startTime = performance.now();
 
+    const mediaTimestamp = serverFiles['mediaTimestamp'] || 0;
+    if (mediaTimestamp !== 0) {
+        // Send new files from client to server
+        let newMedias = await collectNewMediaFiles();
+        for (const mediaFile of newMedias) {
+            try {
+                // TODo improve that hardcode :D
+                let fileHandle = await getFileHandle('media/' + mediaFile)
+                let file = await fileHandle.getFile();
+                const arrayBuffer = await file.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+                let binaryString = '';
+                for (let i = 0; i < uint8Array.length; i++) {
+                    binaryString += String.fromCharCode(uint8Array[i]);
+                }
+                const base64String = btoa(binaryString);
 
-    let newMedias = await collectNewMediaFiles();
-    console.log(newMedias);
-    for (const mediaFile of newMedias) {
-        try {
-            // TODo improve that hardcode :D
-            let fileHandle = await getFileHandle('media/' + mediaFile)
-            let file = await fileHandle.getFile();
-            const arrayBuffer = await file.arrayBuffer();
-            const uint8Array = new Uint8Array(arrayBuffer);
-            let binaryString = '';
-            for (let i = 0; i < uint8Array.length; i++) {
-                binaryString += String.fromCharCode(uint8Array[i]);
+                const response = await fetch('https://api.files.md/syncMedia', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': localStorage.getItem('token')
+                    },
+                    body: JSON.stringify({
+                        userId: getUserId(),
+                        path: mediaFile,
+                        data: base64String,
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error(`Failed to sync media file ${mediaFile}:`, response.statusText);
+                } else {
+                    console.log(`Successfully synced media file: ${mediaFile}`);
+                }
+            } catch (error) {
+                console.error(`Error syncing media file ${mediaFile}:`, error);
             }
-            const base64String = btoa(binaryString);
-
-            const response = await fetch('https://api.files.md/syncMedia', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': localStorage.getItem('token')
-                },
-                body: JSON.stringify({
-                    userId: getUserId(),
-                    path: mediaFile,
-                    data: base64String,
-                })
-            });
-
-            if (!response.ok) {
-                console.error(`Failed to sync media file ${mediaFile}:`, response.statusText);
-            } else {
-                console.log(`Successfully synced media file: ${mediaFile}`);
-            }
-        } catch (error) {
-            console.error(`Error syncing media file ${mediaFile}:`, error);
         }
     }
-
-    const mediaTimestamp = serverFiles['mediaTimestamp'] || 0;
     try {
         const response = await fetch('https://api.files.md/syncMedias', {
             method: 'POST',
@@ -362,6 +365,8 @@ async function syncMedia() {
     } catch (error) {
         console.error("Network error during media sync:", error.message);
     }
+
+    isSyncingMedia = false;
 }
 
 async function saveMediaFile(path, blob, lastModified) {
@@ -640,13 +645,13 @@ async function saveImageFile(fileName, file) {
 
         let mediaDirHandle;
         try {
-            mediaDirHandle = await rootDirHandle.getDirectoryHandle('media', { create: true });
+            mediaDirHandle = await rootDirHandle.getDirectoryHandle('media', {create: true});
         } catch (error) {
             console.error("Error creating media directory:", error);
             throw new Error("Could not create media directory");
         }
 
-        const fileHandle = await mediaDirHandle.getFileHandle(fileName, { create: true });
+        const fileHandle = await mediaDirHandle.getFileHandle(fileName, {create: true});
         const writable = await fileHandle.createWritable();
         await writable.write(file);
         await writable.close();
