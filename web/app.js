@@ -478,15 +478,20 @@ function updateMoveFocusedItem(resultsList) {
     });
 }
 
-function openSearchModal() {
+function openSearchModal(text = '') {
     document.getElementById('search').style.display = 'block';
     const inputField = document.getElementById('search-input');
+    inputField.value = text;
     inputField.focus();
 
     focusedSearchItemIndex = -1;
     const goToFileResults = document.getElementById('search-results');
     goToFileResults.innerHTML = '';
-    loadRecentFiles();
+    if (text === '') {
+        loadRecentFiles();
+    } else {
+        search();
+    }
 }
 
 function openMoveModal() {
@@ -603,6 +608,28 @@ function search() {
     const list = document.getElementById('search-results');
     list.innerHTML = '';
 
+    if (search.endsWith('/')) {
+        const folderName = search.slice(0, -1); // Remove the trailing slash
+
+        // Check if the folder exists in files
+        if (files[folderName]) {
+            const list = document.getElementById('search-results');
+            list.innerHTML = '';
+
+            // Get all files from the specified folder
+            const folderResults = [];
+            for (const filename in files[folderName]) {
+                folderResults.push({
+                    filename: filename,
+                    dir: folderName,
+                    score: 100 // Give max score since it's an exact folder match
+                });
+            }
+
+            showSearchResults(folderResults);
+            return;
+        }
+    }
 
     let results = [];
     const lowPriorityDirs = ["archive", "_read_", "_watch_", "_shop_", "habits", "triggers", "today", "later"];
@@ -681,6 +708,7 @@ function showSearchResults(results) {
         listItem.setAttribute('data-path', `${dir}/${filename}`);
         listItem.setAttribute('data-index', index);
         listItem.onclick = async () => {
+            openEditor();
             await openFile(dir, filename);
             closeSearchModal();
         };
@@ -739,17 +767,22 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
-async function switchChat() {
-    if (isChat) {
-        sidebarContainer.style.display = 'block';
-        content.style.display = 'block';
-        chatContainer.style.display = 'none';
-        isChat = false;
-        editor.focus();
-
-        return;
+function openEditor() {
+    if (!isChat) {
+        return true;
     }
 
+    sidebarContainer.style.display = 'block';
+    content.style.display = 'block';
+    chatContainer.style.display = 'none';
+    isChat = false;
+    editor.focus();
+}
+
+function openChat() {
+    if (isChat) {
+        return;
+    }
 
     sidebarContainer.style.display = 'none';
     content.style.display = 'none';
@@ -761,6 +794,16 @@ async function switchChat() {
     const left = (screen.availWidth - 500) / 2;
     const top = (screen.availHeight - 500) / 2;
     window.moveTo(left, top);
+}
+
+
+async function switchChat() {
+    if (isChat) {
+        openEditor();
+        return;
+    }
+
+    openChat();
 }
 
 // Toggle focus mode

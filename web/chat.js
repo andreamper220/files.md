@@ -59,6 +59,11 @@ function attachKeyboard(buttons) {
                 button.classList.add('telegram-button'); // Add a class for styling
                 button.onclick = async () => {
                     if (btn.Cmd.t === "iq") {
+                        let search = '';
+                        if (btn.Cmd.p?.length > 0) {
+                            search = btn.Cmd.p[0];
+                        }
+                        openSearchModal(search);
                         return;
                     }
                     // let update = await window.newUpdate('', btn.Cmd)
