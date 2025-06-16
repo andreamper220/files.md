@@ -199,8 +199,11 @@ async function syncTextsWithServer() {
         }
         // Only move timestamp pointers when we were able to sync all the files.
         if (!failedAtLeastOnce) {
+            console.log("BATCH sync ok, moving timestamps");
             serverFiles['timestamps'] = server.timestamps;
             saveMetadata();
+        } else {
+            console.log("BATCH sync error, timestamps aren't moved");
         }
     } catch (error) {
         console.error("Can't sync: ", error.message)
