@@ -186,7 +186,11 @@ async function syncTextsWithServer() {
                 const shouldRemoveOldFile = path in server.renames;
                 if (shouldRemoveOldFile) {
                     const oldPath = server.renames[path];
-                    await removeFile(oldPath);
+                    try {
+                        await removeFile(oldPath);
+                    } catch(err) {
+                        console.log('RENAME: cant remove file: ', err);
+                    }
                 }
                 saveMetadata();
             } catch (error) {
@@ -632,13 +636,7 @@ async function isContentEqual(path, content) {
 
 // TODO save metadata & files
 async function saveTextFile(path, content) {
-    let fileHandle;
-    try {
-        fileHandle = await getFileHandle(path, true);
-    } catch( err) {
-        console.log('FILEHANDLE', err, path);
-        return;
-    }
+    let fileHandle = await getFileHandle(path, true);
     if (fileHandle === null) {
         // TODO fix once Chromium fixes the bug
         throw new Error("Invalid file name");
