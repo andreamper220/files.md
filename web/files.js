@@ -290,10 +290,10 @@ async function syncMedia() {
     if (mediaTimestamp !== 0) {
         // Send new files from client to server
         let newMedias = await collectNewMediaFiles();
-        for (const mediaFile of newMedias) {
+        for (const mediaFilename of newMedias) {
             try {
                 // TODo improve that hardcode :D
-                let fileHandle = await getFileHandle('media/' + mediaFile)
+                let fileHandle = await getFileHandle('media/' + mediaFilename)
                 let file = await fileHandle.getFile();
                 const arrayBuffer = await file.arrayBuffer();
                 const uint8Array = new Uint8Array(arrayBuffer);
@@ -311,18 +311,22 @@ async function syncMedia() {
                     },
                     body: JSON.stringify({
                         userId: getUserId(),
-                        path: mediaFile,
+                        path: mediaFilename,
                         data: base64String,
                     })
                 });
 
                 if (!response.ok) {
-                    console.error(`Failed to sync media file ${mediaFile}:`, response.statusText, response.text(), mediaFile, base64String);
+                    console.error(`Failed to sync media file ${mediaFilename}:`, response.statusText, response.text(), mediaFilename, base64String);
                 } else {
-                    console.log(`Successfully synced media file: ${mediaFile}`);
+                    serverFiles['media'][mediaFilename] = {
+                        lastModified
+                    };
+                    saveMetadata();
+                    console.log(`Successfully synced media file: ${mediaFilename}`);
                 }
             } catch (error) {
-                console.error(`Error syncing media file ${mediaFile}:`, error);
+                console.error(`Error syncing media file ${mediaFilename}:`, error);
             }
         }
     }

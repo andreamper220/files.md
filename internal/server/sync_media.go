@@ -147,6 +147,17 @@ func SyncMedia(w http.ResponseWriter, r *http.Request) {
 		}
 
 		logSync(fmt.Sprintf("Media created: %s", filePath))
+
+		ctime, _ := userFS.Ctime(fs.DirMedia, clientMedia.Path)
+
+		response := media{
+			Path:         clientMedia.Path,
+			LastModified: ctime,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		}
 		return
 	}
 
