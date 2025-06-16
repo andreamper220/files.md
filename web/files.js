@@ -194,7 +194,7 @@ async function syncTextsWithServer() {
                 }
                 saveMetadata();
             } catch (error) {
-                console.error(`Error saving file ${path}:`, error);
+                console.warn(`Error saving file ${path}:`, error);
                 // Don't treat malformed filenames as sync error.
                 console.log(error);
                 if (!error.message.includes('Name is not allowed')) {
@@ -247,7 +247,7 @@ async function syncLocalFileWithServer(dir, filename) {
             return;
         }
         let json = await response.json();
-        if (["notModified", "updatedOnServer"].includes(json.status)) {
+        if (["updatedOnServer"].includes(json.status)) {
             setMetadata(path, content, json.lastModified);
             console.log(`saved metadata for ${path} with timestamp ${json.lastModified}`);
             saveMetadata();
@@ -314,7 +314,7 @@ async function syncMedia() {
                 });
 
                 if (!response.ok) {
-                    console.error(`Failed to sync media file ${mediaFile}:`, response.statusText);
+                    console.error(`Failed to sync media file ${mediaFile}:`, response.statusText, response.text(), mediaFile, base64String);
                 } else {
                     console.log(`Successfully synced media file: ${mediaFile}`);
                 }
