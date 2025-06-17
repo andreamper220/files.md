@@ -40,5 +40,25 @@ test.describe('Files.md Text Editor Sync Tests', () => {
         await expect(page.locator('.CodeMirror')).toContainText('using');
     });
 
+    test('insert link', async ({page}) => {
+        const isMac = process.platform === 'darwin';
+        const modifier = isMac ? 'Meta' : 'Control';
+
+        await page.waitForSelector('.CodeMirror', {timeout: 5000});
+
+        await page.click('.CodeMirror');
+        await page.keyboard.press('Control+a');
+        await page.keyboard.press('Delete');
+        await page.keyboard.type('[markdown');
+        await page.keyboard.press('Enter');
+
+        await page.waitForTimeout(500);
+        const content = await page.locator('.CodeMirror-code').textContent();
+
+        console.log('Content:', content);
+        expect(content).toContain('[Markdown Guide](/Markdown Guide.md)');
+        // await page.pause()
+    });
+
 });
 

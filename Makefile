@@ -100,5 +100,8 @@ watch: # watch for changes and rebuild wasm
 e2e:
 	cd tests && npm run test
 
+e2eh: # headed e2e tests
+	cd tests && npm run test:headed
+
 report:
 	cd tests && npx playwright show-report
