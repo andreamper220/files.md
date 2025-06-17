@@ -447,7 +447,8 @@
     text-align: right;
     white-space: pre;
     box-sizing: border-box;
-    border-right: 1px dashed #CCC;
+    /*PATCHED, make lists prettier*/
+    /*border-right: 1px dashed #CCC;*/
     overflow: hidden;
     font-size: 0.5em;
     line-height: 200%;
