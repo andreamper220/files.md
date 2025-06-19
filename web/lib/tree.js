@@ -467,6 +467,10 @@ function TreeView(root, container, options) {
     function setupContainerDropZone() {
         container.addEventListener('dragover', function(e) {
             e.preventDefault();
+            if (dropIndicator && !e.target.closest('.tj_description')) {
+                dropIndicator.remove();
+                dropIndicator = null;
+            }
             e.dataTransfer.dropEffect = 'move';
         });
 
@@ -484,6 +488,7 @@ function TreeView(root, container, options) {
     }
 
     function handleExternalFileDrop(e) {
+        console.log(e);
         const files = Array.from(e.dataTransfer.files);
         files.forEach(file => {
             if (file.type === 'text/plain' || file.name.endsWith('.md')) {
@@ -590,6 +595,8 @@ function TreeView(root, container, options) {
 
             if (typeof window.handleNodeMove === 'function') {
                 const sourceDir = draggedNode.parent ? draggedNode.parent.toString() : '';
+                console.log(draggedNode.parent);
+                console.log(sourceDir);
                 const sourceFile = draggedNode.toString() + '.md';
 
                 let targetDir = '';
@@ -734,30 +741,6 @@ function TreeView(root, container, options) {
         this.reload();
 }
 
-window.handleNodeMove = async function(sourceDir, sourceFile, targetDir) {
-    console.log(`Moving ${sourceDir}/${sourceFile} to ${targetDir}/`);
-
-    if (typeof moveCurrentFileToDir === 'function') {
-        await moveCurrentFileToDir(sourceDir, sourceFile, targetDir);
-    }
-
-    if (typeof buildSidebar === 'function') {
-        buildSidebar();
-    }
-};
-
-window.handleDroppedFile = async function(fileName, content) {
-    console.log(`Creating new file: ${fileName}`, content);
-
-    if (typeof createFileFromContent === 'function') {
-        await createFileFromContent(fileName + '.md', content);
-    }
-
-    if (typeof buildSidebar === 'function') {
-        buildSidebar();
-    }
-};
-
 /*
 * Util-Methods
 */
@@ -841,15 +824,10 @@ const TreeUtil = {
 window.handleNodeMove = async function(sourceDir, sourceFile, targetDir) {
     console.log(`Moving ${sourceDir}/${sourceFile} to ${targetDir}/`);
 
-    if (typeof moveCurrentFileToDir === 'function') {
-        await moveCurrentFileToDir(sourceDir, sourceFile, targetDir);
-    }
-
-    if (typeof buildSidebar === 'function') {
-        buildSidebar();
-    }
+    await moveFile(`${sourceDir}/${sourceFile}`, `${targetDir}/${sourceFile}`);
 };
 
+// WHEN?
 window.handleDroppedFile = async function(fileName, content) {
     console.log(`Creating new file: ${fileName}`, content);
 

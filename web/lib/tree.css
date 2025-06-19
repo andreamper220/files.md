@@ -104,7 +104,8 @@
 }
 
 .tj_drop_target {
-	background-color: var(--color-bg-active) !important;
+	background-color: var(--color-tx-alt) !important;
+	color: var(--color-tx);
 	/*border: 2px solid var(--color-border) !important;*/
 	border-radius: 5px;
 }

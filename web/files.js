@@ -727,6 +727,7 @@ async function removeFile(path) {
     console.log(`File ${path} removed successfully.`);
 }
 
+// TODO can we reuse moveFile?
 async function moveCurrentFile(toDir) {
     isSyncingCurrent = true;
 
@@ -755,6 +756,40 @@ async function moveCurrentFile(toDir) {
     }
 
     isSyncingCurrent = false;
+}
+
+async function moveFile(oldPath, newPath) {
+    const oldParts = oldPath.split('/');
+    const oldFilename = oldParts.pop();
+    const oldDir = oldParts.join('/');
+
+    const newParts = newPath.split('/');
+    const newFilename = newParts.pop();
+    const newDir = newParts.join('/');
+
+    try {
+        let file = await (await getFileHandle(oldPath)).getFile();
+        let content = await file.text();
+        await saveTextFile(newPath, content);
+
+        console.log('saving ' + newDir + '/' + newFilename);
+        files[newDir][newFilename] = {
+            content: content,
+            lastModified: 0,
+            handle: await getFileHandle(newPath),
+        }
+        setServerFile(newPath, content, 0);
+        saveServerFiles();
+
+        // Server file will be removed here.
+        await removeFile(oldPath);
+        delete files[oldDir][oldFilename];
+        await buildSidebar();
+
+        console.log(`Moved ${oldPath} to ${newPath}`);
+    } catch (error) {
+        console.error("Error moving file:", error);
+    }
 }
 
 function getMetadata(path) {

@@ -280,7 +280,7 @@ function createAutocompleteDict() {
 }
 
 function buildSidebar(focusDir = '') {
-    root = new TreeNode("files");
+    root = new TreeNode('');
     for (const dir in files) {
         if (dir === '' || dir === 'media') {
             continue;
