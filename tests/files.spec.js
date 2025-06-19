@@ -39,12 +39,12 @@ test('should load files', async ({ page }) => {
     });
 });
 
-test('create new', async ({ page }) => {
+test('create new in subfolder', async ({ page }) => {
     await page.evaluate(() => {
         window.getRootDirHandle = async function() {
             // Your mock code here
             const opfsRoot = await navigator.storage.getDirectory();
-            const testDir = await opfsRoot.getDirectoryHandle('test-files', { create: true });
+            const testDir = await opfsRoot.getDirectoryHandle('dir', { create: true });
 
             const testFiles = [
                 { name: 'README.md', content: 'Hello world' },
@@ -62,7 +62,58 @@ test('create new', async ({ page }) => {
                 }
             }
 
-            return testDir;
+            return opfsRoot;
+        };
+    });
+
+    await page.evaluate(() => {
+        init(document.getElementById("editor"));
+    });
+
+    await page.click('#new-file');
+    await page.waitForTimeout(100);
+    await page.keyboard.type('New file');
+    await page.waitForTimeout(100);
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('content');
+    await page.waitForTimeout(700);
+
+    await page.click('#sidebar >> text=dir');
+    await page.waitForTimeout(100);
+
+    await page.click('#sidebar >> text=New file');
+    await page.waitForTimeout(100);
+    const codeMirrorContent = await page.evaluate(() => {
+        const cm = document.querySelector('.CodeMirror').CodeMirror;
+        return cm.getValue();
+    });
+    expect(codeMirrorContent).toBe("# New file\ncontent\n");
+});
+
+test('create new in root', async ({ page }) => {
+    await page.evaluate(() => {
+        window.getRootDirHandle = async function() {
+            // Your mock code here
+            const opfsRoot = await navigator.storage.getDirectory();
+            const testDir = await opfsRoot.getDirectoryHandle('dir', { create: true });
+
+            const testFiles = [
+                { name: 'README.md', content: 'Hello world' },
+                { name: 'Notes.md', content: '**Bold text**' }
+            ];
+
+            for (const fileData of testFiles) {
+                try {
+                    await testDir.getFileHandle(fileData.name);
+                } catch (error) {
+                    const fileHandle = await testDir.getFileHandle(fileData.name, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(fileData.content);
+                    await writable.close();
+                }
+            }
+
+            return opfsRoot;
         };
     });
 

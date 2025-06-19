@@ -16,6 +16,13 @@ module.exports = defineConfig({
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',
+        actionTimeout: 5000,
+        navigationTimeout: 5000,
+    },
+
+    timeout: 5000,
+    expect: {
+        timeout: 3000
     },
 
     webServer: {
