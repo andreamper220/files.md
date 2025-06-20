@@ -102,11 +102,11 @@ watch: # watch for changes and rebuild wasm
 		echo "✅ WASM rebuilt at $$(date)"; \
 	done
 
-e2e:
-	cd tests && npm run test
+e2e: # make e2e test="create and move"
+	cd tests && npm run test -- $(if $(test),-g "$(test)",)
 
 e2eh: # headed e2e tests
-	cd tests && npm run test:headed
+	cd tests && npm run test:headed -- $(if $(test),-g "$(test)",)
 
 report:
 	cd tests && npx playwright show-report

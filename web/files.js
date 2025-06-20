@@ -740,6 +740,7 @@ async function moveCurrentFile(toDir) {
         await saveTextFile(newPath, content);
         // TODO move to saveTextFile?
         delete files[editor.currentDir][editor.currentFile];
+        console.log('MOVING to DIR:', toDir);
         files[toDir][editor.currentFile] = {
             content: content,
             lastModified: 0,

@@ -471,6 +471,8 @@ async function newFolder() {
     await rootDirHandle.getDirectoryHandle(finalFolderName, {create: true});
     files[finalFolderName] = {};
 
+    console.log('CREATED folder', finalFolderName);
+
     await buildSidebar(finalFolderName);
 }
 
@@ -798,6 +800,7 @@ function showMoveResults(dirs) {
         listItem.setAttribute('data-path', dataDir);
         listItem.setAttribute('data-index', index);
         listItem.onclick = async () => {
+            console.log("HERE2", dir);
             await moveCurrentFile(dir);
             closeMoveModal();
         };
@@ -936,6 +939,7 @@ document.getElementById('move').addEventListener('keydown', (event) => {
         event.preventDefault();
         if (resultsList[focusedMoveItemIndex]) {
             const dir = resultsList[focusedMoveItemIndex].getAttribute('data-path');
+            console.log("HERE, ", dir, resultsList);
             moveCurrentFile(dir);
             closeMoveModal();
         }
