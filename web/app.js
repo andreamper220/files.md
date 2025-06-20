@@ -800,8 +800,8 @@ function showMoveResults(dirs) {
         listItem.setAttribute('data-path', dataDir);
         listItem.setAttribute('data-index', index);
         listItem.onclick = async () => {
-            console.log("HERE2", dir);
-            await moveCurrentFile(dir);
+            console.log("CLICKED ON folder to move", dataDir);
+            await moveCurrentFile(dataDir);
             closeMoveModal();
         };
         listItem.onmouseenter = () => {

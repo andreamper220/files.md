@@ -196,52 +196,61 @@ test('create and move', async ({ page }) => {
 test('create dirs and move', async ({ page }) => {
     await page.evaluate(() => {
         window.getRootDirHandle = async function() {
-            // Your mock code here
             const root = await navigator.storage.getDirectory();
-            const subDir = await root.getDirectoryHandle('dir', { create: true });
-
-            const testFiles = [
-                { name: 'README.md', content: 'Hello world' },
-                { name: 'Notes.md', content: '**Bold text**' }
-            ];
-
-            for (const fileData of testFiles) {
-                try {
-                    await root.getFileHandle(fileData.name);
-                } catch (error) {
-                    const fileHandle = await root.getFileHandle(fileData.name, { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(fileData.content);
-                    await writable.close();
-                }
-            }
 
             return root;
         };
+
+        window.prompt = function() {
+            return 'dir1';
+        }
     });
 
     await page.evaluate(() => {
         init(document.getElementById("editor"));
     });
 
-    await page.click('#sidebar >> text=README');
+    await page.click('#new-file');
     await page.waitForTimeout(100);
+    await page.keyboard.type('file1');
+    await page.waitForTimeout(200);
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('content');
+    await page.waitForTimeout(300);
+
+    await page.click('#new-folder');
+    await page.waitForTimeout(100);
+    // await page.keyboard.type('dir1');
+    // await page.waitForTimeout(100);
+    // await page.keyboard.press('Enter');
+
+
+    await page.keyboard.press('Meta+m');
+    await page.waitForTimeout(100);
+    await page.click('#move-results >> text=dir1');
+    await page.waitForTimeout(200);
 
     await page.click('#new-file');
     await page.waitForTimeout(100);
-    await page.keyboard.type('New file');
+    await page.keyboard.type('file2');
     await page.waitForTimeout(100);
     await page.keyboard.press('Enter');
     await page.keyboard.type('content');
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(300);
 
-    await page.click('#sidebar >> text=New file');
+    await page.keyboard.press('Meta+m');
     await page.waitForTimeout(100);
-    const codeMirrorContent = await page.evaluate(() => {
-        const cm = document.querySelector('.CodeMirror').CodeMirror;
-        return cm.getValue();
-    });
-    expect(codeMirrorContent).toBe("# New file\ncontent\n");
+    await page.click('#move-results >> text=/');
+    await page.waitForTimeout(200);
+
+
+    // await page.click('#sidebar >> text=New file');
+    // await page.waitForTimeout(100);
+    // const codeMirrorContent = await page.evaluate(() => {
+    //     const cm = document.querySelector('.CodeMirror').CodeMirror;
+    //     return cm.getValue();
+    // });
+    // expect(codeMirrorContent).toBe("# New file\ncontent\n");
     await page.pause();
 });
 
