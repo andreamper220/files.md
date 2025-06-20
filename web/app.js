@@ -22,7 +22,7 @@ async function init(el) {
         document.getElementById('new-folder').style.display = 'none';
         document.getElementById('chat').style.display = 'none';
         files = defaultFiles;
-        buildSidebar();
+        updateSidebar();
         await openFile("", "Welcome.md");
         return;
     } else {
@@ -49,7 +49,7 @@ async function init(el) {
     initChat();
 
     perf = performance.now();
-    buildSidebar();
+    updateSidebar();
     console.log(`Sidebar built in: ${(performance.now() - perf).toFixed(3)} milliseconds`);
 
     perf = performance.now();
@@ -286,8 +286,23 @@ function createAutocompleteDict() {
 
     return dict;
 }
+function updateSidebar(focusDir = '') {
+    let expandedDirs = new Set();
+    let selectedDirs = new Set();
 
-function buildSidebar(focusDir = '') {
+    if (tree) {
+        tree.getRoot().getChildren().forEach(child => {
+            if (child.isExpanded()) {
+                expandedDirs.add(child.toString());
+            }
+            if (child.isSelected()) {
+                selectedDirs.add(child.toString());
+            }
+        });
+    }
+
+    console.log(expandedDirs, selectedDirs);
+
     root = new TreeNode('');
     for (const dir in files) {
         if (dir === '' || dir === 'media') {
@@ -303,14 +318,17 @@ function buildSidebar(focusDir = '') {
             dirNode.addChild(fileNode);
         }
         root.addChild(dirNode);
+
         if (dir === focusDir) {
             dirNode.setExpanded(true);
             dirNode.setSelected(true);
+        } else {
+            if (expandedDirs.has(dir)) dirNode.setExpanded(true);
+            if (selectedDirs.has(dir)) dirNode.setSelected(true);
         }
     }
 
     if (files['']) {
-        // Adding root files after dirs
         for (let file in files['']) {
             if (file === CONFIG_FILENAME) {
                 continue;
@@ -328,7 +346,6 @@ function buildSidebar(focusDir = '') {
         show_root: false,
     });
 }
-
 async function showRandomFile() {
     if (debug) {
         await openFile(debug.dir, debug.file);
@@ -447,7 +464,7 @@ async function newFile() {
         {line: 0, ch: null}
     );
 
-    await buildSidebar();
+    await updateSidebar();
 }
 
 async function newFolder() {
@@ -475,7 +492,7 @@ async function newFolder() {
 
     console.log('CREATED folder', finalFolderName);
 
-    await buildSidebar(finalFolderName);
+    await updateSidebar(finalFolderName);
 }
 
 // Focus last line before the links.
@@ -594,7 +611,7 @@ window.addEventListener('keydown', async (event) => {
         // Remove from files object
         delete files[dir][filename];
         await showRandomFile();
-        await buildSidebar();
+        await updateSidebar();
     }
 
     if (isModifierKey(event) && event.key === 'k') {
@@ -846,7 +863,7 @@ async function openEditor(withSidebar = true) {
         setTimeout(async () => {
             const rootDirHandle = await getRootDirHandle();
             files = await loadLocalFiles(rootDirHandle);
-            buildSidebar();
+            updateSidebar();
         }, 1);
     }
     content.style.display = 'block';
@@ -978,7 +995,7 @@ async function openDir() {
     document.getElementById('chat').style.display = 'inline';
     await saveDirectoryHandle(dirHandle);
     files = await loadLocalFiles(dirHandle)
-    buildSidebar();
+    updateSidebar();
     await showRandomFile();
 }
 

@@ -751,7 +751,7 @@ async function moveCurrentFile(toDir) {
         saveServerFiles();
 
         await removeFile(oldPath);
-        await buildSidebar();
+        await updateSidebar();
     } catch (error) {
         console.error("Error moving file:", error);
     }
@@ -809,7 +809,7 @@ async function moveFile(oldPath, newPath) {
         // Server file will be removed here.
         await removeFile(oldPath);
         delete files[oldDir][oldFilename];
-        await buildSidebar();
+        await updateSidebar();
 
         console.log(`Moved ${oldPath} to ${newPath}`);
     } catch (error) {
@@ -920,7 +920,7 @@ async function syncCurrentFile(syncWithServer = true) {
             setServerFile(path, content, 0);
             saveServerFiles();
             console.log('Created', `${editor.currentDir}/${editor.currentFile}`);
-            await buildSidebar();
+            await updateSidebar();
         }
     } catch (error) {
         console.error("Error during filename change:", error);
