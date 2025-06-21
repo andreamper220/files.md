@@ -533,8 +533,8 @@ func (fs FS) Ctime(dir, filename string) (int64, error) {
 // for all .md files as Unix timestamps.
 // Returns [filename] => ctime
 // TODO add tests
-func (fs FS) Ctimes(dir string) (map[string]int64, error) {
-	rootPath := fs.UnsafePath(DirRoot, dir)
+func (fs FS) Ctimes(root string) (map[string]int64, error) {
+	rootPath := fs.UnsafePath(DirRoot, root)
 	isSafe, err := fs.isSafe(rootPath)
 	if err != nil {
 		return nil, fmt.Errorf("fs ctimes: can't check if the file is safe to access '%s': %w", rootPath, err)
@@ -543,8 +543,7 @@ func (fs FS) Ctimes(dir string) (map[string]int64, error) {
 		return nil, fmt.Errorf("fs ctimes: unsafe rootPath '%s': %w", rootPath, errUnsafePath)
 	}
 
-	timestamps := make(map[string]int64)
-
+	ctimes := make(map[string]int64)
 	err = afero.Walk(fs.backend, rootPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
@@ -574,7 +573,7 @@ func (fs FS) Ctimes(dir string) (map[string]int64, error) {
 			relPath = "."
 		}
 
-		timestamps[relPath] = Ctime(info)
+		ctimes[relPath] = Ctime(info)
 
 		return nil
 	})
@@ -583,7 +582,7 @@ func (fs FS) Ctimes(dir string) (map[string]int64, error) {
 		return nil, err
 	}
 
-	return timestamps, nil
+	return ctimes, nil
 }
 
 func exists(backend afero.Fs, path string) (bool, error) {

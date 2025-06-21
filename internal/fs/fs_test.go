@@ -2,6 +2,7 @@ package fs
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -698,4 +699,132 @@ func FuzzWrite(f *testing.F) {
 		r.NoError(err, "Unexpected error for valid inputs dir: '%s', filename: '%s', calculated path: '%s", dir, filename, unsafePath)
 		r.Len(files, 1, "File has been written outside of user dir. Provided dir: '%s', filename: '%s', unsafe path: '%s", dir, filename, filePath)
 	})
+}
+
+func TestCtimes(t *testing.T) {
+	r := require.New(t)
+
+	saved := Ctime
+	defer func() {
+		Ctime = saved
+	}()
+
+	Ctime = func(fi os.FileInfo) int64 {
+		switch fi.Name() {
+		case "file1.md":
+			return 1000
+		case "file2.md":
+			return 2000
+		case "nested.md":
+			return 3000
+		default:
+			return 0
+		}
+	}
+
+	fs, err := NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+
+	err = fs.Write("/", "file1.md", "content1")
+	r.NoError(err)
+	err = fs.Write("today", "file2.md", "content2")
+	r.NoError(err)
+	err = fs.Write("/", "not-markdown.txt", "should be ignored")
+	r.NoError(err)
+	err = fs.MakeDir("today/subdir")
+	r.NoError(err)
+	err = fs.Write("today/subdir", "nested.md", "nested content")
+	r.NoError(err)
+
+	// Create hidden file (should be ignored)
+	err = fs.Write("today", ".hidden.md", "hidden content")
+	r.NoError(err)
+
+	// Test Ctimes
+	ctimes, err := fs.Ctimes("/")
+	r.NoError(err)
+
+	fmt.Println(ctimes)
+	r.Len(ctimes, 3)
+	r.Equal(int64(1000), ctimes["file1.md"])
+	r.Equal(int64(2000), ctimes["today/file2.md"])
+	r.Equal(int64(3000), ctimes["today/subdir/nested.md"])
+
+	// Should not include non-markdown files or hidden files
+	_, exists := ctimes["today/not-markdown.txt"]
+	r.False(exists)
+
+	_, exists = ctimes["today/.hidden.md"]
+	r.False(exists)
+}
+
+func TestCtimesInSubDir(t *testing.T) {
+	r := require.New(t)
+
+	saved := Ctime
+	defer func() {
+		Ctime = saved
+	}()
+
+	Ctime = func(fi os.FileInfo) int64 {
+		switch fi.Name() {
+		case "file1.md":
+			return 1000
+		case "file2.md":
+			return 2000
+		case "nested.md":
+			return 3000
+		default:
+			return 0
+		}
+	}
+
+	fs, err := NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+
+	err = fs.Write("today", "file1.md", "content1")
+	r.NoError(err)
+	err = fs.Write("today", "file2.md", "content2")
+	r.NoError(err)
+	err = fs.Write("today", "not-markdown.txt", "should be ignored")
+	r.NoError(err)
+	err = fs.MakeDir("today/subdir")
+	r.NoError(err)
+	err = fs.Write("today/subdir", "nested.md", "nested content")
+	r.NoError(err)
+
+	// Create hidden file (should be ignored)
+	err = fs.Write("today", ".hidden.md", "hidden content")
+	r.NoError(err)
+
+	// Test Ctimes
+	ctimes, err := fs.Ctimes("today")
+	r.NoError(err)
+
+	// Should only include .md files, not .txt or hidden files
+	r.Len(ctimes, 3)
+	r.Equal(int64(1000), ctimes["today/file1.md"])
+	r.Equal(int64(2000), ctimes["today/file2.md"])
+	r.Equal(int64(3000), ctimes["today/subdir/nested.md"])
+
+	// Should not include non-markdown files or hidden files
+	_, exists := ctimes["today/not-markdown.txt"]
+	r.False(exists)
+
+	_, exists = ctimes["today/.hidden.md"]
+	r.False(exists)
+}
+
+func TestCtimesEmptyDir(t *testing.T) {
+	r := require.New(t)
+
+	fs, err := NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+
+	err = fs.MakeDir("empty")
+	r.NoError(err)
+
+	ctimes, err := fs.Ctimes("empty")
+	r.NoError(err)
+	r.Empty(ctimes)
 }
