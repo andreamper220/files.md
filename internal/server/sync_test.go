@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -45,6 +46,7 @@ func TestSyncText_CreateNewFileOnServer(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/syncText", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(context.WithValue(req.Context(), "userID", int64(-1)))
 	w := httptest.NewRecorder()
 
 	SyncText(w, req)
@@ -85,6 +87,7 @@ func TestSyncText_UpdateExistingFile_NoConflict(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/syncText", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(context.WithValue(req.Context(), "userID", int64(-1)))
 	w := httptest.NewRecorder()
 
 	SyncText(w, req)
@@ -130,6 +133,7 @@ func TestSyncText_NotModified(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/syncText", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(context.WithValue(req.Context(), "userID", int64(-1)))
 	w := httptest.NewRecorder()
 
 	SyncText(w, req)
@@ -175,6 +179,7 @@ func TestSyncText_UpdateExistingFile_Conflict(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/syncText", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(context.WithValue(req.Context(), "userID", int64(-1)))
 	w := httptest.NewRecorder()
 
 	SyncText(w, req)
@@ -220,6 +225,7 @@ func TestSyncText_UpdateExistingFile_JournalConflict(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/syncText", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(context.WithValue(req.Context(), "userID", int64(-1)))
 	w := httptest.NewRecorder()
 
 	SyncText(w, req)
@@ -267,6 +273,7 @@ func TestSyncAllTexts_EmptyRequest(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/syncTexts", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(context.WithValue(req.Context(), "userID", int64(-1)))
 	w := httptest.NewRecorder()
 
 	SyncTexts(w, req)
@@ -322,6 +329,7 @@ func TestSyncAllTexts_CreateNewFilesOnServer(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/syncTexts", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(context.WithValue(req.Context(), "userID", int64(-1)))
 	w := httptest.NewRecorder()
 
 	SyncTexts(w, req)
@@ -382,6 +390,7 @@ func TestSyncAllTexts_UpdateExistingFilesOnServer(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/sync-all", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(context.WithValue(req.Context(), "userID", int64(-1)))
 	w := httptest.NewRecorder()
 
 	SyncTexts(w, req)
@@ -437,6 +446,7 @@ func TestSyncAllTexts_SendUpdatedFilesToClient(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/syncTexts", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(context.WithValue(req.Context(), "userID", int64(-1)))
 	w := httptest.NewRecorder()
 
 	SyncTexts(w, req)
