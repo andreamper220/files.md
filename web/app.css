@@ -333,6 +333,7 @@ a:hover {
 .cm-formatting-list-ul {
     position: relative;
     top: 3px;
+    color: var(--color-tx-alt) !important;
 }
 
 /*Hide bulletpoints when tasks*/
@@ -486,6 +487,7 @@ body.dragging * {
 
 .cm-s-hypermd-light .CodeMirror-line.HyperMD-codeblock {
     padding-left: 10px;
+    color: var(--color-tx-alt) !important;
 }
 
 .cm-s-hypermd-light .HyperMD-codeblock::before {
