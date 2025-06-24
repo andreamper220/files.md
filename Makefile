@@ -112,8 +112,12 @@ e2eh: # headed e2e tests
 sync:
 	killall tgbot || true
 	go run ./cmd/tgbot & \
-	sleep 1 && \
-	cd tests && npm run test -g "sync"
+	cd tests && npm run test --g "sync"
+
+synch:
+	killall tgbot || true
+	go run ./cmd/tgbot & \
+	cd tests && npm run test:headed --g "sync"
 
 report:
 	cd tests && npx playwright show-report

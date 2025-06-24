@@ -31,6 +31,7 @@ func Serve(apiHost, appHost, certDir, logFilename, token, tokensDir string) {
 	srv.Handler = newRouter(logger)
 
 	// For local environment.
+	// TODO make it more explicit
 	if certDir == "" {
 		srv := &http.Server{
 			Addr:    ":8080",
