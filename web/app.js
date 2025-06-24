@@ -6,7 +6,7 @@ let focusedMoveItemIndex = -1;
 let isChat = false;
 let isWelcome = false;
 let debug = false;
-// let debug = {dir: "", file: "Sim.md", loaded: false};
+// let debug = {dir: '', file: 'Sim.md', loaded: false};
 
 const sidebar = document.getElementById('sidebar');
 const sidebarContainer = document.getElementById('sidebar-container');
@@ -57,7 +57,7 @@ async function init(el) {
         document.getElementById('chat').style.display = 'none';
         files = defaultFiles;
         updateSidebar();
-        await openFile("", "Welcome.md");
+        await openFile('', 'Welcome.md');
         isWelcome = true;
         return;
     } else {
@@ -114,12 +114,12 @@ function initEditor(el) {
         dragDrop: false,
         viewportMargin: Infinity,
         mode: {
-            name: "hypermd",
+            name: 'hypermd',
             math: false, // disable $math syntax$
         },
         lineNumbers: false,
         extraKeys: {
-            // "Shift-Space": "autocomplete",
+            // 'Shift-Space': 'autocomplete',
             'Cmd-[': false, 'Cmd-]': false,
         },
         hintOptions: {
@@ -134,19 +134,19 @@ function initEditor(el) {
         },
         configureMouse: () => ({addNew: false}) // disable multicursor
     });
-    editor.setSize(null, "100%");
+    editor.setSize(null, '100%');
 
     editor.hmdResolveURL = function (path) {
         if (typeof path === 'undefined') {
             return path
         }
 
-        path = path.replace(/%20/g, " ");
+        path = path.replace(/%20/g, ' ');
 
         if (/^(?!http|https|\[).+\.md$/.test(path)) {
             let parts = path.split('/');
             if (parts.length === 1) {
-                openFile("", path);
+                openFile('', path);
                 return;
             }
             openFile(parts[0], parts[1]);
@@ -174,14 +174,14 @@ function initEditor(el) {
 
         let parts = path.split('/');
         if (parts.length === 1) {
-            await openFile("", path + '.md');
+            await openFile('', path + '.md');
             return;
         }
 
         await openFile(parts[0], parts[1] + '.md');
     };
 
-    editor.on("inputRead", async function (cm, change) {
+    editor.on('inputRead', async function (cm, change) {
         if (change.text.length === 1 && change.text[0] === '[') {
             editor.showHint({
                 completeSingle: false, updateOnCursorActivity: true,
@@ -192,10 +192,10 @@ function initEditor(el) {
     initAutoscroll(editor);
 
     // Image upload
-    editor.on("paste", async (_, event) => {
+    editor.on('paste', async (_, event) => {
         const items = (event.clipboardData || event.originalEvent.clipboardData).items;
         for (const item of items) {
-            if (item.kind === "file" && item.type.startsWith("image/")) {
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
                 event.preventDefault(); // Prevent default paste behavior
 
                 const file = item.getAsFile();
@@ -217,12 +217,12 @@ function initEditor(el) {
                         editor.replaceSelection(markdownImageSyntax);
                         console.log(`Image saved as: ${fileName}`);
                     } else {
-                        console.error("Failed to save the image.");
-                        alert("Failed to save the image. Please try again.");
+                        console.error('Failed to save the image.');
+                        alert('Failed to save the image. Please try again.');
                     }
                 } catch (error) {
-                    console.error("Error saving image:", error);
-                    alert("Error saving image: " + error.message);
+                    console.error('Error saving image:', error);
+                    alert('Error saving image: ' + error.message);
                 }
             }
         }
@@ -248,10 +248,10 @@ function initEditor(el) {
             let prefix = selection.slice(0, selection.indexOf(trimmedSelection));
             let suffix = selection.slice(selection.indexOf(trimmedSelection) + trimmedSelection.length);
 
-            const isBold = trimmedSelection.startsWith("**") && trimmedSelection.endsWith("**");
+            const isBold = trimmedSelection.startsWith('**') && trimmedSelection.endsWith('**');
 
-            let start = cm.getCursor("start");
-            let end = cm.getCursor("end");
+            let start = cm.getCursor('start');
+            let end = cm.getCursor('end');
 
             if (isBold) {
                 cm.replaceSelection(prefix + trimmedSelection.slice(2, -2) + suffix);
@@ -274,10 +274,10 @@ function initEditor(el) {
             let prefix = selection.slice(0, selection.indexOf(trimmedSelection));
             let suffix = selection.slice(selection.indexOf(trimmedSelection) + trimmedSelection.length);
 
-            const isItalic = trimmedSelection.startsWith("*") && trimmedSelection.endsWith("*");
+            const isItalic = trimmedSelection.startsWith('*') && trimmedSelection.endsWith('*');
 
-            let start = cm.getCursor("start");
-            let end = cm.getCursor("end");
+            let start = cm.getCursor('start');
+            let end = cm.getCursor('end');
 
             if (isItalic) {
                 cm.replaceSelection(prefix + trimmedSelection.slice(1, -1) + suffix);
@@ -322,12 +322,12 @@ function initEditor(el) {
 
 async function initChat() {
     const go = new Go();
-    const wasmFile = await fetch("main.wasm");
+    const wasmFile = await fetch('main.wasm');
     const wasmModule = await WebAssembly.instantiateStreaming(wasmFile, go.importObject);
     go.run(wasmModule.instance);
     let cmd = {
         n: 'today',
-        t: "cmd"
+        t: 'cmd'
     }
     replyCmd(JSON.stringify(cmd));
 
@@ -343,8 +343,8 @@ function createAutocompleteDict() {
             if (filename === CONFIG_FILENAME) {
                 return;
             }
-            const key = `${filename.replace(/\.md$/, "")}`;
-            const filePath = `${filename.replace(/\.md$/, "")}](${dir}/${filename})`;
+            const key = `${filename.replace(/\.md$/, '')}`;
+            const filePath = `${filename.replace(/\.md$/, '')}](${dir}/${filename})`;
             dict[key] = filePath;
         });
     });
@@ -393,7 +393,7 @@ function updateSidebar(focusDir = '') {
         for (let file in files[dir]) {
             let fileNode = new TreeNode(file.replace(/\.md$/, ''), {expanded: false});
             fileNode.on('click', async function (n, node) {
-                await openFile(node.parent.toString(), node.toString() + ".md");
+                await openFile(node.parent.toString(), node.toString() + '.md');
             });
             dirNode.addChild(fileNode);
 
@@ -424,7 +424,7 @@ function updateSidebar(focusDir = '') {
 
             let fileNode = new TreeNode(file.replace(/\.md$/, ''), {expanded: false});
             fileNode.on('click', async function (n, node) {
-                await openFile("", file);
+                await openFile('', file);
             });
             root.addChild(fileNode);
 
@@ -435,7 +435,7 @@ function updateSidebar(focusDir = '') {
         }
     }
 
-    tree = new TreeView(root, "#sidebar-tree", {
+    tree = new TreeView(root, '#sidebar-tree', {
         show_root: false,
     });
 }
@@ -458,7 +458,7 @@ async function showRandomFile() {
     }
 
     if (allFiles.length === 0) {
-        console.error("No files found to open.");
+        console.error('No files found to open.');
         return;
     }
 
@@ -467,7 +467,7 @@ async function showRandomFile() {
     try {
         await openFile(randomFile.dir, randomFile.file);
     } catch (error) {
-        console.error("Failed to open random file:", error);
+        console.error('Failed to open random file:', error);
     }
 }
 
@@ -475,7 +475,7 @@ async function openFile(dir, filename, saveToHistory = true) {
     await syncCurrentFile(false);
 
     const start = performance.now();
-    filename = filename.normalize("NFC");
+    filename = filename.normalize('NFC');
     const fileData = files[dir][filename];
 
     // Check if we're loading the same file and save cursor position
@@ -485,8 +485,8 @@ async function openFile(dir, filename, saveToHistory = true) {
         cursorPos = editor.getCursor();
     }
 
-    const header = filename.replace(/\.md$/, "").replace(/^\w/, (c) => c.toUpperCase());
-    let content = "";
+    const header = filename.replace(/\.md$/, '').replace(/^\w/, (c) => c.toUpperCase());
+    let content = '';
     if (fileData.handle !== undefined) {
         const file = await fileData.handle.getFile();
         content = await file.text();
@@ -537,7 +537,7 @@ async function newFile() {
         dir = selectedDirs[0].toString();
     }
     // TODO don't create on disk?
-    let filename = "New file.md";
+    let filename = 'New file.md';
 
     let num = 1;
     while (files[dir] && files[dir][filename]) {
@@ -547,7 +547,7 @@ async function newFile() {
 
     let handle = await getFileHandle(toPath(dir, filename), true);
     addFileToMemory(dir, filename, {
-        content: "",
+        content: '',
         lastModified: 0,
         handle: handle,
         imageUrl: null
@@ -565,14 +565,14 @@ async function newFile() {
 }
 
 async function newFolder() {
-    let folderName = prompt("Enter folder name:", "New Folder");
+    let folderName = prompt('Enter folder name:', 'New Folder');
     if (folderName === null) {
         return;
     }
 
     folderName = folderName.trim();
     if (!folderName) {
-        alert("Folder name cannot be empty");
+        alert('Folder name cannot be empty');
         return;
     }
 
@@ -600,7 +600,7 @@ function focusLastLine() {
     // Eat all empty lines before first links.
     while (lastLine >= 0) {
         const lineContent = editor.getLine(lastLine).trim();
-        if (lineContent === "") {
+        if (lineContent === '') {
             lastLine--;
             continue;
         }
@@ -610,7 +610,7 @@ function focusLastLine() {
     }
     for (let i = lastLine; i >= 0; i--) {
         const lineContent = editor.getLine(i).trim();
-        if (!lineContent.startsWith("[") && (!lineContent.endsWith("]") || !lineContent.endsWith(")"))) {
+        if (!lineContent.startsWith('[') && (!lineContent.endsWith(']') || !lineContent.endsWith(')'))) {
             targetLine = i;
             break;
         }
@@ -628,7 +628,7 @@ function updateSearchFocusedItem(resultsList) {
     resultsList.forEach((item, index) => {
         if (index === focusedSearchItemIndex) {
             item.classList.add('focused');
-            item.scrollIntoView({block: "nearest"});
+            item.scrollIntoView({block: 'nearest'});
         } else {
             item.classList.remove('focused');
         }
@@ -640,7 +640,7 @@ function updateMoveFocusedItem(resultsList) {
     resultsList.forEach((item, index) => {
         if (index === focusedMoveItemIndex) {
             item.classList.add('focused');
-            item.scrollIntoView({block: "nearest"});
+            item.scrollIntoView({block: 'nearest'});
         } else {
             item.classList.remove('focused');
         }
@@ -756,7 +756,7 @@ function loadRecentFiles() {
 }
 
 function getMoveDestinations() {
-    let dirs = ["/"];
+    let dirs = ['/'];
     for (const dir of Object.keys(files)) {
         if (dir === '' || dir === 'media') {
             continue;
@@ -806,12 +806,12 @@ function search() {
     }
 
     let results = [];
-    const lowPriorityDirs = ["archive", "_read_", "_watch_", "_shop_", "habits", "triggers", "today", "later"];
+    const lowPriorityDirs = ['archive', '_read_', '_watch_', '_shop_', 'habits', 'triggers', 'today', 'later'];
 
     // Levenshtein distance
     for (const dir in excludeDirs(SYSTEM_DIRS)) {
         for (const filename in files[dir]) {
-            const potentialMatch = filename.replace(/\.md$/, "");
+            const potentialMatch = filename.replace(/\.md$/, '');
             let similarityScore = similarity(search, potentialMatch);
 
             if (similarityScore >= 70) {
@@ -828,7 +828,7 @@ function search() {
     // Substring
     for (const dir in files) {
         for (const filename in files[dir]) {
-            const potentialMatch = filename.replace(/\.md$/, "");
+            const potentialMatch = filename.replace(/\.md$/, '');
             const isSubstringMatch = potentialMatch.toLowerCase().includes(search.toLowerCase());
 
             if (!isSubstringMatch) {
@@ -877,7 +877,7 @@ function showSearchResults(results) {
         }
 
         const listItem = document.createElement('li');
-        let title = filename.replace(/\.md$/, "")
+        let title = filename.replace(/\.md$/, '')
         if (dir !== '') {
             listItem.textContent = `${dir}/${title}`;
         } else {
@@ -915,7 +915,7 @@ function showMoveResults(dirs) {
         listItem.setAttribute('data-path', dataDir);
         listItem.setAttribute('data-index', index);
         listItem.onclick = async () => {
-            console.log("CLICKED ON folder to move", dataDir);
+            console.log('CLICKED ON folder to move', dataDir);
             await moveCurrentFile(dataDir);
             closeMoveModal();
         };
@@ -981,7 +981,7 @@ function openChat() {
 
     let cmd = {
         n: 'today',
-        t: "cmd"
+        t: 'cmd'
     }
     replyCmd(JSON.stringify(cmd));
 
@@ -1054,7 +1054,7 @@ document.getElementById('move').addEventListener('keydown', (event) => {
         event.preventDefault();
         if (resultsList[focusedMoveItemIndex]) {
             const dir = resultsList[focusedMoveItemIndex].getAttribute('data-path');
-            console.log("HERE, ", dir, resultsList);
+            console.log('HERE, ', dir, resultsList);
             moveCurrentFile(dir);
             closeMoveModal();
         }
@@ -1129,7 +1129,7 @@ async function getImageUrl(fileHandle) {
 
 // Normalize text to use only \n as line endings
 function normNewLines(text) {
-    return text.replace(/\r\n|\r/g, "\n");
+    return text.replace(/\r\n|\r/g, '\n');
 }
 
 function initDB() {
@@ -1179,7 +1179,7 @@ window.addEventListener('focus', async () => {
         return false;
     }
 
-    console.log("FOCUS");
+    console.log('FOCUS');
 
     if (editor.currentFile === undefined) {
         return;
@@ -1200,7 +1200,7 @@ window.addEventListener('focus', async () => {
     console.log(`Files loaded in: ${(end - start).toFixed(3)} milliseconds`);
     await syncTextsWithServer()
     await updateSidebar();
-    console.log("Sync completed");
+    console.log('Sync completed');
 });
 
 // Sync files on chat focus lose.
@@ -1223,7 +1223,7 @@ window.addEventListener('blur', async function() {
     console.log(`Files loaded in: ${(end - start).toFixed(3)} milliseconds`);
     await syncTextsWithServer()
     await updateSidebar();
-    console.log("Sync completed");
+    console.log('Sync completed');
 });
 
 

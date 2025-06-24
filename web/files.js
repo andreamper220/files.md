@@ -11,11 +11,11 @@ let isLoadingLocalFiles = false;
 
 // In-memory mapping of local file system:
 // {
-//   "dir": [
+//   'dir': [
 //     {
-//       "filename": [
+//       'filename': [
 //         {
-//           content: "File content here...",
+//           content: 'File content here...',
 //           lastModified: <timestamp>,
 //           handle: <file handle>,
 //           imageUrl: <image url if any>
@@ -30,15 +30,15 @@ let files = []; // In-memory representation of files.
 let serverFiles = {files: {}, media: {}, timestamps: {}, mediaTimestamp: 0};
 const SERVER_STORAGE_KEY = 'files';
 const SUPPORTED_EXTENSIONS = ['md', 'txt', 'png', 'jpg', 'jpeg', 'webp', 'gif',];
-const SYSTEM_DIRS = ["media", "img", "archive", "_read_", "_watch_", "_shop_", "today", "later", "journal", "habits", "triggers", "places"];
+const SYSTEM_DIRS = ['media', 'img', 'archive', '_read_', '_watch_', '_shop_', 'today', 'later', 'journal', 'habits', 'triggers', 'places'];
 const CONFIG_FILENAME = 'config.json';
 
 // Returns files in flattened structure:
 // {
-//   "dir": {
+//   'dir': {
 //      ...
 //   },
-//   "dir/dir2": {
+//   'dir/dir2': {
 //      ...
 //   },
 // }
@@ -57,7 +57,7 @@ async function loadLocalFiles(rootDirHandle) {
     let newFiles = {};
 
     // Loads files recursively
-    async function loadDir(dirHandle, path = "", depth = 1) {
+    async function loadDir(dirHandle, path = '', depth = 1) {
         const entries = [];
         for await (const entry of dirHandle.values()) {
             entries.push(entry);
@@ -66,7 +66,7 @@ async function loadLocalFiles(rootDirHandle) {
 
         const dirPromises = [];
         for (const entry of entries) {
-            const filename = entry.name.normalize("NFC");
+            const filename = entry.name.normalize('NFC');
 
             let isSupportedExtension = SUPPORTED_EXTENSIONS.includes(filename.split('.').pop());
             let isConfig = filename === CONFIG_FILENAME;
@@ -156,7 +156,7 @@ async function syncTextsWithServer() {
     isSyncing = true;
 
     const startTime = performance.now();
-    console.log("Starting sync with server...");
+    console.log('Starting sync with server...');
 
     // Send locally modified files and timestamps of last seen dirs from the server
     let server = {};
@@ -183,7 +183,7 @@ async function syncTextsWithServer() {
 
         server = await response.json();
     } catch (error) {
-        console.error("Network error occurred:", error.message);
+        console.error('Network error occurred:', error.message);
         isSyncing = false;
         return;
     }
@@ -197,7 +197,7 @@ async function syncTextsWithServer() {
             // TODO if we skip current, don't take it's timestamp? We had a bug when sync was broken for 1 file
             // TODO fix missing / for root files
             if (path === `${editor.currentDir}/${editor.currentFile}` || path === editor.currentFile) {
-                console.log("Skip current " + path);
+                console.log('Skip current ' + path);
                 continue;
             }
 
@@ -244,17 +244,17 @@ async function syncTextsWithServer() {
         }
         // Only move timestamp pointers when we were able to sync all the files.
         if (!failedAtLeastOnce) {
-            console.log("BATCH sync ok, moving timestamps");
+            console.log('BATCH sync ok, moving timestamps');
             serverFiles['timestamps'] = server.timestamps;
             saveServerFiles();
         } else {
-            console.log("BATCH sync error, timestamps aren't moved");
+            console.log('BATCH sync error, timestamps aren\'t moved');
         }
     } catch (error) {
-        console.error("Can't sync: ", error.message)
+        console.error('Can\'t sync: ', error.message)
     }
 
-    console.log("Sync completed in " + (performance.now() - startTime) + "ms");
+    console.log('Sync completed in ' + (performance.now() - startTime) + 'ms');
 
     isSyncing = false;
 }
@@ -297,7 +297,7 @@ async function syncLocalFileWithServer(dir, filename) {
         }
         serverFile = json
     } catch (error) {
-        console.error("Network error occurred:", error.message);
+        console.error('Network error occurred:', error.message);
         return;
     }
     setServerFile(path, serverFile.content, serverFile.lastModified);
@@ -307,7 +307,7 @@ async function syncLocalFileWithServer(dir, filename) {
     await saveTextFile(path, serverFile.content);
     console.log('showing file sync one');
     await openFile(dir, filename);
-    console.log("File synced with server");
+    console.log('File synced with server');
 }
 
 async function syncMedia() {
@@ -421,7 +421,7 @@ async function syncMedia() {
 
         console.log(`Media sync completed in ${(performance.now() - startTime).toFixed(2)}ms. Downloaded ${filesProcessed} files.`);
     } catch (error) {
-        console.error("Network error during media sync:", error.message);
+        console.error('Network error during media sync:', error.message);
     }
 
     isSyncingMedia = false;
@@ -493,7 +493,7 @@ async function collectModifiedAndDeletedFiles() {
 
         for (const filename in files[dir]) {
             if (dir === editor.currentDir && filename === editor.currentFile) {
-                console.log("Skip sending current file");
+                console.log('Skip sending current file');
                 continue;
             }
 
@@ -517,14 +517,14 @@ async function collectModifiedAndDeletedFiles() {
     let deleted = [];
     for (const dir in serverFiles.files) {
         for (const file in serverFiles.files[dir]) {
-            if (/[<>:"|?*\\/\x00-\x1F\x7F]/.test(file)) {
+            if (/[<>:'|?*\\/\x00-\x1F\x7F]/.test(file)) {
                 continue;
             }
             if (editor.currentDir === dir && editor.currentFile === file) {
                 continue;
             }
             if (!existingFiles[toPath(dir, file)]) {
-                console.log("DELETED " + toPath(dir, file));
+                console.log('DELETED ' + toPath(dir, file));
                 deleted.push(toPath(dir, file));
             }
         }
@@ -550,13 +550,13 @@ async function collectNewMediaFiles() {
         }
     }
 
-    console.log("NEW FILENAMES", newMediaFiles);
+    console.log('NEW FILENAMES', newMediaFiles);
 
     return newMediaFiles;
 }
 
 function toPath(dir, file) {
-    if (dir === "") {
+    if (dir === '') {
         return file;
     }
 
@@ -585,7 +585,7 @@ async function getFileStatus(dir, filename) {
     // TODO why path is stored at all?
     const path = serverFiles?.files?.[dir]?.[filename]?.path;
     if (!path) {
-        console.log("NEW FILE " + dir + "/" + filename);
+        console.log('NEW FILE ' + dir + '/' + filename);
         return {
             status: 'new',
             content: content,
@@ -649,7 +649,7 @@ async function isContentEqual(path, content) {
     let fileHandle = await getFileHandle(path);
     if (fileHandle === null) {
         // TODO fix once Chromium fixes the bug
-        console.warn("Malformed name, skipping file...");
+        console.warn('Malformed name, skipping file...');
         return false;
     }
 
@@ -667,7 +667,7 @@ async function isContentEqual(path, content) {
             const clientLine = clientLines[i] || '';
             const serverLine = serverLines[i] || '';
             if (clientLine !== serverLine) {
-                diff.push(`Line ${i + 1}: "${clientLine}" vs "${serverLine}"`);
+                diff.push(`Line ${i + 1}: '${clientLine}' vs '${serverLine}'`);
             }
         }
 
@@ -682,18 +682,18 @@ async function saveTextFile(path, content) {
     let fileHandle = await getFileHandle(path, true);
     if (fileHandle === null) {
         // TODO fix once Chromium fixes the bug
-        throw new Error("Invalid file name");
+        throw new Error('Invalid file name');
     }
 
     const fileExists= !await exists([path]);
     if (fileExists || !await isContentEqual(path, content)) {
         // TODO what if we're syncing first time and already have changes?
-        console.log("Hashes do not match, writing file...", path);
+        console.log('Hashes do not match, writing file...', path);
         const writable = await fileHandle.createWritable();
         await writable.write(content);
         await writable.close();
     } else {
-        console.log("Hashes match, no need to write file.");
+        console.log('Hashes match, no need to write file.');
     }
 }
 
@@ -705,8 +705,8 @@ async function saveImageFile(fileName, file) {
         try {
             mediaDirHandle = await rootDirHandle.getDirectoryHandle('media', {create: true});
         } catch (error) {
-            console.error("Error creating media directory:", error);
-            throw new Error("Could not create media directory");
+            console.error('Error creating media directory:', error);
+            throw new Error('Could not create media directory');
         }
 
         const fileHandle = await mediaDirHandle.getFileHandle(fileName, {create: true});
@@ -716,7 +716,7 @@ async function saveImageFile(fileName, file) {
 
         return fileHandle;
     } catch (error) {
-        console.error("Error in saveImageFile:", error);
+        console.error('Error in saveImageFile:', error);
         throw error;
     }
 }
@@ -738,7 +738,7 @@ async function removeFile(path) {
     let fileHandle = await getFileHandle(path);
     if (fileHandle === null) {
         // TODO fix once Chromium fixes the bug
-        console.log("Malformed name, skipping file...");
+        console.log('Malformed name, skipping file...');
         return;
     }
     await fileHandle.remove()
@@ -771,7 +771,7 @@ async function moveCurrentFile(toDir) {
         await removeFile(oldPath);
         await updateSidebar();
     } catch (error) {
-        console.error("Error moving file:", error);
+        console.error('Error moving file:', error);
     }
 
     isSyncingCurrent = false;
@@ -832,7 +832,7 @@ async function moveFile(oldPath, newPath) {
 
         console.log(`Moved ${oldPath} to ${newPath}`);
     } catch (error) {
-        console.error("Error moving file:", error);
+        console.error('Error moving file:', error);
     }
 }
 
@@ -941,7 +941,7 @@ async function syncCurrentFile(syncWithServer = true) {
             await updateSidebar();
         }
     } catch (error) {
-        console.error("Error during filename change:", error);
+        console.error('Error during filename change:', error);
         isSyncingCurrent = false;
         return;
     }
@@ -951,7 +951,7 @@ async function syncCurrentFile(syncWithServer = true) {
         const path = `${editor.currentDir}/${editor.currentFile}`;
         contentWasModifiedLocally = !await isContentEqual(path, getCurrentContent());
     } catch (error) {
-        console.error("Error checking content equality:", error);
+        console.error('Error checking content equality:', error);
         isSyncingCurrent = false;
         return;
     }
@@ -963,12 +963,12 @@ async function syncCurrentFile(syncWithServer = true) {
     // Sync with server.
 
     if (contentWasModifiedLocally && editor.isClean()) {
-        console.log("WAS MODIFIED LOCALLY", editor.currentFile);
+        console.log('WAS MODIFIED LOCALLY', editor.currentFile);
         // Changes only from local system
         try {
             await openFile(editor.currentDir, editor.currentFile);
         } catch (error) {
-            console.error("Error opening file:", error);
+            console.error('Error opening file:', error);
             isSyncingCurrent = false;
             return;
         }
@@ -1004,7 +1004,7 @@ async function syncCurrentFile(syncWithServer = true) {
         } catch (error) {
             // TODO We might switch to another current file.
 
-            console.error("Error during save:", error);
+            console.error('Error during save:', error);
             isSaving = false;
             // Revert doc back to dirty state
             editor.replaceRange(' ', editor.getCursor());
@@ -1019,7 +1019,7 @@ async function syncCurrentFile(syncWithServer = true) {
         try {
             await syncLocalFileWithServer(editor.currentDir, editor.currentFile);
         } catch (error) {
-            console.error("Error during sync with server:", error);
+            console.error('Error during sync with server:', error);
         }
     }
 
