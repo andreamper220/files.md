@@ -1,6 +1,7 @@
 // TODO Do sync not as often
-const saverInterval = 1000; // ms, how often to save currently open file
-const loaderInterval = 3000; // ms, how often to load current file from local file system
+const API_HOST = window.API_HOST || 'https://api.files.md';
+const SAVE_INTERVAL = 1000; // ms, how often to save currently open file
+const LOAD_INTERVAL = 3000; // ms, how often to load current file from local file system
 
 let isSaving = false;
 let isSyncing = false;
@@ -161,7 +162,7 @@ async function syncTextsWithServer() {
     let server = {};
     const {modified, deleted} = await collectModifiedAndDeletedFiles();
     try {
-        let response = await fetch('https://api.files.md/syncTexts', {
+        let response = await fetch(`${API_HOST}/syncTexts`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'Authorization': localStorage.getItem('token')},
             body: JSON.stringify({
@@ -271,7 +272,7 @@ async function syncLocalFileWithServer(dir, filename) {
 
     let serverFile = {};
     try {
-        let response = await fetch('https://api.files.md/syncText', {
+        let response = await fetch(`${API_HOST}/syncText`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'Authorization': localStorage.getItem('token')},
             body: JSON.stringify({
@@ -313,7 +314,6 @@ async function syncMedia() {
     if (files === undefined) {
         return;
     }
-
     if (isSyncingMedia) {
         return;
     }
@@ -334,7 +334,7 @@ async function syncMedia() {
         let newMedias = await collectNewMediaFiles();
         for (const mediaFilename of newMedias) {
             try {
-                // TODo improve that hardcode :D
+                // TODO improve that hardcode :D
                 let fileHandle = await getFileHandle('media/' + mediaFilename)
                 let file = await fileHandle.getFile();
                 const arrayBuffer = await file.arrayBuffer();
@@ -345,7 +345,7 @@ async function syncMedia() {
                 }
                 const base64String = btoa(binaryString);
 
-                const response = await fetch('https://api.files.md/syncMedia', {
+                const response = await fetch(`${API_HOST}/syncMedia`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -372,7 +372,7 @@ async function syncMedia() {
         }
     }
     try {
-        const response = await fetch('https://api.files.md/syncMedias', {
+        const response = await fetch(`${API_HOST}/syncMedias`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -382,14 +382,12 @@ async function syncMedia() {
                 timestamp: mediaTimestamp
             })
         });
-
         if (!response.ok) {
             console.error(`Server responded with ${response.status}`);
         }
 
         const serverData = await response.json();
 
-        // Process and save media files
         let filesProcessed = 0;
         for (const fileInfo of serverData.files) {
             const {filename, lastModified} = fileInfo;
@@ -397,7 +395,7 @@ async function syncMedia() {
 
             try {
                 // Fetch the binary file
-                const response = await fetch('https://api.files.md/syncMedia', {
+                const response = await fetch(`${API_HOST}/syncMedia`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -429,6 +427,7 @@ async function syncMedia() {
     isSyncingMedia = false;
 }
 
+// Saves media file and moves pointer
 async function saveMediaFile(path, blob, lastModified) {
     const fileHandle = await getFileHandle(path, true);
     if (fileHandle === null) {
@@ -964,7 +963,7 @@ async function syncCurrentFile(syncWithServer = true) {
     // Sync with server.
 
     if (contentWasModifiedLocally && editor.isClean()) {
-        console.log("WAS MODIFIED LOCALLY");
+        console.log("WAS MODIFIED LOCALLY", editor.currentFile);
         // Changes only from local system
         try {
             await openFile(editor.currentDir, editor.currentFile);
@@ -1045,4 +1044,4 @@ window.addEventListener('beforeunload', function () {
 
 
 // Worker to process the saving queue
-window.saver = setInterval(syncCurrentFile, saverInterval);
+window.saver = setInterval(syncCurrentFile, SAVE_INTERVAL);

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -54,6 +55,7 @@ func findUserID(token string) (int64, bool) {
 		return 0, false
 	}
 
+	fmt.Println(saltToken(token))
 	data, err := tokens.Read(fs.DirRoot, saltToken(token))
 	if err != nil {
 		return 0, false
@@ -103,7 +105,7 @@ func issueToken(w http.ResponseWriter, r *http.Request) {
 }
 
 // TODO CHECK that user id belongs to oneTimeToken ID, or get user id by oneTimeToken
-func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func tokenMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
 		userID, ok := findUserID(token)

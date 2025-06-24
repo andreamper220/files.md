@@ -74,10 +74,10 @@ func newRouter(logger *log.Logger) *http.ServeMux {
 
 	// TODO CHECK that user id belongs to oneTimeToken ID, or get userID by oneTimeToken id
 	// TODO for further safety, remove * cors?
-	r.HandleFunc("/syncTexts", panicMiddleware(corsMiddleware(authMiddleware(SyncTexts))))
-	r.HandleFunc("/syncText", panicMiddleware(corsMiddleware(authMiddleware(SyncText))))
-	r.HandleFunc("/syncMedias", panicMiddleware(corsMiddleware(authMiddleware(SyncMedias))))
-	r.HandleFunc("/syncMedia", panicMiddleware(corsMiddleware(authMiddleware(SyncMedia))))
+	r.HandleFunc("/syncTexts", panicMiddleware(corsMiddleware(tokenMiddleware(SyncTexts))))
+	r.HandleFunc("/syncText", panicMiddleware(corsMiddleware(tokenMiddleware(SyncText))))
+	r.HandleFunc("/syncMedias", panicMiddleware(corsMiddleware(tokenMiddleware(SyncMedias))))
+	r.HandleFunc("/syncMedia", panicMiddleware(corsMiddleware(tokenMiddleware(SyncMedia))))
 	r.HandleFunc("/token", panicMiddleware(corsMiddleware(issueToken)))
 
 	r.HandleFunc("GET /habits_v2/{userID}", func(w http.ResponseWriter, r *http.Request) {

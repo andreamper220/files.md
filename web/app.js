@@ -13,6 +13,7 @@ const sidebarContainer = document.getElementById('sidebar-container');
 const content = document.getElementById('content')
 
 async function init(el) {
+    console.log(API_HOST);
     // Authorize if we have one-time token in URL.
     const urlParams = new URLSearchParams(window.location.search);
     const oneTimeToken = urlParams.get('token');

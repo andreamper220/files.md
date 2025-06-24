@@ -151,6 +151,7 @@ func (fs FS) Exists(dir, filename string) (bool, error) {
 
 func (fs FS) Read(dir, filename string) (string, error) {
 	filePath, err := fs.SafePath(dir, filename)
+	fmt.Println(filePath)
 	if err != nil {
 		return "", fmt.Errorf("fs read: unsafe filePath '%s': %w", filePath, errUnsafePath)
 	}
