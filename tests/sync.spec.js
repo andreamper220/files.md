@@ -113,6 +113,37 @@ test('send changes from current file to server', async ({ page }) => {
     await expectFileOnServer(page, 'file.md', 'test content\nadded\naddded from client');
 });
 
+test('changed on both client and serve, should merge', async ({ page }) => {
+    await createFileOnServer('file.md', 'test content');
+
+    await setup(page);
+
+    await expectFileContent(page, 'file', '# File\ntest content');
+
+    // Disable sync
+    await page.addInitScript((workerIndex) => {
+        localStorage.removeItem('token')
+    }, currentWorkerIndex);
+
+    // Modify on server
+    await createFileOnServer('file.md', 'test content\nadded from server');
+    await page.waitForTimeout(2000);
+
+    // Modify on client
+    await page.keyboard.press('Meta+ArrowDown');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('addded from client');
+
+    // Enable sync
+    await page.addInitScript((workerIndex) => {
+        localStorage.setItem('token', workerIndex);
+    }, currentWorkerIndex);
+
+    await page.waitForTimeout(2000);
+    await expectFileOnServer(page, 'file.md', 'test content\nadded from server\naddded from client');
+    await expectCurrentContent(page, '# File\ntest content\nadded from server\naddded from client');
+});
+
 async function createFileOnServer(filepath, content) {
     const p = path.join(getServerDir(), filepath);
     await fs.writeFile(p, content, 'utf8');

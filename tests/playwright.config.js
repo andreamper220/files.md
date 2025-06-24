@@ -20,7 +20,7 @@ module.exports = defineConfig({
         navigationTimeout: 5000,
     },
 
-    timeout: 5000,
+    timeout: 8000,
     expect: {
         timeout: 3000
     },
