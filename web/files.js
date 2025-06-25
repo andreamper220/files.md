@@ -923,7 +923,8 @@ async function syncCurrentFile(syncWithServer = true) {
         let newFilename = ucfirst(fromHeaderToFilename(firstLine));
         // If filename is empty, generate an available "Untitled" name
         if (newFilename.trim() === '.md') {
-            if (!editor.currentFile.startsWith('Untitled')) {
+            let hasOldName = !editor.currentFile.startsWith('Untitled');
+            if (hasOldName) {
                 newFilename = 'Untitled.md';
                 let counter = 1;
                 while (files[editor.currentDir][newFilename]) {
@@ -931,6 +932,8 @@ async function syncCurrentFile(syncWithServer = true) {
                     counter++;
                 }
             } else {
+                // TODO add tests
+                // Already renamed to untitled
                 newFilename = editor.currentFile;
             }
         }

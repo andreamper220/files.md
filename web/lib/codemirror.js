@@ -3375,8 +3375,15 @@
           // Draw first visual line of selection
           let firstLine = cm.lineAtHeight(fromPos.top, "div")
           let firstVisualLine = getVisualLines(cm, firstLine)[0];
-          let firstLineRight = wrapXObj(cm, lineObj, firstVisualLine.startChar, dir, "before");
-          drawSelectionRect(fromPos.left, fromPos.top, (firstLineRight - fromPos.left) + 4, fromPos.bottom);
+          console.log(getVisualLines(cm, firstLine), from);
+          for (let firstVisualLine of getVisualLines(cm, firstLine)) {
+            if (from >= firstVisualLine.startChar && from < firstVisualLine.endChar) {
+              let firstLineRight = wrapXObj(cm, lineObj, firstVisualLine.startChar, dir, "before");
+              console.log(firstVisualLine);
+              drawSelectionRect(fromPos.left, fromPos.top, (firstLineRight - fromPos.left) + 4, fromPos.bottom);
+              break;
+            }
+          }
 
           // PATCHED
           // Draw in-between visual lines

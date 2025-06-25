@@ -165,5 +165,52 @@ test.describe('Files.md Text Editor Sync Tests', () => {
             expect(selectionData.right).toBe(expectedSelections[i].right);
         }
     });
+
+    test('should handle partical text selection for word-wrap content', async ({page}) => {
+        await page.click('.CodeMirror');
+        await page.keyboard.press('Control+a');
+        await page.keyboard.press('Delete');
+
+        const testContent = `\`1400–1500\` Рассвет эпохи возрождения (особенно Флоренция, Рим, Венеция). Человек в центре. Развитие гуманизма: акцент на личность, разум, творчество человека. Наука и открытия расцвет астрономии, анатомии, математики (Коперник, Галилей, Леонардо да Винчи). Искусство – новые методы перспективы, реализма, анатомической точности. Великие художники: Леонардо, Микеланджело, Рафаэль, Боттичелли.`;
+
+        await page.keyboard.type(testContent);
+        await page.waitForTimeout(500);
+
+        await page.evaluate(() => {
+            editor.setSelection(
+                { line: 1, ch: 84 },
+                { line: 1, ch: 184 }
+            );
+        });
+        await page.waitForTimeout(800);
+
+        const allSelections = page.locator('.CodeMirror-selected');
+        let count = await allSelections.count();
+        expect(count).toEqual(2);
+
+        const expectedSelections = [
+            { left: 2, width: 758, right: 760 },
+            { left: 2, width: 67, right: 69 },
+        ];
+
+        for (let i = 0; i < count; i++) {
+            const selection = allSelections.nth(i);
+
+            const selectionData = await selection.evaluate(el => {
+                const style = window.getComputedStyle(el);
+                const left = parseInt(style.left);
+                const width = parseInt(style.width);
+                return {
+                    left: left,
+                    width: width,
+                    right: left + width
+                };
+            });
+
+            expect(selectionData.left).toBe(expectedSelections[i].left);
+            expect(selectionData.width).toBe(expectedSelections[i].width);
+            expect(selectionData.right).toBe(expectedSelections[i].right);
+        }
+    });
 });
 
