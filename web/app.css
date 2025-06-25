@@ -361,7 +361,7 @@ a:hover {
 /*Hide (...) in links. Don't hide links after images*/
 .CodeMirror span:not(:has(.cm-image)) > span.cm-url.hmd-hidden-token.cm-url {
     display: inline;
-    font-size: 1px !important;
+    font-size: 0 !important;
     letter-spacing: -1ch;
     color: transparent;
 }
