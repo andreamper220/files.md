@@ -105,19 +105,24 @@ func NewFile(name, hash, title string, ctime int64, isMultiline, isDir bool, par
 	return File{name, hash, title, ctime, isMultiline, isDir, parentDir}
 }
 
-func (fs FS) CreateDirsIfNotExist() error {
-	for _, dir := range []string{
-		DirArchive,
-		DirToday,
-		DirLater,
-		DirMedia,
-		DirRead,
-		DirWatch,
-		DirShop,
-		DirHabits,
-		DirJournal,
-		DirInsights,
-	} {
+// CreateDirsIfNotExist creates specified directories for a user if they do not exist.
+// If dirs are not specified, it creates default directories.
+func (fs FS) CreateDirsIfNotExist(dirs ...string) error {
+	if len(dirs) == 0 {
+		dirs = []string{
+			DirArchive,
+			DirToday,
+			DirLater,
+			DirMedia,
+			DirRead,
+			DirWatch,
+			DirShop,
+			DirHabits,
+			DirJournal,
+			DirInsights,
+		}
+	}
+	for _, dir := range dirs {
 		userPath := path.Join(fs.rootPath, dir)
 		exists, err := Exists(fs.backend, userPath)
 		if err != nil {
@@ -223,6 +228,11 @@ func (fs FS) Rename(oldDir, oldFilename, newDir, newFilename string) error {
 		return fmt.Errorf("fs can't rename to '%s': %w", newPath, errUnsafePath)
 	}
 
+	err = fs.CreateDirsIfNotExist(oldDir, newDir)
+	if err != nil {
+		return fmt.Errorf("fs can't rename: %w", err)
+	}
+
 	err = fs.backend.Rename(oldPath, newPath)
 	if err != nil {
 		return fmt.Errorf("can't rename from '%s' to '%s': %w", oldPath, newPath, err)
@@ -270,6 +280,11 @@ func (fs FS) FilesAndDirs(dir string) ([]File, error) {
 	userPath, err := fs.SafePath(dir, "")
 	if err != nil {
 		return nil, fmt.Errorf("can't get files for '%s': %w", path.Join(fs.rootPath, dir), errUnsafePath)
+	}
+
+	err = fs.CreateDirsIfNotExist(dir)
+	if err != nil {
+		return nil, fmt.Errorf("can't get files for '%s': %w", path.Join(fs.rootPath, dir), err)
 	}
 
 	entries, err := ReadDir(fs.backend, userPath)

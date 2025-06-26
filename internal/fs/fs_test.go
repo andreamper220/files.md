@@ -641,7 +641,7 @@ func TestUnhashNonExistentFile(t *testing.T) {
 	fs, _ := NewFS("/", afero.NewMemMapFs())
 	_, err := fs.Unhash("today", "nonexistenthash")
 	r.Error(err)
-	r.Contains(err.Error(), "can't unhash:")
+	r.Contains(err.Error(), "can't unhash")
 }
 
 func TestSanitizeAndUnsanitizeFilename(t *testing.T) {

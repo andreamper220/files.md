@@ -150,10 +150,6 @@ func initBot() {
 		if err != nil {
 			fmt.Printf("Bot error: can't create fs: %v", err)
 		}
-		err = userFS.CreateDirsIfNotExist()
-		if err != nil {
-			fmt.Printf("Bot error: can't create user dirs: %v", err)
-		}
 
 		confFilename := "config.json"
 		userconf := userconfig.NewConfig(userFS, userID, confFilename)

@@ -145,7 +145,6 @@ async function syncTextsWithServer() {
     if (files === undefined) {
         return;
     }
-
     if (localStorage.getItem('token') === null) {
         return;
     }
@@ -891,7 +890,6 @@ async function syncCurrentFile(syncWithServer = true) {
     if (debug) {
         return;
     }
-
     if (editor.currentFile === undefined) {
         return
     }

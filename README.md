@@ -100,6 +100,7 @@ Read 4K randomly from SSD = 150,000 ns
 ```
 
 ## ADRs (Architecture Decision Records)
+- Before we created all necessary dirs upfront, now we create dirs on the fly. That way we won't clutter user's knowledge base right from the start.
 - Switched to microseconds for tracking file changes during sync. Gap between consecutive files creation is more than enough - ranging from 5000μs to 1000μs. We didn't go for nanosec because js is having troubles with int64 precision. Added later. Linux is using cached kernel time, which is updated at `CONFIG_HZ` interval (`grep CONFIG_HZ /boot/config-$(uname -r)`), in my case the value is 1000 (1ms). Most real-world operations operations are spaced much further apart than 1ms due to: user interaction, network latency, disk i/o. We might only have issue if we update files inside an effective/native loop. 
 - I believe it's time to make our knowledge base cross-platform, by forbidding characters like ":?<>*" in filenames. These characters aren't allowed in some environments (like Windows, PWA).
 - I wanted bot-like functionality in browser. I didn't want to re-write well-tested code in TypeScript, so I used wasm. And it worked perfectly good.
