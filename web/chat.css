@@ -122,14 +122,14 @@
     z-index: 1000;
 }
 
-.action-btn .btn-label::after {
+.action-btn .btn-submenu.show::after {
     content: '';
     position: absolute;
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    border: 4px solid transparent;
-    /*border-top-color: #1f2937;*/
+    border: 5px solid transparent;
+    border-top-color: #1f2937;
 }
 
 .action-btn:hover .btn-label {
@@ -145,7 +145,6 @@
     text-align: center;
     /*color: #6b7280;*/
 }
-
 
 .empty-title {
     font-size: 22px;
@@ -180,15 +179,9 @@
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
-/*#chat-input::placeholder {*/
-/*    color: #6b7280;*/
-/*}*/
-
 .CodeMirror-wrap {
     display: none;
 }
-
-
 
 .action-btn .btn-submenu {
     position: absolute;
@@ -211,16 +204,6 @@
     padding: 8px;
 }
 
-.action-btn .btn-submenu::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-top-color: #1f2937;
-}
-
 .action-btn .btn-submenu.show {
     opacity: 1;
     pointer-events: auto;
@@ -237,6 +220,72 @@
     background: #374151;
 }
 
+.file-submenu .submenu-item {
+    margin: 4px 0;
+}
+
 .submenu-item:hover {
     background: #4b5563;
+}
+
+.btn-submenu.file-submenu {
+    max-height: 300px;
+    /*overflow: hidden;*/
+    display: flex;
+    flex-direction: column;
+}
+
+.submenu-search {
+    padding: 0 8px;
+    /*border-top: 1px solid #374151;*/
+    background: #1f2937;
+}
+
+.submenu-search input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 6px 8px;
+    font-size: 12px;
+    color: #e5e5e7;
+    outline: none;
+}
+
+.submenu-search input::placeholder {
+    color: #9ca3af;
+}
+
+.submenu-search input::placeholder {
+    color: #9ca3af;
+}
+
+.submenu-items {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 240px;
+    padding: 4px;
+}
+
+.submenu-items::-webkit-scrollbar {
+    width: 4px;
+}
+
+.submenu-items::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+
+.submenu-items::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 2px;
+}
+.submenu-triangle {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border: 5px solid transparent;
+    border-top-color: #1f2937;
+    z-index: 1001;
 }

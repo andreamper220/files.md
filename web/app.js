@@ -1022,7 +1022,7 @@ async function openEditor(withSidebar = true) {
 
         setTimeout(async () => {
             const rootDirHandle = await getRootDirHandle();
-            sidebarFiles = await loadLocalFiles(rootDirHandle);
+            files = await loadLocalFiles(rootDirHandle);
             updateSidebar();
         }, 1);
     }
@@ -1167,7 +1167,7 @@ async function openDir() {
     document.getElementById('open-chat').style.display = 'inline';
 
     await saveDirectoryHandle(dirHandle);
-    sidebarFiles = await loadLocalFiles(dirHandle)
+    files = await loadLocalFiles(dirHandle)
 
     initWasm();
 
@@ -1301,7 +1301,7 @@ window.addEventListener('focus', async () => {
     await syncCurrentFile();
 
     const start = performance.now();
-    sidebarFiles = await loadLocalFiles(savedDirectoryHandle);
+    files = await loadLocalFiles(savedDirectoryHandle);
     const end = performance.now();
     console.log(`Files loaded in: ${(end - start).toFixed(3)} milliseconds`);
     await syncTextsWithServer()
@@ -1324,7 +1324,7 @@ window.addEventListener('blur', async function () {
 
     // Benchmark time took
     const start = performance.now();
-    sidebarFiles = await loadLocalFiles(savedDirectoryHandle);
+    files = await loadLocalFiles(savedDirectoryHandle);
     const end = performance.now();
     console.log(`Files loaded in: ${(end - start).toFixed(3)} milliseconds`);
     await syncTextsWithServer()

@@ -1061,6 +1061,8 @@ function getDirs() {
 
     let dirs = Object.keys(files).filter(dir => !SYSTEM_DIRS.includes(dir));
     dirs.push('habits');
+    // replace '' with /
+    dirs = dirs.map(dir => dir === '' ? '/' : dir);
 
     return dirs;
 }

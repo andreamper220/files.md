@@ -4,7 +4,6 @@ let chatContainer;
 let messageInput;
 const CHAT_FILENAME = 'Chat.txt';
 
-
 function parseFileContent(content) {
     // Normalize line endings
     content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -240,25 +239,6 @@ function renderMessages() {
     attachEventListeners();
 }
 
-
-const fileOptions = [
-    { id: 'journal-2024.txt', label: '2024' },
-    { id: 'journal-2025.txt', label: '2025' },
-    { id: 'journal-2026.txt', label: '2026' },
-    { id: 'shop-2024.txt', label: 'Shop 24' },
-    { id: 'shop-2025.txt', label: 'Shop 25' },
-    { id: 'ideas.txt', label: 'Ideas' }
-];
-
-const dirOptions = [
-    { id: 'folder1', label: 'Folder 1' },
-    { id: 'folder2', label: 'Folder 2' },
-    { id: 'folder3', label: 'Folder 3' },
-    { id: 'archive', label: 'Archive' },
-    { id: 'temp', label: 'Temp' },
-    { id: 'backup', label: 'Backup' }
-];
-
 function attachEventListeners() {
     // Add event listeners for editing message content
     chatContainer.querySelectorAll('.message-content[contenteditable]').forEach(element => {
@@ -303,17 +283,15 @@ function attachEventListeners() {
         });
     });
 
-
-    // Submenu
     document.querySelectorAll('.submenu-btn').forEach(btn => {
         // Add appropriate submenu based on button type
         if (btn.classList.contains('to-file-btn')) {
-            addSubmenuToButton(btn, fileOptions, 'data-target-file');
+            // Get root files from files var
+            addSubmenuToButton(btn, Object.keys(files['']), 'data-target-file');
         } else if (btn.classList.contains('to-dir-btn')) {
-            addSubmenuToButton(btn, dirOptions, 'data-target-dir');
+            addSubmenuToButton(btn, getDirs(), 'data-target-dir');
         }
 
-        // Add click listener
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const submenu = btn.querySelector('.btn-submenu');
@@ -325,9 +303,15 @@ function attachEventListeners() {
 
             // Toggle current submenu
             submenu.classList.toggle('show');
+
+            if (btn.classList.contains('to-file-btn') && submenu.classList.contains('show')) {
+                const searchInput = submenu.querySelector('.submenu-search-input');
+                if (searchInput) {
+                    setTimeout(() => searchInput.focus(), 0);
+                }
+            }
         });
     });
-
 
     // Prevent submenu from closing when clicking inside it
     document.querySelectorAll('.btn-submenu').forEach(submenu => {
@@ -342,12 +326,15 @@ function attachEventListeners() {
             e.stopPropagation();
             const messageIndex = item.closest('.submenu-btn').dataset.index;
             const targetFile = item.dataset.targetFile;
-            // Your move logic here
-            console.log(`Moving message ${messageIndex} to ${targetFile}`);
+            const targetDir = item.dataset.targetDir;
+
+            console.log(`Moving message ${messageIndex} to ${targetFile || targetDir}`);
+
+            // Close submenu after selection
+            item.closest('.btn-submenu').classList.remove('show');
         });
     });
 }
-
 
 function saveEdit(noteId, newText) {
     const note = messages.find(n => n.id == noteId);
@@ -375,9 +362,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Initialize when page loads
-// document.addEventListener('DOMContentLoaded', init);
-
 const chatInput = document.getElementById('chat-input');
 
 function autoResize() {
@@ -389,8 +373,6 @@ function autoResize() {
 chatInput.addEventListener('input', autoResize);
 // Initial resize to set proper height
 autoResize();
-
-// Add click listeners for submenu buttons
 
 // Handle submenu item clicks
 document.addEventListener('click', (e) => {
@@ -414,25 +396,101 @@ document.addEventListener('click', () => {
     });
 });
 
-
-function createSubmenu(options, dataAttribute) {
-    return `
-        <div class="btn-submenu">
-            ${options.map(option =>
-        `<div class="submenu-item" ${dataAttribute}="${option.id}">${option.label}</div>`
-    ).join('')}
-        </div>
-    `;
+function createSubmenu(options, dataAttribute, isFileSubmenu = false) {
+    if (isFileSubmenu) {
+        return `
+            <div class="btn-submenu file-submenu">
+                <div class="submenu-search">
+                    <input type="text" placeholder="Search files..." class="submenu-search-input">
+                </div>
+                <div class="submenu-items">
+                    ${options.map(option =>
+            `<div class="submenu-item" ${dataAttribute}="${option}">${option}</div>`
+        ).join('')}
+                </div>
+            </div>
+        `;
+    } else {
+        return `
+            <div class="btn-submenu">
+                ${options.map(option =>
+            `<div class="submenu-item" ${dataAttribute}="${option}">${option}</div>`
+        ).join('')}
+            </div>
+        `;
+    }
 }
 
 // Function to add submenu to button
 function addSubmenuToButton(button, options, dataAttribute) {
-    // Remove existing submenu if any
     const existingSubmenu = button.querySelector('.btn-submenu');
     if (existingSubmenu) {
         existingSubmenu.remove();
     }
 
-    // Add new submenu
-    button.insertAdjacentHTML('beforeend', createSubmenu(options, dataAttribute));
+    const isFileSubmenu = button.classList.contains('to-file-btn');
+
+    if (isFileSubmenu) {
+        button.insertAdjacentHTML('beforeend', `
+            <div class="btn-submenu file-submenu">
+                <div class="submenu-items">
+                    ${options.map(option =>
+            `<div class="submenu-item" ${dataAttribute}="${option}">${option}</div>`
+        ).join('')}
+                </div>
+                <div class="submenu-search">
+                    <input type="text" placeholder="" class="submenu-search-input">
+                </div>
+            </div>
+        `);
+
+        const searchInput = button.querySelector('.submenu-search-input');
+        const submenuItems = button.querySelector('.submenu-items');
+
+        // Focus the input
+        setTimeout(() => searchInput.focus(), 10);
+
+        searchInput.addEventListener('input', (e) => {
+            handleFileSearch(e.target.value, submenuItems, options, dataAttribute);
+        });
+
+        searchInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    } else {
+        button.insertAdjacentHTML('beforeend', `
+            <div class="btn-submenu">
+                ${options.map(option =>
+            `<div class="submenu-item" ${dataAttribute}="${option}">${option}</div>`
+        ).join('')}
+            </div>
+        `);
+    }
+}
+
+function handleFileSearch(searchTerm, submenuItemsContainer, allOptions, dataAttribute) {
+    // Simple filter - you can replace this with your own search logic
+    const filteredOptions = allOptions.filter(option =>
+        option.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Re-render the filtered items
+    submenuItemsContainer.innerHTML = filteredOptions.map(option =>
+        `<div class="submenu-item" ${dataAttribute}="${option}">${option}</div>`
+    ).join('');
+
+    // Re-attach click listeners for new items
+    submenuItemsContainer.querySelectorAll('.submenu-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const messageIndex = e.target.closest('.submenu-btn').dataset.index;
+            const targetFile = e.target.dataset.targetFile;
+            const targetDir = e.target.dataset.targetDir;
+
+            console.log(`Moving message ${messageIndex} to ${targetFile || targetDir}`);
+
+            // Close submenu after selection
+            e.target.closest('.btn-submenu').classList.remove('show');
+        });
+    });
 }
