@@ -187,3 +187,56 @@
 .CodeMirror-wrap {
     display: none;
 }
+
+
+
+.action-btn .btn-submenu {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    margin-bottom: 6px;
+    z-index: 1000;
+    min-width: 180px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 8px;
+}
+
+.action-btn .btn-submenu::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #1f2937;
+}
+
+.action-btn .btn-submenu.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.submenu-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 12px;
+    transition: background 0.2s;
+    font-weight: 500;
+    text-align: center;
+    background: #374151;
+}
+
+.submenu-item:hover {
+    background: #4b5563;
+}

@@ -5,7 +5,6 @@ let messageInput;
 const CHAT_FILENAME = 'Chat.txt';
 
 
-
 function parseFileContent(content) {
     // Normalize line endings
     content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -139,7 +138,7 @@ function initChat() {
     chatContainer = document.getElementById('chat');
     messageInput = document.getElementById('chat-input');
 
-    messageInput.addEventListener('keydown', function(e) {
+    messageInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
@@ -201,9 +200,33 @@ function renderMessages() {
             <div class="message-footer">
                 <span class="message-time">${message.timestamp}</span>
                 <div class="message-actions">
+                    <button class="action-btn submenu-btn to-file-btn" data-index="${message.index}">
+                        📄
+                        <span class="btn-label">To File</span>
+                    </button>
+                    <button class="action-btn submenu-btn to-dir-btn" data-index="${message.index}">
+                        🗂
+                        <span class="btn-label">To Dir</span>
+                    </button>
+                    <button class="action-btn to-todo-btn" data-index="${message.index}">
+                        ✅   
+                    <span class="btn-label">To Do</span>
+                    </button>
+                    <button class="action-btn to-read-btn" data-index="${message.index}">
+                        📚
+                        <span class="btn-label">To Read</span>
+                    </button>
+                    <button class="action-btn to-shop-btn" data-index="${message.index}">
+                        🛒
+                        <span class="btn-label">To Shop</span>
+                    </button>
+                    <button class="action-btn to-watch-btn" data-index="${message.index}">
+                        📺
+                        <span class="btn-label">To Watch</span>
+                    </button>
                     <button class="action-btn journal-btn" data-index="${message.index}">
                         💚
-                        <span class="btn-label">Journal</span>
+                        <span class="btn-label">To Journal</span>
                     </button>
                     <button class="action-btn delete-btn" data-index="${message.index}">
                         🗑️
@@ -218,20 +241,37 @@ function renderMessages() {
 }
 
 
+const fileOptions = [
+    { id: 'journal-2024.txt', label: '2024' },
+    { id: 'journal-2025.txt', label: '2025' },
+    { id: 'journal-2026.txt', label: '2026' },
+    { id: 'shop-2024.txt', label: 'Shop 24' },
+    { id: 'shop-2025.txt', label: 'Shop 25' },
+    { id: 'ideas.txt', label: 'Ideas' }
+];
+
+const dirOptions = [
+    { id: 'folder1', label: 'Folder 1' },
+    { id: 'folder2', label: 'Folder 2' },
+    { id: 'folder3', label: 'Folder 3' },
+    { id: 'archive', label: 'Archive' },
+    { id: 'temp', label: 'Temp' },
+    { id: 'backup', label: 'Backup' }
+];
 
 function attachEventListeners() {
     // Add event listeners for editing message content
     chatContainer.querySelectorAll('.message-content[contenteditable]').forEach(element => {
-        element.addEventListener('blur', function(e) {
+        element.addEventListener('blur', function (e) {
             saveEdit(e.target.dataset.noteId, e.target.textContent);
             e.target.classList.remove('editing');
         });
 
-        element.addEventListener('focus', function(e) {
+        element.addEventListener('focus', function (e) {
             e.target.classList.add('editing');
         });
 
-        element.addEventListener('keydown', function(e) {
+        element.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 e.target.blur();
@@ -245,7 +285,7 @@ function attachEventListeners() {
 
     // Add delete button listeners
     chatContainer.querySelectorAll('.journal-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
+        btn.addEventListener('click', function (e) {
             e.stopPropagation();
             let cmd = {
                 n: "mv_to_journal",
@@ -257,13 +297,56 @@ function attachEventListeners() {
     });
 
     chatContainer.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
+        btn.addEventListener('click', function (e) {
             e.stopPropagation();
             deleteNote(btn.dataset.noteId);
         });
     });
-}
 
+
+    // Submenu
+    document.querySelectorAll('.submenu-btn').forEach(btn => {
+        // Add appropriate submenu based on button type
+        if (btn.classList.contains('to-file-btn')) {
+            addSubmenuToButton(btn, fileOptions, 'data-target-file');
+        } else if (btn.classList.contains('to-dir-btn')) {
+            addSubmenuToButton(btn, dirOptions, 'data-target-dir');
+        }
+
+        // Add click listener
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const submenu = btn.querySelector('.btn-submenu');
+
+            // Close other open submenus
+            document.querySelectorAll('.btn-submenu.show').forEach(menu => {
+                if (menu !== submenu) menu.classList.remove('show');
+            });
+
+            // Toggle current submenu
+            submenu.classList.toggle('show');
+        });
+    });
+
+
+    // Prevent submenu from closing when clicking inside it
+    document.querySelectorAll('.btn-submenu').forEach(submenu => {
+        submenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    });
+
+    // Handle submenu item clicks
+    document.querySelectorAll('.submenu-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const messageIndex = item.closest('.submenu-btn').dataset.index;
+            const targetFile = item.dataset.targetFile;
+            // Your move logic here
+            console.log(`Moving message ${messageIndex} to ${targetFile}`);
+        });
+    });
+}
 
 
 function saveEdit(noteId, newText) {
@@ -281,7 +364,7 @@ function deleteNote(noteId) {
 }
 
 function scrollToBottom() {
-    setTimeout(function() {
+    setTimeout(function () {
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }, 100);
 }
@@ -293,14 +376,63 @@ function escapeHtml(text) {
 }
 
 // Initialize when page loads
-document.addEventListener('DOMContentLoaded', init);
+// document.addEventListener('DOMContentLoaded', init);
 
 const chatInput = document.getElementById('chat-input');
+
 function autoResize() {
     chatInput.style.height = 'auto';
     chatInput.style.height = Math.min(chatInput.scrollHeight, 250) + 'px';
 }
+
 // Add event listener for input changes
 chatInput.addEventListener('input', autoResize);
 // Initial resize to set proper height
 autoResize();
+
+// Add click listeners for submenu buttons
+
+// Handle submenu item clicks
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('submenu-item')) {
+        e.stopPropagation();
+        const messageIndex = e.target.closest('.submenu-btn').dataset.index;
+        const targetFile = e.target.dataset.targetFile;
+        const targetDir = e.target.dataset.targetDir;
+
+        console.log(`Moving message ${messageIndex} to ${targetFile || targetDir}`);
+
+        // Close submenu after selection
+        e.target.closest('.btn-submenu').classList.remove('show');
+    }
+});
+
+// Close submenus when clicking outside
+document.addEventListener('click', () => {
+    document.querySelectorAll('.btn-submenu.show').forEach(menu => {
+        menu.classList.remove('show');
+    });
+});
+
+
+function createSubmenu(options, dataAttribute) {
+    return `
+        <div class="btn-submenu">
+            ${options.map(option =>
+        `<div class="submenu-item" ${dataAttribute}="${option.id}">${option.label}</div>`
+    ).join('')}
+        </div>
+    `;
+}
+
+// Function to add submenu to button
+function addSubmenuToButton(button, options, dataAttribute) {
+    // Remove existing submenu if any
+    const existingSubmenu = button.querySelector('.btn-submenu');
+    if (existingSubmenu) {
+        existingSubmenu.remove();
+    }
+
+    // Add new submenu
+    button.insertAdjacentHTML('beforeend', createSubmenu(options, dataAttribute));
+}
