@@ -480,64 +480,59 @@ function attachEventListeners() {
             chatInput.focus();
             updateSidebar();
         });
+    });
 
-        chatContainer.querySelectorAll('.to-archive-btn').forEach(btn => {
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                const selectedMessages = document.querySelectorAll('.message.selected');
-                let indices = [];
-                let messagesToRemove = [];
-                if (selectedMessages.length > 0) {
-                    indices = Array.from(selectedMessages).map(msg => msg.dataset.index);
-                    messagesToRemove = selectedMessages;
-                } else {
-                    indices = [btn.dataset.index];
-                    messagesToRemove = [btn.closest('.message')];
-                }
+    chatContainer.querySelectorAll('.to-archive-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const selectedMessages = document.querySelectorAll('.message.selected');
+            let indices = [];
+            let messagesToRemove = [];
+            if (selectedMessages.length > 0) {
+                indices = Array.from(selectedMessages).map(msg => msg.dataset.index);
+                messagesToRemove = selectedMessages;
+            } else {
+                indices = [btn.dataset.index];
+                messagesToRemove = [btn.closest('.message')];
+            }
 
-                sendCmd('mv', ['archive', indices.join(',')]);
-                messagesToRemove.forEach(message => {
-                    message.classList.add('removing');
-                    setTimeout(() => {
-                        message.remove();
-                    }, 300);
-                });
-                chatInput.focus();
-                updateSidebar();
+            sendCmd('mv', ['archive', indices.join(',')]);
+            console.log(indices);
+            messagesToRemove.forEach(message => {
+                message.classList.add('removing');
+                setTimeout(() => {
+                    message.remove();
+                }, 300);
             });
-        });
-
-        chatContainer.querySelectorAll('.to-recent-btn').forEach(btn => {
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                const selectedMessages = document.querySelectorAll('.message.selected');
-                let indices = [];
-                let messagesToRemove = [];
-                if (selectedMessages.length > 0) {
-                    indices = Array.from(selectedMessages).map(msg => msg.dataset.index);
-                    messagesToRemove = selectedMessages;
-                } else {
-                    let message = btn.closest('.message');
-                    indices = [message.dataset.index];
-                    messagesToRemove = [message];
-                }
-
-                sendCmd('mf', [btn.dataset.filename, indices.join(',')]);
-                messagesToRemove.forEach(message => {
-                    message.classList.add('removing');
-                    setTimeout(() => {
-                        message.remove();
-                    }, 300);
-                });
-                chatInput.focus();
-                updateSidebar();
-            });
+            chatInput.focus();
+            updateSidebar();
         });
     });
 
-    chatContainer.querySelectorAll('.delete-btn').forEach(btn => {
+    chatContainer.querySelectorAll('.to-recent-btn').forEach(btn => {
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
+            const selectedMessages = document.querySelectorAll('.message.selected');
+            let indices = [];
+            let messagesToRemove = [];
+            if (selectedMessages.length > 0) {
+                indices = Array.from(selectedMessages).map(msg => msg.dataset.index);
+                messagesToRemove = selectedMessages;
+            } else {
+                let message = btn.closest('.message');
+                indices = [message.dataset.index];
+                messagesToRemove = [message];
+            }
+
+            sendCmd('mf', [btn.dataset.filename, indices.join(',')]);
+            messagesToRemove.forEach(message => {
+                message.classList.add('removing');
+                setTimeout(() => {
+                    message.remove();
+                }, 300);
+            });
+            chatInput.focus();
+            updateSidebar();
         });
     });
 
