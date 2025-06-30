@@ -224,6 +224,7 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		consts.CmdShowWatchChecklist: b.showWatch,
 		consts.CmdShowShopChecklist:  b.showShop,
 		consts.CmdShowSchedule:       b.showSchedule,
+		consts.CmdShowMoveFromToday:  b.showMoveFromToday,
 		consts.CmdShowSettings:       b.showSettings,
 		consts.CmdOpenInApp:          b.openInApp,
 		consts.CmdShowHelp:           b.showHelp,
@@ -238,8 +239,7 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		consts.CmdShowScheduleForDay:          b.showToADay,
 		consts.CmdShowMoveToDirOrFile:         b.showMoveToFileOrDir,
 		consts.CmdShowMoveToChecklist:         b.showToChecklist,
-		consts.CmdMoveToExistingDir:           b.moveToDir,
-		consts.CmdMOveToExistingDirFromChat:   b.moveToDirFromChat,
+		consts.CmdMoveToExistingDir:           b.moveToDirFromChat,
 		consts.CmdRequestNewDir:               b.requestNewDirName,
 		consts.CmdMoveToNewDir:                b.moveToNewDir,
 		consts.CmdMoveToExistingFile:          b.moveToExistingFile,
@@ -254,7 +254,6 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		consts.CmdMoveToLater:                 b.moveToLater,
 		consts.CmdSchedule:                    b.schedule,
 		consts.CmdScheduleForTmrw:             b.scheduleForTmrw,
-		consts.CmdScheduleForTmrwFromChat:     b.scheduleForTmrwFromChat,
 		consts.CmdComplete:                    b.complete,
 		consts.CmdPostpone:                    b.postpone,
 		consts.CmdPomodoro:                    b.togglePomodoro,
@@ -811,15 +810,20 @@ func (b *Bot) showMD(probablyInvalidMD string, kb *tg.Keyboard) error {
 }
 
 func (b *Bot) showMoveTo(params []string) error {
-	hashOrIndex := params[0]
+	msgIndexStr := params[0]
+	msgIndex, err := strconv.Atoi(msgIndexStr)
+	if err != nil {
+		return fmt.Errorf("move: can't convert %s to int: %w", msgIndexStr, err)
+	}
+
 	if b.cfg.NotesOnlyMode() {
 		b.delAllKeyboards()
 
-		return b.showMoveToFileOrDir([]string{hashOrIndex})
+		return b.showMoveToFileOrDir([]string{msgIndexStr})
 	}
 
 	var kb tg.Keyboard
-	userMoveToBtns := b.moveToBtns(hashOrIndex)
+	userMoveToBtns := b.moveToBtns(msgIndex)
 	if len(userMoveToBtns) == 0 {
 		b.delAllKeyboards()
 
@@ -827,12 +831,12 @@ func (b *Bot) showMoveTo(params []string) error {
 	}
 
 	// Add recent command if any
-	recentBtn := b.recentCmdBtn(hashOrIndex)
+	recentBtn := b.recentCmdBtn(msgIndex)
 	if recentBtn != nil {
 		userMoveToBtns = append(userMoveToBtns, *recentBtn)
 	}
 
-	userMoveToBtns = append(userMoveToBtns, tg.NewBtn(i18n.Tr("➡️ Today"), tg.NewCmd(consts.CmdShowToday, nil)))
+	userMoveToBtns = append(userMoveToBtns, tg.NewBtn(i18n.StrGoToToday, tg.NewCmd(consts.CmdShowToday, nil)))
 
 	userBtnsByRows := slice.Chunk(userMoveToBtns, btnsPerRow)
 	for _, row := range userBtnsByRows {
@@ -841,7 +845,7 @@ func (b *Bot) showMoveTo(params []string) error {
 
 	b.delAllKeyboards()
 
-	err := b.showHTML(b.tr("Saved!"), &kb)
+	err = b.showHTML(b.tr("Task added for <b>today</b>!"), &kb)
 	if err != nil {
 		return fmt.Errorf("move: %w", err)
 	}
@@ -849,41 +853,42 @@ func (b *Bot) showMoveTo(params []string) error {
 	return nil
 }
 
-func (b *Bot) recentCmdBtn(filenameHash string) *tg.Btn {
-	recentCmd, ok := b.db.RecentCommand()
-	if !ok {
-		return nil
-	}
-
-	args, _ := b.db.RecentCommandParams()
-	args = append(args, filenameHash)
-	targetFilenameHash := args[0]
-
-	var unhashedTarget string
-	icon := "⭐️"
-	if recentCmd == consts.CmdMoveToExistingFile {
-		var err error
-		unhashedTarget, err = b.fs.Unhash(fs.DirRoot, targetFilenameHash)
-		if err != nil {
-			return nil
-		}
-	} else if recentCmd == consts.CmdMoveToExistingNote {
-		dir, err := b.fs.Unhash(fs.DirRoot, args[1])
-		if err != nil {
-			return nil
-		}
-
-		unhashedTarget, err = b.fs.Unhash(dir, targetFilenameHash)
-		if err != nil {
-			return nil
-		}
-	} else {
-		return nil
-	}
-
-	name := fmt.Sprintf("%s %s", icon, fs.Title(unhashedTarget))
-	btn := tg.NewBtn(name, tg.NewCmd(recentCmd, args))
-	return &btn
+func (b *Bot) recentCmdBtn(msgIndex int) *tg.Btn {
+	return nil
+	//recentCmd, ok := b.db.RecentCommand()
+	//if !ok {
+	//	return nil
+	//}
+	//
+	//args, _ := b.db.RecentCommandParams()
+	//args = append(args, filenameHash)
+	//targetFilenameHash := args[0]
+	//
+	//var unhashedTarget string
+	//icon := "⭐️"
+	//if recentCmd == consts.CmdMoveToExistingFile {
+	//	var err error
+	//	unhashedTarget, err = b.fs.Unhash(fs.DirRoot, targetFilenameHash)
+	//	if err != nil {
+	//		return nil
+	//	}
+	//} else if recentCmd == consts.CmdMoveToExistingNote {
+	//	dir, err := b.fs.Unhash(fs.DirRoot, args[1])
+	//	if err != nil {
+	//		return nil
+	//	}
+	//
+	//	unhashedTarget, err = b.fs.Unhash(dir, targetFilenameHash)
+	//	if err != nil {
+	//		return nil
+	//	}
+	//} else {
+	//	return nil
+	//}
+	//
+	//name := fmt.Sprintf("%s %s", icon, fs.Title(unhashedTarget))
+	//btn := tg.NewBtn(name, tg.NewCmd(recentCmd, args))
+	//return &btn
 }
 
 func (b *Bot) ShowToday(_ []string) error {
@@ -1150,6 +1155,7 @@ func (b *Bot) showMoveFromToday(_ []string) error {
 
 	var kb tg.Keyboard
 	for _, file := range files {
+		// TODO first move to chat.md
 		cmd := tg.NewCmd(consts.CmdShowMoveTo, []string{fs.Hash(file.Name)})
 		kb.AddRow(tg.NewBtn(file.Title, cmd))
 	}
@@ -1251,7 +1257,7 @@ func (b *Bot) rename(params []string) error {
 
 	filename, err := b.fs.Unhash(dir, fromFilenameHash)
 	if err != nil {
-		return fmt.Errorf("move: can't unhash old filename: %w", err)
+		return fmt.Errorf("rename: can't unhash old filename: %w", err)
 	}
 
 	err = b.fs.Rename(dir, filename, dir, newFilenameFromUserInput)
@@ -1540,11 +1546,11 @@ func (b *Bot) moveToDir(params []string) error {
 func (b *Bot) moveToDirFromChat(params []string) error {
 	// TODO Remove input expectations if dir is not today
 	toDirHash := params[0]
-	index, err := strconv.Atoi(params[1])
+	msgIndex, err := strconv.Atoi(params[1])
 	if err != nil {
-		return fmt.Errorf("move to dir: can't parse index from params: %w", err)
+		return fmt.Errorf("move to dir: can't parse msgIndex from params: %w", err)
 	}
-	index = -index
+	msgIndex = -msgIndex
 
 	toDir, err := b.fs.Unhash(fs.DirRoot, toDirHash)
 	if err != nil {
@@ -1567,13 +1573,13 @@ func (b *Bot) moveToDirFromChat(params []string) error {
 		}
 
 		return b.createOrAdd(toDir, filename, content)
-	}, index)
+	}, msgIndex)
 
 	if toDir != fs.DirLater {
 		//b.db.SetRecentCommand(consts.CmdMoveToExistingNote)
 		// Move from dir is today, because quick command
 		// appears when file is in today dir
-		//b.db.SetRecentCommandParams([]string{strconv.Itoa(index), toDirHash})
+		//b.db.SetRecentCommandParams([]string{strconv.Itoa(msgIndex), toDirHash})
 	}
 
 	b.delAllKeyboards()
@@ -1791,16 +1797,16 @@ func (b *Bot) moveToShop(params []string) error {
 
 // TODO test
 func (b *Bot) moveToNewFile(params []string) error {
-	hashOrIndex, err := strconv.Atoi(params[0])
+	msgIndex, err := strconv.Atoi(params[0])
 	if err != nil {
 		return fmt.Errorf("move to new file: can't parse hash or index from params: %w", err)
 	}
-	hashOrIndex = -hashOrIndex
+	msgIndex = -msgIndex
 	newFilenameFromUserInput := fs.Filename(params[1])
 
-	//filename, err := b.fs.Unhash(fs.DirRoot, hashOrIndex)
+	//filename, err := b.fs.Unhash(fs.DirRoot, msgIndex)
 	//if err != nil {
-	//	return fmt.Errorf("move to new file: can't unhash existing file '%s': %w", hashOrIndex, err)
+	//	return fmt.Errorf("move to new file: can't unhash existing file '%s': %w", msgIndex, err)
 	//}
 	//
 	//// Save existing filename to content in case the content of new file is empty (i.e. not multiline)
@@ -1834,7 +1840,7 @@ func (b *Bot) moveToNewFile(params []string) error {
 
 		// TODO add if exists
 		return b.fs.Write(fs.DirRoot, newFilenameFromUserInput, content)
-	}, hashOrIndex)
+	}, msgIndex)
 	if err != nil {
 		return fmt.Errorf("move to new file: can't read content from chat: %w", err)
 	}
@@ -1976,9 +1982,9 @@ func (b *Bot) addToRecentFileOrNoteFromShortcut(params []string) error {
 }
 
 func (b *Bot) moveToLater(params []string) error {
-	filenameHash := params[0]
+	msgIndexStr := params[0]
 
-	return b.moveToDir([]string{fs.DirLater, fs.DirToday, filenameHash})
+	return b.moveToDirFromChat([]string{fs.DirLater, msgIndexStr})
 }
 
 func (b *Bot) complete(params []string) error {
@@ -1990,9 +1996,8 @@ func (b *Bot) complete(params []string) error {
 		return fmt.Errorf("complete: can't unhash filename %s: %w", filename, err)
 	}
 
-	if err = b.fs.Touch(dir, filename); err != nil {
-		return fmt.Errorf("complete: can't touch %s: %w", filename, err)
-	}
+	// Not critical if we were unable to touch.
+	_ = b.fs.Touch(dir, filename)
 
 	// TODO multiline?
 	err = b.fs.Rename(dir, filename, fs.DirArchive, filename)
@@ -2119,16 +2124,11 @@ func (b *Bot) schedule(params []string) error {
 }
 
 func (b *Bot) scheduleForTmrw(params []string) error {
-	filenameHash := params[0]
-
-	return b.schedule([]string{filenameHash, txt.I64(sched.Tomorrow()), ""})
-}
-
-func (b *Bot) scheduleForTmrwFromChat(params []string) error {
-	index, err := strconv.Atoi(params[0])
+	msgIndex, err := strconv.Atoi(params[0])
 	if err != nil {
-		return fmt.Errorf("schedule for tomorrow from chat: can't parse index from params: %w", err)
+		return fmt.Errorf("schedule for tomorrow from chat: can't parse msgIndex from params: %w", err)
 	}
+	msgIndex = -msgIndex
 
 	var filenameHash string
 	err = b.moveFromChat(func(content string, timestamp time.Time) error {
@@ -2139,7 +2139,7 @@ func (b *Bot) scheduleForTmrwFromChat(params []string) error {
 		filename := fs.Filename(title)
 		filenameHash = fs.ShortHash(filename)
 		return b.fs.Write(fs.DirToday, filename, content)
-	}, index)
+	}, msgIndex)
 	if err != nil {
 		return fmt.Errorf("schedule for tomorrow from chat: can't read content from chat: %w", err)
 	}
@@ -2227,7 +2227,11 @@ func (b *Bot) toADayKeyboard(filenameHash string) (*tg.Keyboard, error) {
 }
 
 func (b *Bot) showMoveToFileOrDir(params []string) error {
-	hashOrIndex := params[0]
+	msgIndexStr := params[0]
+	msgIndex, err := strconv.Atoi(msgIndexStr)
+	if err != nil {
+		return fmt.Errorf("to file dialog: can't parse index from params: %w", err)
+	}
 	maxRecentBtns := maxGroupedBtnsInMoveTo
 
 	//filename := ""
@@ -2238,14 +2242,14 @@ func (b *Bot) showMoveToFileOrDir(params []string) error {
 		maxRecentBtns = maxBtns
 		//var err error
 		//// TODO fix unhash
-		//filename, err = b.fs.Unhash(fs.DirRoot, hashOrIndex)
+		//filename, err = b.fs.Unhash(fs.DirRoot, msgIndex)
 		//if err != nil {
 		//	return fmt.Errorf("to file dialog: %w", err)
 		//}
 	} else {
 		// For the first time we have to move file to the root directory, as this is not a task anymore
 		//var err error
-		//filename, err = b.fs.Unhash(fs.DirToday, hashOrIndex)
+		//filename, err = b.fs.Unhash(fs.DirToday, msgIndex)
 		//if err != nil {
 		//	return fmt.Errorf("to file dialog: %w", err)
 		//}
@@ -2263,7 +2267,7 @@ func (b *Bot) showMoveToFileOrDir(params []string) error {
 	skippedBtns := false
 
 	//fileBtns, err := b.moveToFileBtns(fs.ShortHash(filename))
-	fileBtns, err := b.moveToFileBtns(hashOrIndex)
+	fileBtns, err := b.moveToFileBtns(msgIndex)
 	if err != nil {
 		return fmt.Errorf("to file dialog: %w", err)
 	}
@@ -2280,7 +2284,7 @@ func (b *Bot) showMoveToFileOrDir(params []string) error {
 		kb.AddRow(row)
 	}
 
-	dirBtns, err := b.moveToDirBtns(hashOrIndex)
+	dirBtns, err := b.moveToDirBtns(msgIndex)
 	if err != nil {
 		return fmt.Errorf("to file dialog: %w", err)
 	}
@@ -2294,7 +2298,7 @@ func (b *Bot) showMoveToFileOrDir(params []string) error {
 		// Free up space for the new dir button
 		dirBtns = dirBtns[:len(fileBtns)-1]
 	}
-	btn := tg.NewBtn("🗂 New Dir", tg.NewCmd(consts.CmdRequestNewDir, []string{hashOrIndex}))
+	btn := tg.NewBtn("🗂 New Dir", tg.NewCmd(consts.CmdRequestNewDir, []string{msgIndexStr}))
 	dirBtns = append(dirBtns, btn)
 
 	//shouldAddSeparator := len(fileBtns) > 0
@@ -2308,10 +2312,10 @@ func (b *Bot) showMoveToFileOrDir(params []string) error {
 	}
 
 	if skippedBtns {
-		kb.AddRow(tg.NewBtn(i18n.Tr("More..."), tg.NewCmd(consts.CmdShowMoveToDirOrFile, []string{hashOrIndex, "full"})))
+		kb.AddRow(tg.NewBtn(i18n.Tr("More..."), tg.NewCmd(consts.CmdShowMoveToDirOrFile, []string{msgIndexStr, "full"})))
 	}
 
-	b.db.SetInputExpectation(tg.NewCmd(consts.CmdMoveToNewFile, []string{hashOrIndex, "%s"}))
+	b.db.SetInputExpectation(tg.NewCmd(consts.CmdMoveToNewFile, []string{msgIndexStr, "%s"}))
 
 	err = b.showHTML("📄 Select a file or enter a new name:", kb)
 	if err != nil {
@@ -2339,7 +2343,7 @@ func (b *Bot) showToChecklist(params []string) error {
 	return nil
 }
 
-func (b *Bot) moveToFileBtns(newFilenameShortHash string) ([]tg.Btn, error) {
+func (b *Bot) moveToFileBtns(msgIndex int) ([]tg.Btn, error) {
 	files, err := b.fs.FilesAndDirs(fs.DirRoot)
 	if err != nil {
 		return nil, fmt.Errorf("to doc keyboard: %w", err)
@@ -2354,7 +2358,7 @@ func (b *Bot) moveToFileBtns(newFilenameShortHash string) ([]tg.Btn, error) {
 	newBtn := func(title, existingFilenameHash string) tg.Btn {
 		title = fmt.Sprintf("%s", title)
 		//params := []string{existingFilenameHash, fs.DirRoot, newFilenameShortHash}
-		params := []string{existingFilenameHash, newFilenameShortHash}
+		params := []string{existingFilenameHash, strconv.Itoa(msgIndex)}
 		return tg.NewBtn(title, tg.NewCmd(consts.CmdMoveToExistingFile, params))
 	}
 	for _, file := range files {
@@ -2364,11 +2368,11 @@ func (b *Bot) moveToFileBtns(newFilenameShortHash string) ([]tg.Btn, error) {
 	return buttons, nil
 }
 
-func (b *Bot) moveToDirBtns(msgIndex string) ([]tg.Btn, error) {
+func (b *Bot) moveToDirBtns(msgIndex int) ([]tg.Btn, error) {
 	newBtn := func(dir string) tg.Btn {
 		emojifiedDir := fmt.Sprintf("%s %s", i18n.Emoji("dir"), txt.Ucfirst(dir))
 		//return tg.NewBtn(emojifiedDir, tg.NewCmd(consts.CmdMoveToExistingDir, []string{fs.ShortHash(dir), fs.DirRoot, msgIndex}))
-		return tg.NewBtn(emojifiedDir, tg.NewCmd(consts.CmdMOveToExistingDirFromChat, []string{fs.ShortHash(dir), msgIndex}))
+		return tg.NewBtn(emojifiedDir, tg.NewCmd(consts.CmdMoveToExistingDir, []string{fs.ShortHash(dir), strconv.Itoa(msgIndex)}))
 	}
 
 	dirs, err := b.fs.FilesAndDirs(fs.DirRoot)
