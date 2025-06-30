@@ -2612,95 +2612,93 @@ func TestSaveToExistingFile(t *testing.T) {
 	r.Equal(3, tgram.LastSentMessageID)
 }
 
-// TODO
-//func TestSaveToExistingFileModeTasks(t *testing.T) {
-//	r := require.New(t)
-//
-//	savedNow := now
-//	defer func() {
-//		now = savedNow
-//	}()
-//	now = func() time.Time {
-//		return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
-//	}
-//
-//	mode := userconfig.DefaultConfig.Mode
-//	userconfig.DefaultConfig.Mode = userconfig.ModeFull
-//	defer func() {
-//		userconfig.DefaultConfig.Mode = mode
-//	}()
-//
-//	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
-//	r.NoError(err)
-//	err = userFS.CreateDirsIfNotExist()
-//	r.NoError(err)
-//
-//	err = userFS.Write("/", "Chat.txt", "#### 27 June, Friday\n`01:01` New\ncontent")
-//	r.NoError(err)
-//	err = userFS.Write("", "File.md", "#### 1 January 1970, Thursday\nExisting\ncontent")
-//	r.NoError(err)
-//
-//	cfg := userconfig.NewConfig(userFS, -1, "config.json")
-//	err = cfg.CreateDefaultIfNotExists()
-//	r.NoError(err)
-//
-//	_ = cfg.AddMoveToCmd(consts.CmdScheduleForTmrw)
-//	_ = cfg.AddMoveToCmd(consts.CmdMoveToLater)
-//	_ = cfg.AddMoveToCmd(consts.CmdShowScheduleForDay)
-//	_ = cfg.AddMoveToCmd(consts.CmdShowMoveToDirOrFile)
-//	_ = cfg.AddMoveToCmd(consts.CmdMoveToJournal)
-//
-//	tgram := tg.NewFakeTG()
-//	database := db.NewFakeDB()
-//	bot := NewBot(-1, tgram, userFS, database, cfg)
-//	err = bot.Reply(tg.NewUpd(-1, "Text"))
-//	r.NoError(err)
-//
-//	kb := tg.NewKeyboard([]tg.Row{
-//		tg.NewRow(
-//			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{"232004794e5"})),
-//			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{"232004794e5"})),
-//			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{"232004794e5"})),
-//		),
-//		tg.NewRow(
-//			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{"232004794e5"})),
-//			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{"232004794e5"})),
-//			tg.NewBtn("➡️ To Today", tg.NewCmd("today", nil)),
-//		),
-//	})
-//	r.Equal(kb, tgram.LastSentKeyboard)
-//
-//	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{"232004794e5"})))
-//	r.NoError(err)
-//
-//	selectFileKB := tg.NewKeyboard([]tg.Row{
-//		tg.NewRow(
-//			tg.NewBtn("Text", tg.NewCmd("mf", []string{"23200", "/", "23200"})),
-//			tg.NewBtn("File", tg.NewCmd("mf", []string{"7595e", "/", "23200"})),
-//		),
-//		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
-//		tg.NewRow(
-//			tg.NewBtn("🗂️ Habits", tg.NewCmd("mv", []string{"51fc0", "/", "232004794e5"})),
-//			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{"232004794e5"})),
-//		),
-//	})
-//	r.Equal(selectFileKB, tgram.LastEditedKeyboard)
-//
-//	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mf", []string{"7595e", "0"})))
-//	r.NoError(err)
-//
-//	r.Nil(tgram.LastEditedKeyboard)
-//
-//	content, err := userFS.Read("", "File.md")
-//	r.NoError(err)
-//	r.Equal("#### 1 January 1970, Thursday\nExisting\ncontent\nNew\ncontent", content)
-//
-//	r.Nil(database.InputExpectation())
-//	keybdMsgID, ok := database.LastKeyboardMsgID()
-//	r.True(ok)
-//	r.Equal(3, keybdMsgID)
-//	r.Equal(3, tgram.LastSentMessageID)
-//}
+func TestSaveToExistingFileModeTasks(t *testing.T) {
+	r := require.New(t)
+
+	savedNow := now
+	defer func() {
+		now = savedNow
+	}()
+	now = func() time.Time {
+		return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	}
+
+	mode := userconfig.DefaultConfig.Mode
+	userconfig.DefaultConfig.Mode = userconfig.ModeTasks
+	defer func() {
+		userconfig.DefaultConfig.Mode = mode
+	}()
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	err = userFS.CreateDirsIfNotExist()
+	r.NoError(err)
+
+	err = userFS.Write("/", "Chat.txt", "#### 27 June, Friday\n`01:01` New\ncontent")
+	r.NoError(err)
+	err = userFS.Write("", "File.md", "#### 1 January 1970, Thursday\nExisting\ncontent")
+	r.NoError(err)
+
+	cfg := userconfig.NewConfig(userFS, -1, "config.json")
+	err = cfg.CreateDefaultIfNotExists()
+	r.NoError(err)
+
+	_ = cfg.AddMoveToCmd(consts.CmdScheduleForTmrw)
+	_ = cfg.AddMoveToCmd(consts.CmdMoveToLater)
+	_ = cfg.AddMoveToCmd(consts.CmdShowScheduleForDay)
+	_ = cfg.AddMoveToCmd(consts.CmdShowMoveToDirOrFile)
+	_ = cfg.AddMoveToCmd(consts.CmdMoveToJournal)
+
+	tgram := tg.NewFakeTG()
+	database := db.NewFakeDB()
+	bot := NewBot(-1, tgram, userFS, database, cfg)
+	err = bot.Reply(tg.NewUpd(-1, "Text"))
+	r.NoError(err)
+
+	kb := tg.NewKeyboard([]tg.Row{
+		tg.NewRow(
+			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{"1"})),
+			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{"1"})),
+			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{"1"})),
+		),
+		tg.NewRow(
+			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{"1"})),
+			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{"1"})),
+			tg.NewBtn("➡️ To Today", tg.NewCmd("mv", []string{"c5e7dfaf771", "1"})),
+		),
+	})
+	r.Equal(kb, tgram.LastSentKeyboard)
+
+	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{"1"})))
+	r.NoError(err)
+
+	selectFileKB := tg.NewKeyboard([]tg.Row{
+		tg.NewRow(
+			tg.NewBtn("File", tg.NewCmd("mf", []string{"7595e", "1"})),
+		),
+		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewRow(
+			tg.NewBtn("🗂️ Habits", tg.NewCmd("mv", []string{"51fc0", "1"})),
+			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{"1"})),
+		),
+	})
+	r.Equal(selectFileKB, tgram.LastEditedKeyboard)
+
+	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mf", []string{"7595e", "0"})))
+	r.NoError(err)
+
+	r.Nil(tgram.LastEditedKeyboard)
+
+	content, err := userFS.Read("", "File.md")
+	r.NoError(err)
+	r.Equal("#### 1 January 1970, Thursday\nExisting\ncontent\nNew\ncontent", content)
+
+	r.Nil(database.InputExpectation())
+	keybdMsgID, ok := database.LastKeyboardMsgID()
+	r.True(ok)
+	r.Equal(3, keybdMsgID)
+	r.Equal(3, tgram.LastSentMessageID)
+}
 
 func TestSaveToNewFile(t *testing.T) {
 	r := require.New(t)
@@ -2788,7 +2786,7 @@ func TestSaveToNewFile(t *testing.T) {
 	r.Equal(2, tgram.LastSentMessageID)
 }
 
-func TestSaveToNewDir(t *testing.T) {
+func TestSaveToNewDirFull(t *testing.T) {
 	r := require.New(t)
 
 	savedNow := now
@@ -2877,96 +2875,98 @@ func TestSaveToNewDir(t *testing.T) {
 	r.Equal(3, tgram.LastSentMessageID)
 }
 
-// TODO support move from hash?
-//func TestSaveToNewDirIntegration(t *testing.T) {
-//	r := require.New(t)
-//
-//	savedNow := now
-//	defer func() {
-//		now = savedNow
-//	}()
-//	now = func() time.Time {
-//		return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
-//	}
-//
-//	mode := userconfig.DefaultConfig.Mode
-//	userconfig.DefaultConfig.Mode = userconfig.ModeTasks
-//	defer func() {
-//		userconfig.DefaultConfig.Mode = mode
-//	}()
-//
-//	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
-//	r.NoError(err)
-//	err = userFS.CreateDirsIfNotExist()
-//	r.NoError(err)
-//
-//	cfg := userconfig.NewConfig(userFS, -1, "config.json")
-//	err = cfg.CreateDefaultIfNotExists()
-//	r.NoError(err)
-//
-//	_ = cfg.AddMoveToCmd(consts.CmdScheduleForTmrw)
-//	_ = cfg.AddMoveToCmd(consts.CmdMoveToLater)
-//	_ = cfg.AddMoveToCmd(consts.CmdShowScheduleForDay)
-//	_ = cfg.AddMoveToCmd(consts.CmdShowMoveToDirOrFile)
-//	_ = cfg.AddMoveToCmd(consts.CmdMoveToJournal)
-//
-//	tgram := tg.NewFakeTG()
-//	database := db.NewFakeDB()
-//	bot := NewBot(-1, tgram, userFS, database, cfg)
-//	err = bot.Reply(tg.NewUpd(-1, "Text"))
-//	r.NoError(err)
-//
-//	kb := tg.NewKeyboard([]tg.Row{
-//		tg.NewRow(
-//			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{"232004794e5"})),
-//			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{"232004794e5"})),
-//			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{"232004794e5"})),
-//		),
-//		tg.NewRow(
-//			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{"232004794e5"})),
-//			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{"232004794e5"})),
-//			tg.NewBtn("➡️ To Today", tg.NewCmd("today", nil)),
-//		),
-//	})
-//	r.Equal(kb, tgram.LastSentKeyboard)
-//
-//	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{"232004794e5"})))
-//	r.NoError(err)
-//
-//	selectFileKB := tg.NewKeyboard([]tg.Row{
-//		tg.NewRow(
-//			tg.NewBtn("Text", tg.NewCmd("mf", []string{"23200", "/", "23200"})),
-//		),
-//		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
-//		tg.NewRow(
-//			tg.NewBtn("🗂️ Habits", tg.NewCmd("mv", []string{"51fc0", "/", "232004794e5"})),
-//			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{"232004794e5"})),
-//		),
-//	})
-//	r.Equal(selectFileKB, tgram.LastEditedKeyboard)
-//
-//	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("new_dir", []string{"232004794e5"})))
-//	r.NoError(err)
-//
-//	r.Equal("OK. Send me the name for your new dir", tgram.LastEditedText)
-//	r.Nil(tgram.LastEditedKeyboard)
-//	r.Equal(tg.NewCmd("mv_to_new_dir", []string{"232004794e5", "%s"}), *database.InputExpectation())
-//
-//	err = bot.Reply(tg.NewUpd(-1, "My dir"))
-//	r.NoError(err)
-//
-//	r.Equal("🌴 You don't have any tasks!", tgram.LastSentText)
-//
-//	content, err := userFS.Read("my dir", "Text.md")
-//	r.NoError(err)
-//	r.Empty(content)
-//
-//	r.Nil(database.InputExpectation())
-//	msgID, ok := database.LastKeyboardMsgID()
-//	r.True(ok)
-//	r.Equal(3, msgID)
-//	r.Equal(3, tgram.LastSentMessageID)
-//}
+func TestSaveToNewDir(t *testing.T) {
+	r := require.New(t)
+
+	savedNow := now
+	defer func() {
+		now = savedNow
+	}()
+	now = func() time.Time {
+		return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	}
+
+	mode := userconfig.DefaultConfig.Mode
+	userconfig.DefaultConfig.Mode = userconfig.ModeTasks
+	defer func() {
+		userconfig.DefaultConfig.Mode = mode
+	}()
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	err = userFS.CreateDirsIfNotExist()
+	r.NoError(err)
+
+	cfg := userconfig.NewConfig(userFS, -1, "config.json")
+	err = cfg.CreateDefaultIfNotExists()
+	r.NoError(err)
+
+	_ = cfg.AddMoveToCmd(consts.CmdScheduleForTmrw)
+	_ = cfg.AddMoveToCmd(consts.CmdMoveToLater)
+	_ = cfg.AddMoveToCmd(consts.CmdShowScheduleForDay)
+	_ = cfg.AddMoveToCmd(consts.CmdShowMoveToDirOrFile)
+	_ = cfg.AddMoveToCmd(consts.CmdMoveToJournal)
+
+	tgram := tg.NewFakeTG()
+	database := db.NewFakeDB()
+	bot := NewBot(-1, tgram, userFS, database, cfg)
+	err = bot.Reply(tg.NewUpd(-1, "Text"))
+	r.NoError(err)
+
+	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mv", []string{"c5e7dfaf771", "0"})))
+	r.NoError(err)
+
+	kb := tg.NewKeyboard([]tg.Row{
+		tg.NewRow(
+			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{"232004794e5"})),
+			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{"232004794e5"})),
+			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{"232004794e5"})),
+		),
+		tg.NewRow(
+			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{"232004794e5"})),
+			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{"232004794e5"})),
+			tg.NewBtn("➡️ To Today", tg.NewCmd("today", nil)),
+		),
+	})
+	r.Equal(kb, tgram.LastSentKeyboard)
+
+	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{"232004794e5"})))
+	r.NoError(err)
+
+	selectFileKB := tg.NewKeyboard([]tg.Row{
+		tg.NewRow(
+			tg.NewBtn("Text", tg.NewCmd("mf", []string{"23200", "/", "23200"})),
+		),
+		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewRow(
+			tg.NewBtn("🗂️ Habits", tg.NewCmd("mv", []string{"51fc0", "/", "232004794e5"})),
+			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{"232004794e5"})),
+		),
+	})
+	r.Equal(selectFileKB, tgram.LastEditedKeyboard)
+
+	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("new_dir", []string{"232004794e5"})))
+	r.NoError(err)
+
+	r.Equal("OK. Send me the name for your new dir", tgram.LastEditedText)
+	r.Nil(tgram.LastEditedKeyboard)
+	r.Equal(tg.NewCmd("mv_to_new_dir", []string{"232004794e5", "%s"}), *database.InputExpectation())
+
+	err = bot.Reply(tg.NewUpd(-1, "My dir"))
+	r.NoError(err)
+
+	r.Equal("🌴 You don't have any tasks!", tgram.LastSentText)
+
+	content, err := userFS.Read("my dir", "Text.md")
+	r.NoError(err)
+	r.Empty(content)
+
+	r.Nil(database.InputExpectation())
+	msgID, ok := database.LastKeyboardMsgID()
+	r.True(ok)
+	r.Equal(3, msgID)
+	r.Equal(3, tgram.LastSentMessageID)
+}
 
 func TestSaveToNewMultilineFile(t *testing.T) {
 	r := require.New(t)
@@ -3133,116 +3133,114 @@ func TestSaveToNewCustomFile(t *testing.T) {
 	r.Equal(2, tgram.LastSentMessageID)
 }
 
-// TODO fix recent
-//func TestSaveToRecentFileIntegration(t *testing.T) {
-//	r := require.New(t)
-//
-//	savedNow := now
-//	defer func() {
-//		now = savedNow
-//	}()
-//	now = func() time.Time {
-//		return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
-//	}
-//
-//	mode := userconfig.DefaultConfig.Mode
-//	userconfig.DefaultConfig.Mode = userconfig.ModeTasks
-//	defer func() {
-//		userconfig.DefaultConfig.Mode = mode
-//	}()
-//
-//	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
-//	r.NoError(err)
-//	err = userFS.Write("", "Text.md", "Text")
-//	r.NoError(err)
-//	err = userFS.MakeDir("today")
-//	r.NoError(err)
-//
-//	cfg := userconfig.NewConfig(userFS, -1, "config.json")
-//	err = cfg.CreateDefaultIfNotExists()
-//	r.NoError(err)
-//
-//	_ = cfg.AddMoveToCmd(consts.CmdScheduleForTmrw)
-//	_ = cfg.AddMoveToCmd(consts.CmdMoveToLater)
-//	_ = cfg.AddMoveToCmd(consts.CmdShowScheduleForDay)
-//	_ = cfg.AddMoveToCmd(consts.CmdShowMoveToDirOrFile)
-//	_ = cfg.AddMoveToCmd(consts.CmdMoveToJournal)
-//
-//	tgram := tg.NewFakeTG()
-//	database := db.NewFakeDB()
-//	bot := NewBot(-1, tgram, userFS, database, cfg)
-//	err = bot.Reply(tg.NewUpd(-1, "New text"))
-//	r.NoError(err)
-//
-//	kb := tg.NewKeyboard([]tg.Row{
-//		tg.NewRow(
-//			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{"72e564182be"})),
-//			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{"72e564182be"})),
-//			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{"72e564182be"})),
-//		),
-//		tg.NewRow(
-//			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{"72e564182be"})),
-//			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{"72e564182be"})),
-//			tg.NewBtn("➡️ To Today", tg.NewCmd("today", nil)),
-//		),
-//	})
-//	r.Equal(kb, tgram.LastSentKeyboard)
-//
-//	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{"72e564182be"})))
-//	r.NoError(err)
-//
-//	selectFileKeyboard := tg.NewKeyboard([]tg.Row{
-//		tg.NewRow(
-//			tg.NewBtn("Text", tg.NewCmd("mf", []string{"23200", "/", "72e56"})),
-//			tg.NewBtn("New text", tg.NewCmd("mf", []string{"72e56", "/", "72e56"})),
-//		),
-//		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
-//		tg.NewRow(
-//			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{"72e564182be"})),
-//		),
-//	})
-//	r.Equal(selectFileKeyboard, tgram.LastEditedKeyboard)
-//
-//	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mf", []string{"23200", "/", "72e56"})))
-//	r.NoError(err)
-//
-//	r.Empty(tgram.LastEditedKeyboard)
-//
-//	content, err := userFS.Read("", "Text.md")
-//	r.NoError(err)
-//	r.Equal("#### 1 January 1970, Thursday\nNew text\nText", content)
-//
-//	recentCMD, ok := database.RecentCommand()
-//	r.Equal("mf", recentCMD)
-//	r.True(ok)
-//
-//	// Adding text again to see if we have a recent file
-//	err = bot.Reply(tg.NewUpd(-1, "Text2"))
-//	r.NoError(err)
-//
-//	kb = tg.NewKeyboard([]tg.Row{
-//		tg.NewRow(
-//			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{"76bddbd30b1"})),
-//			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{"76bddbd30b1"})),
-//			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{"76bddbd30b1"})),
-//		),
-//		tg.NewRow(
-//			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{"76bddbd30b1"})),
-//			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{"76bddbd30b1"})),
-//			tg.NewBtn("⭐️ Text", tg.NewCmd("mf", []string{"23200", "c5e7d", "76bddbd30b1"})),
-//		),
-//		tg.NewRow(
-//			tg.NewBtn("➡️ To Today", tg.NewCmd("today", nil)),
-//		),
-//	})
-//	r.Equal(kb, tgram.LastSentKeyboard)
-//
-//	r.Nil(database.InputExpectation())
-//	msgID, ok := database.LastKeyboardMsgID()
-//	r.True(ok)
-//	r.Equal(4, msgID)
-//	r.Equal(msgID, tgram.LastSentMessageID)
-//}
+func TestSaveToRecentFile(t *testing.T) {
+	r := require.New(t)
+
+	savedNow := now
+	defer func() {
+		now = savedNow
+	}()
+	now = func() time.Time {
+		return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	}
+
+	mode := userconfig.DefaultConfig.Mode
+	userconfig.DefaultConfig.Mode = userconfig.ModeTasks
+	defer func() {
+		userconfig.DefaultConfig.Mode = mode
+	}()
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	err = userFS.Write("", "Text.md", "Text")
+	r.NoError(err)
+	err = userFS.MakeDir("today")
+	r.NoError(err)
+
+	cfg := userconfig.NewConfig(userFS, -1, "config.json")
+	err = cfg.CreateDefaultIfNotExists()
+	r.NoError(err)
+
+	_ = cfg.AddMoveToCmd(consts.CmdScheduleForTmrw)
+	_ = cfg.AddMoveToCmd(consts.CmdMoveToLater)
+	_ = cfg.AddMoveToCmd(consts.CmdShowScheduleForDay)
+	_ = cfg.AddMoveToCmd(consts.CmdShowMoveToDirOrFile)
+	_ = cfg.AddMoveToCmd(consts.CmdMoveToJournal)
+
+	tgram := tg.NewFakeTG()
+	database := db.NewFakeDB()
+	bot := NewBot(-1, tgram, userFS, database, cfg)
+	err = bot.Reply(tg.NewUpd(-1, "New text"))
+	r.NoError(err)
+
+	kb := tg.NewKeyboard([]tg.Row{
+		tg.NewRow(
+			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{"0"})),
+			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{"0"})),
+			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{"0"})),
+		),
+		tg.NewRow(
+			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{"0"})),
+			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{"0"})),
+			tg.NewBtn("➡️ To Today", tg.NewCmd("mv", []string{"c5e7dfaf771", "0"})),
+		),
+	})
+	r.Equal(kb, tgram.LastSentKeyboard)
+
+	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{"0"})))
+	r.NoError(err)
+
+	selectFileKeyboard := tg.NewKeyboard([]tg.Row{
+		tg.NewRow(
+			tg.NewBtn("Text", tg.NewCmd("mf", []string{"23200", "0"})),
+		),
+		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewRow(
+			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{"0"})),
+		),
+	})
+	r.Equal(selectFileKeyboard, tgram.LastEditedKeyboard)
+
+	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mf", []string{"23200", "0"})))
+	r.NoError(err)
+
+	r.Empty(tgram.LastEditedKeyboard)
+
+	content, err := userFS.Read("", "Text.md")
+	r.NoError(err)
+	r.Equal("#### 1 January 1970, Thursday\nNew text\nText", content)
+
+	recentCMD, ok := database.RecentCommand()
+	r.Equal("mf", recentCMD)
+	r.True(ok)
+
+	// Adding text again to see if we have a recent file
+	err = bot.Reply(tg.NewUpd(-1, "Text2"))
+	r.NoError(err)
+
+	kb = tg.NewKeyboard([]tg.Row{
+		tg.NewRow(
+			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{"0"})),
+			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{"0"})),
+			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{"0"})),
+		),
+		tg.NewRow(
+			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{"0"})),
+			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{"0"})),
+			tg.NewBtn("⭐️ Text", tg.NewCmd("mf", []string{"23200", "0"})),
+		),
+		tg.NewRow(
+			tg.NewBtn("➡️ To Today", tg.NewCmd("mv", []string{"c5e7dfaf771", "0"})),
+		),
+	})
+	r.Equal(kb, tgram.LastSentKeyboard)
+
+	r.Nil(database.InputExpectation())
+	msgID, ok := database.LastKeyboardMsgID()
+	r.True(ok)
+	r.Equal(4, msgID)
+	r.Equal(msgID, tgram.LastSentMessageID)
+}
 
 func TestSaveToTodayTask(t *testing.T) {
 	r := require.New(t)

@@ -897,41 +897,40 @@ func (b *Bot) showMoveToFromToday(params []string) error {
 }
 
 func (b *Bot) recentCmdBtn(msgIndex int) *tg.Btn {
-	return nil
-	//recentCmd, ok := b.db.RecentCommand()
-	//if !ok {
-	//	return nil
-	//}
-	//
-	//args, _ := b.db.RecentCommandParams()
-	//args = append(args, filenameHash)
-	//targetFilenameHash := args[0]
-	//
-	//var unhashedTarget string
-	//icon := "⭐️"
-	//if recentCmd == consts.CmdMoveToExistingFile {
-	//	var err error
-	//	unhashedTarget, err = b.fs.Unhash(fs.DirRoot, targetFilenameHash)
-	//	if err != nil {
-	//		return nil
-	//	}
-	//} else if recentCmd == consts.CmdMoveToExistingNote {
-	//	dir, err := b.fs.Unhash(fs.DirRoot, args[1])
-	//	if err != nil {
-	//		return nil
-	//	}
-	//
-	//	unhashedTarget, err = b.fs.Unhash(dir, targetFilenameHash)
-	//	if err != nil {
-	//		return nil
-	//	}
-	//} else {
-	//	return nil
-	//}
-	//
-	//name := fmt.Sprintf("%s %s", icon, fs.Title(unhashedTarget))
-	//btn := tg.NewBtn(name, tg.NewCmd(recentCmd, args))
-	//return &btn
+	recentCmd, ok := b.db.RecentCommand()
+	if !ok {
+		return nil
+	}
+
+	args, _ := b.db.RecentCommandParams()
+	args = append(args, strconv.Itoa(msgIndex))
+	targetFilenameHash := args[0]
+
+	var unhashedTarget string
+	icon := "⭐️"
+	if recentCmd == consts.CmdMoveToExistingFile {
+		var err error
+		unhashedTarget, err = b.fs.Unhash(fs.DirRoot, targetFilenameHash)
+		if err != nil {
+			return nil
+		}
+	} else if recentCmd == consts.CmdMoveToExistingNote {
+		dir, err := b.fs.Unhash(fs.DirRoot, args[1])
+		if err != nil {
+			return nil
+		}
+
+		unhashedTarget, err = b.fs.Unhash(dir, targetFilenameHash)
+		if err != nil {
+			return nil
+		}
+	} else {
+		return nil
+	}
+
+	name := fmt.Sprintf("%s %s", icon, fs.Title(unhashedTarget))
+	btn := tg.NewBtn(name, tg.NewCmd(recentCmd, args))
+	return &btn
 }
 
 func (b *Bot) ShowToday(_ []string) error {
@@ -1695,41 +1694,10 @@ func (b *Bot) moveToExistingFile(params []string) error {
 		msgIndices = append(msgIndices, msgIndex)
 	}
 
-	//fromDirHash := params[1]
-	//fromFilenameHash := params[2]
-
 	existingFilename, err := b.fs.Unhash(fs.DirRoot, existingFilenameHash)
 	if err != nil {
 		return fmt.Errorf("move to file: can't unhash existing file '%s': %w", existingFilenameHash, err)
 	}
-
-	//// TODO add test for adding to same file, it seems it is broken (after we added short hash)
-	//addingToSameFile := fromFilenameHash == existingFilenameHash
-	//if addingToSameFile {
-	//	b.delAllKeyboards()
-	//	msg := txt.Emoji(i18n.Emoji("file"), fmt.Sprintf(i18n.Tr("Saved to <b>%s</b>"), fs.Title(existingFilename)))
-	//	// Just an informative messages
-	//	_, _ = b.tg.Send(b.userID, msg, nil, tg.MarkupHTML)
-	//	return b.ShowToday(nil)
-	//}
-
-	//fromDir, err := b.fs.Unhash(fs.DirRoot, fromDirHash)
-	//if err != nil {
-	//	return fmt.Errorf("move to file: can't unhash from dir '%s': %w", fromDirHash, err)
-	//}
-	//
-	//fromFilename, err := b.fs.Unhash(fromDir, fromFilenameHash)
-	//if err != nil {
-	//	return fmt.Errorf("move to file: can't unhash new filename '%s': %w", fromFilenameHash, err)
-	//}
-	//
-	//content, err := b.restoreMsg(fromDir, fromFilename)
-	//if err != nil {
-	//	return fmt.Errorf("move to file: can't read content of '%s': %w", fromFilename, err)
-	//}
-	//
-	//// We can tolerate this
-	//_ = b.fs.Del(fromDir, fromFilename)
 
 	err = b.moveFromChat(func(content string, timestamp time.Time) error {
 		return b.addToFile(fs.DirRoot, existingFilename, content)
@@ -1738,13 +1706,8 @@ func (b *Bot) moveToExistingFile(params []string) error {
 		return fmt.Errorf("move to file: can't add to existing file '%s': %w", existingFilename, err)
 	}
 
-	//err = b.addToFile(fs.DirRoot, existingFilename, content)
-	//if err != nil {
-	//	return fmt.Errorf("move to file: can't add to existing file: %w", err)
-	//}
-
 	b.db.SetRecentCommand(consts.CmdMoveToExistingFile)
-	b.db.SetRecentCommandParams([]string{fs.ShortHash(existingFilename), fs.ShortHash(fs.DirToday)})
+	b.db.SetRecentCommandParams([]string{fs.ShortHash(existingFilename)})
 
 	b.delAllKeyboards()
 	msg := txt.Emoji(i18n.Emoji("file"), fmt.Sprintf(i18n.Tr("Saved to <b>%s</b>"), fs.Title(existingFilename)))
@@ -2425,7 +2388,6 @@ func (b *Bot) moveToFileBtns(msgIndex int) ([]tg.Btn, error) {
 	var buttons []tg.Btn
 	newBtn := func(title, existingFilenameHash string) tg.Btn {
 		title = fmt.Sprintf("%s", title)
-		//params := []string{existingFilenameHash, fs.DirRoot, newFilenameShortHash}
 		params := []string{existingFilenameHash, strconv.Itoa(msgIndex)}
 		return tg.NewBtn(title, tg.NewCmd(consts.CmdMoveToExistingFile, params))
 	}
@@ -2439,7 +2401,6 @@ func (b *Bot) moveToFileBtns(msgIndex int) ([]tg.Btn, error) {
 func (b *Bot) moveToDirBtns(msgIndex int) ([]tg.Btn, error) {
 	newBtn := func(dir string) tg.Btn {
 		emojifiedDir := fmt.Sprintf("%s %s", i18n.Emoji("dir"), txt.Ucfirst(dir))
-		//return tg.NewBtn(emojifiedDir, tg.NewCmd(consts.CmdMoveToExistingDir, []string{fs.ShortHash(dir), fs.DirRoot, msgIndex}))
 		return tg.NewBtn(emojifiedDir, tg.NewCmd(consts.CmdMoveToExistingDir, []string{fs.ShortHash(dir), strconv.Itoa(msgIndex)}))
 	}
 
