@@ -220,7 +220,6 @@ class SearchModal {
         const list = document.getElementById('search-results');
         list.innerHTML = '';
 
-        console.log(results);
         results.forEach(({dir, filename}, index) => {
             if (filename === CONFIG_FILENAME) {
                 return;
@@ -245,20 +244,16 @@ class SearchModal {
             };
             list.appendChild(listItem);
         });
-        console.log(list);
 
         this.focusedIndex = 0;
         this.updateFocusedItem();
     }
 
     handleItemClick(dir, filename) {
-        console.log('handling');
         if (this.messageIndex !== null) {
             sendCmd('mf', [filename, this.messageIndex.toString()]);
             this.close();
         } else {
-            // Default behavior
-            openEditor(!isChat);
             openFile(dir, filename);
             this.close();
         }

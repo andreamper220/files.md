@@ -502,6 +502,7 @@ async function openFile(dir, filename, saveToHistory = true) {
         codemirror.style.display = 'block';
         chat.style.display = 'none';
         chatInput.style.display = 'none';
+        isChat = false;
     }
 
     const start = performance.now();
@@ -806,29 +807,8 @@ function closeMove() {
 //     }
 // });
 
-async function openEditor(withSidebar = true) {
-    if (!isChat) {
-        return true;
-    }
-
-    if (withSidebar) {
-        sidebarContainer.style.display = 'block';
-        window.resizeTo(screen.availWidth, screen.availHeight);
-        window.moveTo(0, 0);
-
-        setTimeout(async () => {
-            const rootDirHandle = await getRootDirHandle();
-            files = await loadLocalFiles(rootDirHandle);
-            updateSidebar();
-        }, 1);
-    }
-    content.style.display = 'block';
-    chatContainer.style.display = 'none';
-    isChat = false;
-    editor.focus();
-}
-
 function openChat() {
+    chatInput.focus();
     if (isChat) {
         return;
     }
@@ -867,19 +847,14 @@ function openBot() {
 
 
 async function switchChat() {
-    if (isChat) {
-        openEditor();
-        return;
-    }
 
-    openChat();
 }
 
 // Toggle focus mode
 document.addEventListener('keydown', function (event) {
     if (isMetaKey(event) && event.key === 'Enter') {
         event.preventDefault();
-        switchChat();
+        openChat();
 
         // const sidebar = document.getElementById('sidebar');
         // if (sidebar.style.display === 'none') {
@@ -916,7 +891,6 @@ document.getElementById('move').addEventListener('keydown', (event) => {
         event.preventDefault();
         if (resultsList[focusedMoveItemIndex]) {
             const dir = resultsList[focusedMoveItemIndex].getAttribute('data-path');
-            console.log('HERE, ', dir, resultsList);
             moveCurrentFile(dir);
             closeMoveModal();
         }
