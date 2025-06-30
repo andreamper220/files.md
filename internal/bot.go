@@ -1673,14 +1673,14 @@ func (b *Bot) moveToExistingFile(params []string) error {
 	// TODO Remove input expectations if dir is not today (?)
 	existingFilenameHash := params[0]
 
-	var msgIndicies []int
 	msgIndicesStr := strings.Split(params[1], ",")
+	var msgIndices []int
 	for _, msgIndexStr := range msgIndicesStr {
 		msgIndex, err := strconv.Atoi(msgIndexStr)
 		if err != nil {
 			return fmt.Errorf("move to file: can't parse msgIndex from params: %w", err)
 		}
-		msgIndicies = append(msgIndicies, msgIndex)
+		msgIndices = append(msgIndices, msgIndex)
 	}
 
 	//fromDirHash := params[1]
@@ -1721,7 +1721,7 @@ func (b *Bot) moveToExistingFile(params []string) error {
 
 	err = b.moveFromChat(func(content string, timestamp time.Time) error {
 		return b.addToFile(fs.DirRoot, existingFilename, content)
-	}, msgIndicies...)
+	}, msgIndices...)
 	if err != nil {
 		return fmt.Errorf("move to file: can't add to existing file '%s': %w", existingFilename, err)
 	}
@@ -1777,20 +1777,31 @@ func (b *Bot) moveToExistingNote(params []string) error {
 }
 
 func (b *Bot) moveToChecklist(params []string) error {
-	msgIndex, err := strconv.Atoi(params[0])
-	if err != nil {
-		return fmt.Errorf("move to checklistDir: can't parse hash or index from params: %w", err)
+	msgIndicesStr := strings.Split(params[0], ",")
+	var msgIndices []int
+	for _, msgIndexStr := range msgIndicesStr {
+		msgIndex, err := strconv.Atoi(msgIndexStr)
+		if err != nil {
+			return fmt.Errorf("move to file: can't parse msgIndex from params: %w", err)
+		}
+		msgIndices = append(msgIndices, msgIndex)
 	}
-	checklistHash := params[1]
+	checklistDirHash := params[1]
 
 	//filename, err := b.fs.Unhash(fs.DirToday, msgIndex)
 	//if err != nil {
 	//	return fmt.Errorf("move to checkilst: %w", err)
 	//}
 
-	checklistDir, err := b.fs.Unhash(fs.DirRoot, checklistHash)
+	checklistDir, err := b.fs.Unhash(fs.DirRoot, checklistDirHash)
+	// Default directories can be created later
+	canCreateMissingDir := slices.Contains([]string{fs.DirWatch, fs.DirShop, fs.DirRead}, checklistDirHash)
 	if err != nil {
-		return fmt.Errorf("move to checklistDir: %w", err)
+		if canCreateMissingDir {
+			checklistDir = checklistDirHash
+		} else {
+			return fmt.Errorf("move to checklistDir: %w", err)
+		}
 	}
 
 	err = b.moveFromChat(func(content string, t time.Time) error {
@@ -1821,7 +1832,7 @@ func (b *Bot) moveToChecklist(params []string) error {
 		}
 
 		return nil
-	}, msgIndex)
+	}, msgIndices...)
 	if err != nil {
 		return fmt.Errorf("move to checklistDir: can't read content from chat: %w", err)
 	}

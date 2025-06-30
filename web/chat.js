@@ -215,15 +215,15 @@ function renderMessages() {
                         ✅   
                     <span class="btn-label">To Do</span>
                     </button>
-                    <button class="action-btn to-read-btn" data-index="${message.index}">
+                    <button class="action-btn to-checklist-btn" data-index="${message.index}" data-dir="_read_">
                         📚
                         <span class="btn-label">To Read</span>
                     </button>
-                    <button class="action-btn to-shop-btn" data-index="${message.index}">
+                    <button class="action-btn to-checklist-btn" data-index="${message.index}" data-dir="_shop_">
                         🛒
                         <span class="btn-label">To Shop</span>
                     </button>
-                    <button class="action-btn to-watch-btn" data-index="${message.index}">
+                    <button class="action-btn to-checklist-btn" data-index="${message.index}" data-dir="_watch_">
                         📺
                         <span class="btn-label">To Watch</span>
                     </button>
@@ -381,6 +381,31 @@ function attachEventListeners() {
             }
 
             sendCmd('mv_to_journal', indices);
+            messagesToRemove.forEach(message => {
+                message.classList.add('removing');
+                setTimeout(() => {
+                    message.remove();
+                }, 300);
+            });
+            chatInput.focus();
+        });
+    });
+
+    chatContainer.querySelectorAll('.to-checklist-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const selectedMessages = document.querySelectorAll('.message.selected');
+            let indices = [];
+            let messagesToRemove = [];
+            if (selectedMessages.length > 0) {
+                indices = Array.from(selectedMessages).map(msg => msg.dataset.index);
+                messagesToRemove = selectedMessages;
+            } else {
+                indices = [btn.dataset.index];
+                messagesToRemove = [btn.closest('.message')];
+            }
+
+            sendCmd('mv_to_chk', [indices.join(','), btn.dataset.dir]);
             messagesToRemove.forEach(message => {
                 message.classList.add('removing');
                 setTimeout(() => {
