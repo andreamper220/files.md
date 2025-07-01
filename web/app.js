@@ -736,7 +736,7 @@ async function switchChat() {
 document.addEventListener('keydown', function (event) {
     if (isMetaKey(event) && event.key === 'Enter') {
         event.preventDefault();
-        openChat();
+        toggleChat();
 
         // const sidebar = document.getElementById('sidebar');
         // if (sidebar.style.display === 'none') {

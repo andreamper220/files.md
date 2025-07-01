@@ -14,12 +14,6 @@ async function openChat() {
     editor.currentDir = "";
     editor.currentFile = CHAT_FILENAME;
 
-    chatInput.focus();
-    if (isChat) {
-        history.back();
-        return;
-    }
-
     const codemirror = document.querySelector('.CodeMirror-wrap');
     codemirror.style.display = 'none';
     chat.style.display = 'flex';
@@ -30,6 +24,15 @@ async function openChat() {
     await loadData();
     renderMessages();
     scrollToBottom();
+}
+
+async function toggleChat() {
+    chatInput.focus();
+    if (isChat) {
+        history.back();
+    } else {
+        openChat();
+    }
 }
 
 function parseFileContent(content) {

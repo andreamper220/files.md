@@ -671,7 +671,7 @@ async function isContentEqual(path, content) {
             }
         }
 
-        console.log(diff);
+        // console.log(diff);
 
         return false;
     } else {
