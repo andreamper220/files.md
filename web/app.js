@@ -677,6 +677,9 @@ window.addEventListener('keydown', async (event) => {
         let path = toPath(editor.currentDir, editor.currentFile);
         let dir = editor.currentDir;
         let filename = editor.currentFile;
+        if (filename === CHAT_FILENAME) {
+            return;
+        }
         editor.currentDir = undefined;
         editor.currentFile = undefined;
         await removeFile(path);
