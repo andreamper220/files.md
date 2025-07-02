@@ -264,7 +264,7 @@
                                 cm.hmdReadLink(cm.hmdResolveURL(url));
                             } else if (typeof read_link_1 === 'undefined') {
                                 url = "[" + text.match(/\(([^)]+)\)/)[1] + "]"; // PATCHED for non-wiki links
-                                url = url.replace(/\.md]$/, "]")
+                                url = url.replace(/\.md]$/, "]");
                                 cm.hmdReadLink(cm.hmdResolveURL(url));
                             } else {
                                 // remove title part (if exists)

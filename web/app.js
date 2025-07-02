@@ -345,6 +345,7 @@ async function initWasm() {
     window.replyCmd = replyCmd
 }
 
+// Logic for click-handling is in click.js => isWikiLink
 function createAutocompleteDict() {
     const dict = {};
 
@@ -354,7 +355,8 @@ function createAutocompleteDict() {
                 return;
             }
             const key = `${filename.replace(/\.md$/, '')}`;
-            const filePath = `${filename.replace(/\.md$/, '')}](${dir}/${filename})`;
+            const url = `${dir}/${filename}`.replace(/ /g, '%20');
+            const filePath = `${filename.replace(/\.md$/, '')}](${url})`;
             dict[key] = filePath;
         });
     });
