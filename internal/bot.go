@@ -55,7 +55,6 @@ const (
 	maxInlineResults       = 20
 	maxMsgLength           = 4096 // In UTF-8 characters (runes), skin-tone emojis count as 2
 	maxMsgsToSendAtOnce    = 5    // For lengthy messages
-	savedImgWidth          = 400  // We insert images into *.md files with the specified width
 
 	// On mobile phones buttons shrink to the message width, and sometimes it's too narrow, so we make the message wider
 	wideSpacer = "<code>            ⁠</code>"
@@ -501,7 +500,7 @@ func (b *Bot) saveImage(u Update) (string, error) {
 
 	// TODO remove center
 	imgPath := fmt.Sprintf("%s/%s", fs.DirMedia, imgFilename)
-	content := fmt.Sprintf("![center|%d](%s)", savedImgWidth, imgPath)
+	content := fmt.Sprintf("![](%s)", imgPath)
 	// If there's caption, place it under the image
 	if u.Caption() != "" {
 		caption := txt.TelegramEntitiesToMarkdown(u.Caption(), u.CaptionEntities())

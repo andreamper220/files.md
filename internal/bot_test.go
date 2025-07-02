@@ -412,7 +412,7 @@ func TestSaveFromPhotoWithCaption(t *testing.T) {
 
 	content, err := userFS.Read("/", "Chat.txt")
 	r.NoError(err)
-	r.Equal("#### 11 August, Sunday\n`09:54` ![center|400](media/tg_PHOTO_ID)\nCaption\n", content)
+	r.Equal("#### 11 August, Sunday\n`09:54` ![](media/tg_PHOTO_ID)\nCaption\n", content)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mv", []string{"c5e7dfaf771", "0"})))
 	r.NoError(err)
@@ -425,7 +425,7 @@ func TestSaveFromPhotoWithCaption(t *testing.T) {
 
 	content, err = bot.fs.Read("today", "Caption.md")
 	r.NoError(err)
-	r.Equal("![center|400](media/tg_PHOTO_ID)\nCaption", content)
+	r.Equal("![](media/tg_PHOTO_ID)\nCaption", content)
 }
 
 func TestSaveFromPhotoWithLongCaption(t *testing.T) {
@@ -455,14 +455,14 @@ func TestSaveFromPhotoWithLongCaption(t *testing.T) {
 
 	content, err := userFS.Read("/", "Chat.txt")
 	r.NoError(err)
-	r.Equal("#### 11 August, Sunday\n`09:54` ![center|400](media/tg_PHOTO_ID)\nAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n", content)
+	r.Equal("#### 11 August, Sunday\n`09:54` ![](media/tg_PHOTO_ID)\nAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n", content)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mv", []string{"c5e7dfaf771", "0"})))
 	r.NoError(err)
 
 	content, err = bot.fs.Read("today", fmt.Sprintf("A%s....md", strings.Repeat("a", 32)))
 	r.NoError(err)
-	r.Equal(fmt.Sprintf("![center|400](media/tg_PHOTO_ID)\nA%s", strings.Repeat("a", 33)), content)
+	r.Equal(fmt.Sprintf("![](media/tg_PHOTO_ID)\nA%s", strings.Repeat("a", 33)), content)
 }
 
 func TestSaveFromPhotoWithSanitizedCaption(t *testing.T) {
@@ -492,7 +492,7 @@ func TestSaveFromPhotoWithSanitizedCaption(t *testing.T) {
 
 	content, err := userFS.Read("/", "Chat.txt")
 	r.NoError(err)
-	r.Equal("#### 11 August, Sunday\n`09:54` ![center|400](media/tg_PHOTO_ID)\nCaption/\n", content)
+	r.Equal("#### 11 August, Sunday\n`09:54` ![](media/tg_PHOTO_ID)\nCaption/\n", content)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mv", []string{"c5e7dfaf771", "0"})))
 	r.NoError(err)
@@ -506,7 +506,7 @@ func TestSaveFromPhotoWithSanitizedCaption(t *testing.T) {
 
 	content, err = bot.fs.Read("today", "Caption／.md")
 	r.NoError(err)
-	r.Equal("![center|400](media/tg_PHOTO_ID)\nCaption/", content)
+	r.Equal("![](media/tg_PHOTO_ID)\nCaption/", content)
 }
 
 func TestSaveFromPhotoWithoutCaption(t *testing.T) {
@@ -539,7 +539,7 @@ func TestSaveFromPhotoWithoutCaption(t *testing.T) {
 
 	content, err := userFS.Read("/", "Chat.txt")
 	r.NoError(err)
-	r.Equal("#### 11 August, Sunday\n`09:54` ![center|400](media/tg_PHOTO_ID)\n", content)
+	r.Equal("#### 11 August, Sunday\n`09:54` ![](media/tg_PHOTO_ID)\n", content)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mv", []string{"c5e7dfaf771", "0"})))
 	r.NoError(err)
@@ -555,7 +555,7 @@ func TestSaveFromPhotoWithoutCaption(t *testing.T) {
 	// Be aware that it's not regular ꞉
 	content, err = bot.fs.Read("today", "Img 11.08.24 09꞉54.md")
 	r.NoError(err)
-	r.Equal("![center|400](media/tg_PHOTO_ID)", content)
+	r.Equal("![](media/tg_PHOTO_ID)", content)
 }
 
 func TestSaveFromReplyPhotoWithCaption(t *testing.T) {
@@ -590,7 +590,7 @@ func TestSaveFromReplyPhotoWithCaption(t *testing.T) {
 
 	content, err := bot.fs.Read("today", "Existing file.md")
 	r.NoError(err)
-	r.Equal("#### 11 August, Sunday\n![center|400](media/tg_PHOTO_ID)\nCaption\n\nExisting content", content)
+	r.Equal("#### 11 August, Sunday\n![](media/tg_PHOTO_ID)\nCaption\n\nExisting content", content)
 }
 
 func TestAddTaskToLater(t *testing.T) {
@@ -3556,7 +3556,7 @@ func TestSaveFromImage_NewFile(t *testing.T) {
 
 	content, err := bot.fs.Read("today", "New Image.md")
 	r.NoError(err)
-	r.Equal("![center|400](media/tg_PHOTO_ID)\nNew Image", content)
+	r.Equal("![](media/tg_PHOTO_ID)\nNew Image", content)
 }
 
 func TestSaveFromImage_LongCaption(t *testing.T) {
@@ -3587,7 +3587,7 @@ func TestSaveFromImage_LongCaption(t *testing.T) {
 	filename := fmt.Sprintf("A%s....md", strings.Repeat("a", 32))
 	content, err := bot.fs.Read("today", filename)
 	r.NoError(err)
-	r.Equal(fmt.Sprintf("![center|400](media/tg_PHOTO_ID)\nA%s", strings.Repeat("a", 33)), content)
+	r.Equal(fmt.Sprintf("![](media/tg_PHOTO_ID)\nA%s", strings.Repeat("a", 33)), content)
 }
 
 func TestSaveFromImage_MultilineCaption(t *testing.T) {
@@ -3624,7 +3624,7 @@ func TestSaveFromImage_MultilineCaption(t *testing.T) {
 
 	content, err := userFS.Read("/", "Chat.txt")
 	r.NoError(err)
-	r.Equal("#### 11 August, Sunday\n`09:54` ![center|400](media/tg_PHOTO_ID)\nAbc\ndef\n", content)
+	r.Equal("#### 11 August, Sunday\n`09:54` ![](media/tg_PHOTO_ID)\nAbc\ndef\n", content)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mv", []string{"c5e7dfaf771", "0"})))
 	r.NoError(err)
@@ -3632,7 +3632,7 @@ func TestSaveFromImage_MultilineCaption(t *testing.T) {
 	filename := fmt.Sprintf("Abc.md")
 	content, err = bot.fs.Read("today", filename)
 	r.NoError(err)
-	r.Equal("![center|400](media/tg_PHOTO_ID)\nAbc\ndef", content)
+	r.Equal("![](media/tg_PHOTO_ID)\nAbc\ndef", content)
 }
 
 func TestSaveFromImage_ReplyToExistingFile(t *testing.T) {
@@ -3668,7 +3668,7 @@ func TestSaveFromImage_ReplyToExistingFile(t *testing.T) {
 
 	content, err := bot.fs.Read("today", "Existing file.md")
 	r.NoError(err)
-	r.Equal("#### 1 January, Thursday\n![center|400](media/tg_PHOTO_ID)\nImage Caption\n\nExisting content", content)
+	r.Equal("#### 1 January, Thursday\n![](media/tg_PHOTO_ID)\nImage Caption\n\nExisting content", content)
 }
 
 func TestSaveFromImage_EmptyCaption(t *testing.T) {
@@ -3710,7 +3710,7 @@ func TestSaveFromImage_EmptyCaption(t *testing.T) {
 
 	content, err := bot.fs.Read("today", "Img 01.01.70 00꞉00.md")
 	r.NoError(err)
-	r.Equal("![center|400](media/tg_PHOTO_ID)", content)
+	r.Equal("![](media/tg_PHOTO_ID)", content)
 }
 
 func TestCreateOrAdd_NewFile(t *testing.T) {
