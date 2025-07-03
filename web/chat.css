@@ -332,11 +332,11 @@
 
 #chat-container.modal #fullscreen-chat {
     position: absolute;
-    top: 4px;
+    top: 5px;
     right: 24px;
     background: none;
     border: none;
-    font-size: 22px;
+    font-size: 21px;
     font-weight: bold;
     cursor: pointer;
     color: var(--color-link);
