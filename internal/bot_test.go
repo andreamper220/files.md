@@ -4184,29 +4184,28 @@ func TestShowToday_JournalOnlyMode(t *testing.T) {
 	r.Nil(tgram.LastSentKeyboard) // No keyboard should be sent
 }
 
-func TestShowToday_OneFileOnlyMode(t *testing.T) {
-	r := require.New(t)
-
-	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
-	r.NoError(err)
-	err = userFS.CreateDirsIfNotExist()
-	r.NoError(err)
-
-	tgram := tg.NewFakeTG()
-
-	cfg := fakeConfig()
-	err = cfg.SetMode(userconfig.ModeOneFile)
-	r.NoError(err)
-
-	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), cfg)
-	err = bot.ShowToday(nil)
-	r.NoError(err)
-
-	// Should send "What's on your mind?" message (same as journal mode)
-	r.Contains(tgram.LastSentText, "What's on your mind?")
-	r.Nil(tgram.LastSentKeyboard) // No keyboard should be sent
-}
-
+//	func TestShowToday_OneFileOnlyMode(t *testing.T) {
+//		r := require.New(t)
+//
+//		userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+//		r.NoError(err)
+//		err = userFS.CreateDirsIfNotExist()
+//		r.NoError(err)
+//
+//		tgram := tg.NewFakeTG()
+//
+//		cfg := fakeConfig()
+//		err = cfg.SetMode(userconfig.ModeOneFile)
+//		r.NoError(err)
+//
+//		bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), cfg)
+//		err = bot.ShowToday(nil)
+//		r.NoError(err)
+//
+//		// Should send "What's on your mind?" message (same as journal mode)
+//		r.Contains(tgram.LastSentText, "What's on your mind?")
+//		r.Nil(tgram.LastSentKeyboard) // No keyboard should be sent
+//	}
 func TestShowToday_NormalMode(t *testing.T) {
 	r := require.New(t)
 
@@ -4295,25 +4294,25 @@ func TestShowToday_TodayCommandModeJournal(t *testing.T) {
 	r.Contains(tgram.LastSentText, "What's on your mind?")
 }
 
-func TestShowToday_TodayCommandModeOneFile(t *testing.T) {
-	r := require.New(t)
-
-	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
-	r.NoError(err)
-	err = userFS.CreateDirsIfNotExist()
-	r.NoError(err)
-
-	tgram := tg.NewFakeTG()
-	cfg := fakeConfig()
-
-	tgram = tg.NewFakeTG()
-
-	err = cfg.SetMode(userconfig.ModeOneFile)
-	r.NoError(err)
-
-	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), cfg)
-	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("today", nil)))
-	r.NoError(err)
-
-	r.Contains(tgram.LastSentText, "What's on your mind?")
-}
+//func TestShowToday_TodayCommandModeOneFile(t *testing.T) {
+//	r := require.New(t)
+//
+//	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+//	r.NoError(err)
+//	err = userFS.CreateDirsIfNotExist()
+//	r.NoError(err)
+//
+//	tgram := tg.NewFakeTG()
+//	cfg := fakeConfig()
+//
+//	tgram = tg.NewFakeTG()
+//
+//	err = cfg.SetMode(userconfig.ModeOneFile)
+//	r.NoError(err)
+//
+//	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), cfg)
+//	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("today", nil)))
+//	r.NoError(err)
+//
+//	r.Contains(tgram.LastSentText, "What's on your mind?")
+//}

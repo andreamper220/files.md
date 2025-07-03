@@ -30,7 +30,7 @@ var DefaultConfig = config{
 	Schedules:                 []Schedule{},
 	QuickCmds:                 []string{},
 	TwoEmojisEnabled:          false,
-	Mode:                      "file",
+	Mode:                      "full",
 	QuickHabitsEnabled:        false,
 	Channels:                  []int64{},
 }

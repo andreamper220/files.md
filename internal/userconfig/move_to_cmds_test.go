@@ -19,7 +19,7 @@ const defaultTestCfgWithNewMoveCmd = `{
     "schedules": [],
     "quickCommands": [],
     "twoEmojisEnabled": false,
-    "mode": "file",
+    "mode": "full",
     "quickHabitsEnabled": false,
     "channels": []
 }`

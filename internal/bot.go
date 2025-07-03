@@ -270,7 +270,6 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		consts.CmdAddToJournalShortcut:        b.addToJournalFromShortcut,
 		consts.CmdAddToRecentFileShortcut:     b.addToRecentFileOrNoteFromShortcut,
 		consts.CmdRename:                      b.rename,
-		consts.CmdOneFileOnlyMode:             b.setOneFileOnlyMode,
 		consts.CmdTasksOnlyMode:               b.setTasksOnlyMode,
 		consts.CmdNotesOnlyMode:               b.setNotesOnlyMode,
 		consts.CmdJournalOnlyMode:             b.setJournalOnlyMode,
@@ -1549,11 +1548,10 @@ func (b *Bot) showStart(params []string) error {
 	}
 
 	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(tg.NewBtn(txt.Emoji(i18n.Emoji("clipboard"), b.tr("Saved messages")), tg.NewCmd(consts.CmdOneFileOnlyMode, nil))),
+		tg.NewRow(tg.NewBtn(txt.Emoji(i18n.Emoji("brain"), b.tr("Everything")), tg.NewCmd(consts.CmdFullMode, nil))),
 		tg.NewRow(tg.NewBtn(txt.Emoji(i18n.Emoji("notes"), b.tr("Notes")), tg.NewCmd(consts.CmdNotesOnlyMode, nil))),
 		tg.NewRow(tg.NewBtn(txt.Emoji(i18n.Emoji("tasks"), b.tr("Tasks")), tg.NewCmd(consts.CmdTasksOnlyMode, nil))),
 		tg.NewRow(tg.NewBtn(txt.Emoji(i18n.Emoji("journal"), b.tr("Journal")), tg.NewCmd(consts.CmdJournalOnlyMode, nil))),
-		tg.NewRow(tg.NewBtn(txt.Emoji(i18n.Emoji("brain"), b.tr("Everything")), tg.NewCmd(consts.CmdFullMode, nil))),
 	})
 
 	return b.showHTML("Welcome 👋! What do you need?", kb)
@@ -2649,15 +2647,6 @@ func (b *Bot) download(_ []string) error {
 	kb := tg.NewKeyboard([]tg.Row{tg.NewBtn(i18n.StrToday, tg.NewCmd(consts.CmdShowToday, nil))})
 
 	return b.showHTML("Not yet implemented 🏗!", kb)
-}
-
-func (b *Bot) setOneFileOnlyMode(_ []string) error {
-	err := b.cfg.SetMode(userconfig.ModeOneFile)
-	if err != nil {
-		return fmt.Errorf("one file only mode: %w", err)
-	}
-
-	return b.ShowToday(nil)
 }
 
 func (b *Bot) setTasksOnlyMode(_ []string) error {
