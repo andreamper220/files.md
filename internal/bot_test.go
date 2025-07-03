@@ -1045,7 +1045,7 @@ func TestSettingsMainPanel(t *testing.T) {
 	r.NoError(err)
 	r.Equal("Settings:", tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
-		tg.NewBtn("📋 One file mode", tg.NewCmd("file_only", nil)),
+		//tg.NewBtn("📋 One file mode", tg.NewCmd("file_only", nil)),
 		tg.NewBtn("📌 Notes mode", tg.NewCmd("notes_only", nil)),
 		tg.NewBtn("✅ Tasks mode", tg.NewCmd("tasks_only", nil)),
 		tg.NewBtn("💚 Journal mode", tg.NewCmd("journal_only", nil)),
