@@ -129,18 +129,18 @@ body {
     transform: translateX(0);
 }
 
-/*!* Keep the original layout rules but don't let them interfere *!*/
-/*#content:has(#editor2-container:not([style*="display: none"])) {*/
-/*    flex-direction: row;*/
-/*}*/
+body:has(#sidebar[style*="display: none"]):has(#editor2-container:not([style*="display: none"])) #content {
+    flex-direction: row;
+}
 
-/*#content:has(#editor2-container:not([style*="display: none"])) #editor-container {*/
+body:has(#sidebar[style*="display: none"]):has(#editor2-container:not([style*="display: none"])) #editor-container {
+    flex: 0 0 50%;
+}
+
+/*#content:has(#editor2-container:not([style*="display: none"])) #editor2-container {*/
 /*    flex: 0 0 50%;*/
 /*}*/
 
-#content:has(#editor2-container:not([style*="display: none"])) #editor2-container {
-    flex: 0 0 50%;
-}
 
 #editor {
     flex: 1;
@@ -224,6 +224,11 @@ a:hover {
 }
 
 .CodeMirror-scroll {
+    padding: 2em 0;
+}
+
+/*Center editor1 when there's no editor2*/
+#content:not(:has(#editor2-container.show)) .CodeMirror-scroll {
     padding: 2em calc((100% - var(--normal-width)) / 2);
 }
 
