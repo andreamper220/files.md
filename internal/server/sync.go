@@ -324,15 +324,6 @@ func SyncText(w http.ResponseWriter, r *http.Request) {
 	// TODO what if 0?
 	logSync(fmt.Sprintf("Final server timestamp for '%s': %d", path, serverLastModified), r)
 
-	serverLastModified, err = userFS.Ctime(fs.DirRoot, path)
-	// TODO what if 0?
-	logSync(fmt.Sprintf("Final server timestamp for '%s': %d", path, serverLastModified), r)
-
-	time.Sleep(100 * time.Millisecond) // TODO remove, just for testing
-	serverLastModified, err = userFS.Ctime(fs.DirRoot, path)
-	// TODO what if 0?
-	logSync(fmt.Sprintf("Final server timestamp for '%s': %d", path, serverLastModified), r)
-
 	if !fileWasModifiedOnServer {
 		response := map[string]interface{}{
 			"status":       StatusUpdatedOnServer,

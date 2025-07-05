@@ -1057,8 +1057,6 @@ async function syncCurrentFile(syncWithServer = true) {
 
                 // Used further for syncing.
                 filename = newFilename;
-                // isSyncingCurrentFile = false;
-                // return;
             }
         } catch (error) {
             console.error('Error during filename change:', error);
