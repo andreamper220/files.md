@@ -228,7 +228,7 @@ func SyncTexts(w http.ResponseWriter, r *http.Request) {
 		logSync(fmt.Sprintf("Deleting files: %v", deletions), r)
 	}
 
-	response := syncResponse{
+	response = syncResponse{
 		Status:     StatusOK,
 		Files:      files,
 		Timestamps: dirTimestamps,
