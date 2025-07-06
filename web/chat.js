@@ -773,3 +773,31 @@ function getRecentlyModifiedFiles() {
         .slice(0, 3)
         .map(([filename]) => filename);
 }
+
+chatInput.addEventListener('paste', async (e) => {
+    const items = e.clipboardData.items;
+
+    for (const item of items) {
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            const fileName = generateSafeFileName(file.name);
+
+            const saved = await saveFile(fileName, file);
+            if (saved) {
+                const imageMarkdown = `![${fileName}](media/${fileName})\n`;
+
+                const cursorPos = chatInput.selectionStart;
+                const textBefore = chatInput.value.substring(0, cursorPos);
+                const textAfter = chatInput.value.substring(chatInput.selectionEnd);
+
+                chatInput.value = textBefore + imageMarkdown + textAfter;
+
+                const newCursorPos = cursorPos + imageMarkdown.length;
+                chatInput.setSelectionRange(newCursorPos, newCursorPos);
+                chatInput.focus();
+            }
+            break;
+        }
+    }
+});
