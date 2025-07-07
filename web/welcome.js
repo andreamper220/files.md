@@ -52,10 +52,12 @@ const DEFAULT_FILES = {
                 "#### Checklist\n" +
                 "- [x] Completed task\n" +
                 "- [ ] Incomplete task\n" +
-                "- [ ] Another incomplete task\n" +
+                "- [ ] Another incomplete task\n\n" +
+                "Format:\n`- [ ] Item`\n" +
                 "\n" +
                 "#### Blockquotes\n" +
                 ">This is a blockquote. It can span multiple lines and is great for highlighting important information or quotes from other sources.\n" +
+                "\nFormat:\n`> This is a blockquote`\n" +
                 "\n" +
                 "#### Code Blocks\n" +
                 "```\n" +

@@ -259,7 +259,9 @@ async function receive(val) {
 
     let file = await ((await getFileHandle(CHAT_FILENAME)).getFile());
     // TODO inmemory lastmodified should be reloaded
-    files[editor.currentDir][editor.currentFile].lastModified = file.lastModified;
+    if (currentEditor !== null && currentEditor.currentFile === CHAT_FILENAME) {
+        files[currentEditor.currentDir][currentEditor.currentFile].lastModified = file.lastModified;
+    }
     chatIsClean = true;
 }
 

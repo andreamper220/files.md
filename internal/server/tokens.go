@@ -100,6 +100,7 @@ func IssueToken(w http.ResponseWriter, r *http.Request) {
 
 // TODO CHECK that user id belongs to oneTimeToken ID, or get user id by oneTimeToken
 // TODO add tests
+// TODO too harsh blocking, we may need to take into account proxies
 func tokenMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ipAndPort := strings.Split(r.RemoteAddr, ":")
@@ -118,7 +119,7 @@ func tokenMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if !ok {
 			// Block for 1 hour
 			blockedIPsMutex.Lock()
-			blockedIPs[ip] = time.Now().Add(1 * time.Hour)
+			blockedIPs[ip] = time.Now().Add(10 * time.Minute)
 			blockedIPsMutex.Unlock()
 
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
