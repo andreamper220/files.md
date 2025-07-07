@@ -64,12 +64,9 @@ self.addEventListener('install', event => {
     );
 });
 
-self.addEventListener('fetch', event => {
-    console.log('intercepting');
+self.addEventListener("fetch", (event) => {
+    console.log("Fetching via Service worker");
     event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                return response || fetch(event.request);
-            })
+        fetch(event.request).catch(() => caches.match(event.request))
     );
 });
