@@ -91,7 +91,7 @@ class SearchModal {
 
                 if (similarityScore >= 70) {
                     if (lowPriorityDirs.includes(dir)) {
-                        similarityScore -= 30;
+                        similarityScore -= 60;
                     }
                     results.push({
                         filename: filename, dir: dir, score: similarityScore
