@@ -22,7 +22,7 @@ const DEFAULT_FILES = {
         "Welcome.md": {
             "content": "# 🪴 Welcome\nOnly essential features. No distractions.\n\n" +
                 "You don't need fancy tools to take notes...\n\n"
-                + "[Links](Links.md)\n[Markdown Guide](/Markdown Guide.md)\n[Hotkeys](Hotkeys.md)\n[Why using links](Links.md)"
+                + "[Markdown Guide](Markdown Guide.md)\n[Hotkeys](Hotkeys.md)\n[Why using links](Links.md)"
         },
         "Links.md": {
             "content": "# Links\nLinks are important\n" +
