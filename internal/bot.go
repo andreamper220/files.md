@@ -1657,7 +1657,7 @@ func (b *Bot) moveToDir(params []string) error {
 		}
 
 		return b.createOrAdd(toDir, filename, content)
-	}, false, msgIndices...)
+	}, true, msgIndices...)
 
 	if toDir != fs.DirLater {
 		//b.db.SetRecentCommand(consts.CmdMoveToExistingNote)
@@ -1732,7 +1732,7 @@ func (b *Bot) moveToExistingFile(params []string) error {
 
 	err = b.moveFromChat(func(content string, timestamp time.Time) error {
 		return b.addToFile(fs.DirRoot, existingFilename, content)
-	}, false, msgIndices...)
+	}, true, msgIndices...)
 	if err != nil {
 		return fmt.Errorf("move to file: can't add to existing file '%s': %w", existingFilename, err)
 	}

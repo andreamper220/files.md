@@ -636,3 +636,114 @@ and resource allocation`
 
 	r.Equal(expectedContent, content)
 }
+
+func TestMoveFromChatCollapsedSingleRecord(t *testing.T) {
+	r := require.New(t)
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+
+	initialContent := `#### 27 June, Thursday
+` + "`01:01`" + ` First record
+` + "`02:02`" + ` Second record
+#### 28 June, Friday
+` + "`03:03`" + ` Third record`
+
+	err = userFS.Write(fs.DirRoot, fs.ChatFilename, initialContent)
+	r.NoError(err)
+
+	bot := NewBot(-1, tg.NewFakeTG(), userFS, db.NewFakeDB(), fakeConfig())
+
+	var callbackCalls []struct {
+		content   string
+		timestamp time.Time
+	}
+
+	callback := func(content string, timestamp time.Time) error {
+		callbackCalls = append(callbackCalls, struct {
+			content   string
+			timestamp time.Time
+		}{content, timestamp})
+		return nil
+	}
+
+	err = bot.moveFromChat(callback, true, 1)
+	r.NoError(err)
+
+	r.Len(callbackCalls, 1)
+	r.Equal("Second record", callbackCalls[0].content)
+
+	expectedTime, _ := time.Parse("2 January 15:04", "27 June 02:02")
+	r.Equal(expectedTime, callbackCalls[0].timestamp)
+
+	content, err := userFS.Read(fs.DirRoot, fs.ChatFilename)
+	r.NoError(err)
+
+	expectedContent := `#### 27 June, Thursday
+` + "`01:01`" + ` First record
+#### 28 June, Friday
+` + "`03:03`" + ` Third record`
+
+	r.Equal(expectedContent, content)
+}
+
+func TestMoveFromChatCollapsedMultipleRecords(t *testing.T) {
+	r := require.New(t)
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+
+	initialContent := `#### 1 July, Monday
+` + "`10:30`" + ` Buy groceries
+milk, bread, eggs
+` + "`11:45`" + ` Call mom
+#### 2 July, Tuesday
+` + "`09:15`" + ` Morning workout
+` + "`14:20`" + ` Team meeting
+discuss project timeline
+and resource allocation`
+
+	err = userFS.Write(fs.DirRoot, fs.ChatFilename, initialContent)
+	r.NoError(err)
+
+	bot := NewBot(-1, tg.NewFakeTG(), userFS, db.NewFakeDB(), fakeConfig())
+
+	// Track callback calls
+	var callbackCalls []struct {
+		content   string
+		timestamp time.Time
+	}
+
+	callback := func(content string, timestamp time.Time) error {
+		callbackCalls = append(callbackCalls, struct {
+			content   string
+			timestamp time.Time
+		}{content, timestamp})
+		return nil
+	}
+
+	err = bot.moveFromChat(callback, true, 0, 2)
+	r.NoError(err)
+
+	r.Len(callbackCalls, 1)
+
+	expectedCollapsedContent := `Buy groceries
+milk, bread, eggs
+Morning workout`
+	r.Equal(expectedCollapsedContent, callbackCalls[0].content)
+
+	expectedTime, _ := time.Parse("2 January 15:04", "1 July 10:30")
+	r.Equal(expectedTime, callbackCalls[0].timestamp)
+
+	content, err := userFS.Read(fs.DirRoot, fs.ChatFilename)
+	r.NoError(err)
+
+	expectedContent := `#### 1 July, Monday
+` + "`11:45`" + ` Call mom
+#### 2 July, Tuesday
+` + "`14:20`" + ` Team meeting
+discuss project timeline
+and resource allocation`
+
+	r.Equal(expectedContent, content)
+}

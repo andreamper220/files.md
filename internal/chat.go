@@ -190,7 +190,7 @@ func (b *Bot) moveFromChat(
 			content.WriteString(msg.content)
 			content.WriteString("\n")
 		}
-		err = callback(content.String(), msgs[0].timestamp)
+		err = callback(strings.TrimSpace(content.String()), msgs[0].timestamp)
 		if err != nil {
 			return fmt.Errorf("callback failed: %w", err)
 		}
