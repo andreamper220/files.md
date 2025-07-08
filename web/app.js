@@ -604,6 +604,28 @@ function renderSidebar(focusDir = '') {
     let dirNodes = {};
     dirNodes[''] = root; // Root is empty path
 
+    // First pass: create all directories
+    walk(files, (path, item, isFile) => {
+        if (path === 'media' || path.startsWith('media/')) {
+            return;
+        }
+
+        if (isFile) {
+            return;
+        }
+
+        let dirNode = new TreeNode(path, {expanded: false, dir: true});
+        dirNodes[path] = dirNode;
+
+        // Find parent directory
+        const pathParts = path.split('/');
+        pathParts.pop(); // Remove current directory name
+        const parentPath = pathParts.join('/');
+        const parentNode = dirNodes[parentPath] || root;
+        parentNode.addChild(dirNode);
+    });
+
+    // Second pass: add all files
     walk(files, (path, item, isFile) => {
         if (path === 'media' || path.startsWith('media/')) {
             return;
@@ -613,28 +635,19 @@ function renderSidebar(focusDir = '') {
             return;
         }
 
-        if (isFile) {
-            const {dirPath, filename} = toDirAndFilename(path);
-
-            let fileNode = new TreeNode(filename.replace(/\.md$/, '').replace(/\.txt$/, ''), {expanded: false});
-            fileNode.on('click', async function (n, node) {
-                await openFile(dirPath, filename);
-            });
-
-            const parentNode = dirNodes[dirPath] || root;
-            parentNode.addChild(fileNode);
-
-        } else {
-            let dirNode = new TreeNode(path, {expanded: false, dir: true});
-            dirNodes[path] = dirNode;
-
-            // Find parent directory
-            const pathParts = path.split('/');
-            pathParts.pop(); // Remove current directory name
-            const parentPath = pathParts.join('/');
-            const parentNode = dirNodes[parentPath] || root;
-            parentNode.addChild(dirNode);
+        if (!isFile) {
+            return;
         }
+
+        const {dirPath, filename} = toDirAndFilename(path);
+
+        let fileNode = new TreeNode(filename.replace(/\.md$/, '').replace(/\.txt$/, ''), {expanded: false});
+        fileNode.on('click', async function (n, node) {
+            await openFile(dirPath, filename);
+        });
+
+        const parentNode = dirNodes[dirPath] || root;
+        parentNode.addChild(fileNode);
     });
 
     const groups = [
@@ -645,12 +658,12 @@ function renderSidebar(focusDir = '') {
 
     for (let i = 0; i < groups.length; i++) {
         const dirList = groups[i];
-        const existingDirs = dirList.filter(dir => files[dir]);
+        const existingDirs = dirList.filter(dir => dirNodes[dir]);
         if (existingDirs.length === 0) continue;
 
         existingDirs.forEach((dir, index) => {
-            const dirNode = root.getChildren().find(child => child.toString() === dir);
-            if (dirNode) {
+            const dirNode = dirNodes[dir];
+            if (dirNode && dirNode.parent === root) {
                 root.removeChild(dirNode);
                 if (index === existingDirs.length - 1) {
                     dirNode.isGroupEnd = true;
@@ -661,11 +674,11 @@ function renderSidebar(focusDir = '') {
     }
 
     const groupedDirs = new Set(['_read_', '_watch_', '_shop_', 'journal', 'habits', 'insights', 'archive', 'today', 'later']);
-    for (const dir in files) {
+    for (const dir in dirNodes) {
         if (dir === '' || dir === 'media' || groupedDirs.has(dir)) continue;
 
-        const dirNode = root.getChildren().find(child => child.toString() === dir);
-        if (dirNode) {
+        const dirNode = dirNodes[dir];
+        if (dirNode && dirNode.parent === root) {
             root.removeChild(dirNode);
             root.addChild(dirNode);
         }
@@ -691,6 +704,25 @@ function renderSidebar(focusDir = '') {
     //     }
     // }
     //
+
+    function sortTreeNode(node) {
+        const children = node.getChildren();
+        if (children && children.length > 0) {
+            children.sort((a, b) => {
+                const aIsDir = a.getOptions()?.dir === true;
+                const bIsDir = b.getOptions()?.dir === true;
+
+                if (aIsDir && !bIsDir) return -1; // a is dir, b is file
+                if (!aIsDir && bIsDir) return 1;  // a is file, b is dir
+                return 0; // both same type
+            });
+
+            // Recursively sort children
+            children.forEach(child => sortTreeNode(child));
+        }
+    }
+
+    sortTreeNode(root);
 
     tree = new TreeView(root, '#sidebar-tree', {
         show_root: false,
