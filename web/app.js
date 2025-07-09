@@ -759,8 +759,9 @@ async function newFile() {
 
     const path = toPath(dir, filename);
     let handle = await getFileHandle(path, true);
-    // TODO multidir all mem files should add path key? Search
+    // TODO multidir all mem files should add path key + isFile? Search
     addMemFile(path, {
+        isFile: true,
         content: '',
         lastModified: 0,
         handle: handle,

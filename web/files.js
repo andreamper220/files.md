@@ -1348,6 +1348,10 @@ async function post(endpoint, data) {
 }
 
 function walk(obj, callback, path = '/') {
+    if (obj.isFile) {
+        callback(path, obj, true);
+        return;
+    }
     for (const key in obj) {
         const item = obj[key];
         const fullPath = path + key;
