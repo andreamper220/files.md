@@ -57,7 +57,6 @@ test.describe('Files.md Text Editor Sync Tests', () => {
 
         console.log('Content:', content);
         expect(content).toContain('[Markdown Guide](/Markdown%20Guide.md)');
-        // await page.pause()
     });
 
     test('should handle text selection correctly', async ({page}) => {

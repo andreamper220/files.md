@@ -741,7 +741,7 @@ async function showRandomFile() {
 
 async function newFile() {
     console.log('New file clicked');
-    let dir = toDir(currentEditor.path);
+    let dir = toDirPath(currentEditor.path);
     let selectedDirs = tree.getSelectedNodes();
     // TODO multidir
     if (selectedDirs.length > 0 &&
@@ -889,7 +889,7 @@ window.addEventListener('keydown', async (event) => {
         let newPath = '/archive/' + toFilename(path);
 
         currentEditor.path = undefined;
-        if (toDir(path) === '/archive') {
+        if (toDirPath(path) === '/archive') {
             console.log('Removing file permanently', path);
             await removeFile(oldPath);
         } else {
@@ -1016,9 +1016,15 @@ window.addEventListener('popstate', (event) => {
 function excludeDirs(excludedDirs) {
     const filteredFiles = {};
 
-    for (const dir in files) {
-        if (!excludedDirs.includes(dir)) {
-            filteredFiles[dir] = files[dir];
+    for (const filename in files) {
+        if (files[filename].isFile === true) {
+            filteredFiles[filename] = files[filename];
+            continue;
+        }
+
+        const dirName = filename.replace(/\/$/, '');
+        if (!excludedDirs.includes(dirName)) {
+            filteredFiles[filename] = files[filename];
         }
     }
 
@@ -1265,6 +1271,19 @@ function toggleSidebar() {
             currentEditor.focus();
         }
     }
+}
+
+function trimPostfix(str, postfix) {
+    return str.replace(/\/$/, postfix);
+}
+
+function trimPrefix(str, prefix) {
+    return str.replace(/^\//, prefix);
+}
+
+function joinPath(...parts) {
+    const joined = parts.join('/');
+    return joined.replace(/\/+/g, '/');  // Replace multiple slashes
 }
 
 function getCurrentVersion() {

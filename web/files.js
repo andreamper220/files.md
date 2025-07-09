@@ -1177,7 +1177,7 @@ async function syncCurrentFile(syncWithServer = true) {
             if (hasFilenameChanged) {
                 console.log('Filename has changed from ', filename, 'to', newFilename);
                 // Change the file immediately, because on further await calls it can be synced by syncTexts.
-                currentEditor.path = toDir(path) + '/' + newFilename;
+                currentEditor.path = joinPath(toDirPath(path), newFilename);
 
                 // 1. Remove file with old filename
                 // 2. Create file with new filename
@@ -1197,7 +1197,7 @@ async function syncCurrentFile(syncWithServer = true) {
                 //     content = getCurrentContent();
                 //     // Change current file if the editor is unchanged.
                 // }
-                const newPath = toDir(path) + '/' + newFilename;
+                const newPath = joinPath(toDirPath(path), newFilename);
                 addMemFile(newPath, {
                     isFile: true,
                     content: content,
@@ -1457,13 +1457,9 @@ function toFilename(path) {
 }
 
 // Dir with no slash at the end.
-// Empty for root.
-function toDir(path) {
+// For '/' it returns '/'.
+function toDirPath(path) {
     const {dirPath} = toDirAndFilename(path);
-
-    if (dirPath === '/') {
-        return '';
-    }
 
     return dirPath;
 }
