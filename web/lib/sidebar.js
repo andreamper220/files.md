@@ -5,6 +5,207 @@
  * @author Matthias Thalmann
  */
 
+
+function renderSidebar(focusDir = '') {
+    let expandedDirs = new Set();
+    let selectedNodes = new Set();
+
+    // TODO save state
+    if (tree) {
+        // Save state for all nodes (both directories and files)
+        function saveNodeState(node) {
+            if (node.isExpanded()) {
+                expandedDirs.add(node.toString());
+            }
+            if (node.isSelected()) {
+                selectedNodes.add(node.toString());
+            }
+
+            // Recursively save state for child nodes
+            if (node.getChildren) {
+                node.getChildren().forEach(child => {
+                    saveNodeState(child);
+                });
+            }
+        }
+
+        tree.getRoot().getChildren().forEach(child => {
+            saveNodeState(child);
+        });
+    }
+
+    root = new TreeNode('');
+
+    // Process directories
+    // for (const dir in files) {
+    //     if (dir === 'media') {
+    //         continue;
+    //     }
+    //
+    //     let dirNode = new TreeNode(dir, {expanded: false, dir: true});
+    //
+    //     // Process files in directory
+    //     for (let file in files[dir]) {
+    //         let fileNode = new TreeNode(file.replace(/\.md$/, ''), {expanded: false});
+    //         fileNode.on('click', async function (n, node) {
+    //             await openFile(node.parent.toString(), node.toString() + '.md');
+    //         });
+    //         dirNode.addChild(fileNode);
+    //
+    //         // Restore selected state for file nodes
+    //         if (selectedNodes.has(file.replace(/\.md$/, ''))) {
+    //             fileNode.setSelected(true);
+    //         }
+    //     }
+    //
+    //     root.addChild(dirNode);
+    //
+    //     // Handle focus directory or restore previous state
+    //     if (dir === focusDir) {
+    //         dirNode.setExpanded(true);
+    //         dirNode.setSelected(true);
+    //     } else {
+    //         if (expandedDirs.has(dir)) dirNode.setExpanded(true);
+    //         if (selectedNodes.has(dir)) dirNode.setSelected(true);
+    //     }
+    // }
+    let dirNodes = {'/': root};
+
+    // First pass: create all directories
+    walk(files, (path, isFile) => {
+        if (path === '/media' || path.startsWith('/media/')) {
+            return;
+        }
+
+        if (isFile) {
+            return;
+        }
+
+        let dirNode = new TreeNode(toFilename(path), {expanded: false, dir: true});
+        dirNodes[path] = dirNode;
+
+        // Add to parent
+        const dirPath = toDirPath(path);
+        const parentNode = dirNodes[dirPath + '/'] || root;
+        parentNode.addChild(dirNode);
+        console.log("DIR nodes", path, dirPath);
+
+        // Handle focus directory or restore previous state
+        let dir = toFilename(path);
+        if (dir === focusDir) {
+            dirNode.setExpanded(true);
+            dirNode.setSelected(true);
+        } else {
+            if (expandedDirs.has(dir)) dirNode.setExpanded(true);
+            if (selectedNodes.has(dir)) dirNode.setSelected(true);
+        }
+    });
+
+    // Second pass: add all files
+    walk(files, (path, isFile) => {
+        if (path === '/media' || path.startsWith('/media/')) {
+            return;
+        }
+
+        if (path === CONFIG_PATH || path === CHAT_PATH) {
+            return;
+        }
+
+        if (!isFile) {
+            return;
+        }
+
+        const {dirPath, filename} = toDirPathAndFilename(path);
+
+        let fileNode = new TreeNode(filename.replace(/\.md$/, '').replace(/\.txt$/, ''), {expanded: false});
+        fileNode.on('click', async function (n, node) {
+            await openFile(path);
+        });
+
+        const parentNode = dirNodes[dirPath + '/'] || root;
+        parentNode.addChild(fileNode);
+    });
+
+    // TODO if we have only two groups - hide them (personal + files case)
+    const groups = [
+        ['_read_', '_watch_', '_shop_'],
+        ['today', 'later'],
+        ['journal', 'habits', 'insights', 'archive'],
+    ];
+
+    for (let i = 0; i < groups.length; i++) {
+        const dirList = groups[i];
+        const existingDirs = dirList.filter(dir => dirNodes[dir]);
+        if (existingDirs.length === 0) continue;
+
+        existingDirs.forEach((dir, index) => {
+            const dirNode = dirNodes[dir];
+            if (dirNode && dirNode.parent === root) {
+                root.removeChild(dirNode);
+                if (index === existingDirs.length - 1) {
+                    dirNode.isGroupEnd = true;
+                }
+                root.addChild(dirNode);
+            }
+        });
+    }
+
+    const groupedDirs = new Set(['_read_', '_watch_', '_shop_', 'journal', 'habits', 'insights', 'archive', 'today', 'later']);
+    for (const dir in dirNodes) {
+        if (dir === '/' || dir === 'media' || groupedDirs.has(dir)) continue;
+
+        const dirNode = dirNodes[dir];
+        if (dirNode && dirNode.parent === root) {
+            root.removeChild(dirNode);
+            root.addChild(dirNode);
+        }
+    }
+
+    // Process root-level files
+    // if (files['']) {
+    //     for (let file in files['']) {
+    //         if (file === CONFIG_FILENAME || file === CHAT_FILENAME) {
+    //             continue;
+    //         }
+    //
+    //         let fileNode = new TreeNode(file.replace(/\.md$/, '').replace(/\.txt$/, ''), {expanded: false});
+    //         fileNode.on('click', async function (n, node) {
+    //             await openFile('', file);
+    //         });
+    //         root.addChild(fileNode);
+    //
+    //         // Restore selected state for root-level file nodes
+    //         if (selectedNodes.has(file.replace(/\.md$/, ''))) {
+    //             fileNode.setSelected(true);
+    //         }
+    //     }
+    // }
+    //
+
+    function sortTreeNode(node) {
+        const children = node.getChildren();
+        if (children && children.length > 0) {
+            children.sort((a, b) => {
+                const aIsDir = a.getOptions()?.dir === true;
+                const bIsDir = b.getOptions()?.dir === true;
+
+                if (aIsDir && !bIsDir) return -1;
+                if (!aIsDir && bIsDir) return 1;
+                return 0;
+            });
+
+            // Recursively sort children
+            children.forEach(child => sortTreeNode(child));
+        }
+    }
+
+    sortTreeNode(root);
+
+    tree = new TreeView(root, '#sidebar-tree', {
+        show_root: false,
+    });
+}
+
 function TreeNode(userObject, options) {
     var children = new Array();
     var self = this;

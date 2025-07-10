@@ -33,11 +33,6 @@ async function openChat() {
 }
 
 async function openChatModal() {
-    // editor.currentDir = "";
-    // editor.currentFile = CHAT_FILENAME;
-
-    // codemirror.style.display = 'none';
-
     chatContainer.classList.add('modal');
     chatContainer.style.display = 'flex';
     chatButton.classList.add('hidden');
@@ -47,7 +42,6 @@ async function openChatModal() {
     chatInput.style.display = 'block';
 
     chatInput.focus();
-    // isChat = true;
     await loadData();
     renderMessages();
     scrollToBottom();
@@ -198,22 +192,7 @@ async function loadData() {
 }
 
 async function saveData() {
-    try {
-        // For now, just save the current file's messages
-        // You can extend this to save all files
-        const content = formatFileContent(files[currentFile]);
 
-        // You'll need to implement the file writing part
-        // This is a placeholder for your file system API
-        console.log('Would save to file:', content);
-
-        // Example of what the save might look like:
-        // const fileHandle = await getFileHandle(CHAT_FILENAME);
-        // await fileHandle.write(content);
-
-    } catch (error) {
-        console.error('Error saving data:', error);
-    }
 }
 
 function initChat() {

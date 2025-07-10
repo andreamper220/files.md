@@ -1453,7 +1453,6 @@ function walkFilesExcludingSystemDirs(callback) {
         }
 
         const rootDir = toRootDirName(path);
-        console.log("ROOT", rootDir);
         if (SYSTEM_DIRS.includes(rootDir) && toRootDirName !== '/') {
             return;
         }
