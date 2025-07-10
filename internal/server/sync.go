@@ -246,7 +246,6 @@ func SyncText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := strings.TrimPrefix(clientFile.Path, "/")
 	userFS, err := fs.NewUserFS(userID(r))
 	if err != nil {
 		slog.Error("Sync error: syncText: error creating user FS", "error", err)
@@ -257,10 +256,13 @@ func SyncText(w http.ResponseWriter, r *http.Request) {
 	// 1) Save client-modified file to the server
 	// 2) In case of conflict (server has a newer modification), merge the clientFile and include them in the response
 
+	// Paths that are coming from client start with /, make them relative
+	path := strings.TrimPrefix(clientFile.Path, "/")
+
 	// TODO if no clientFile, severContent = ""
 	serverContent, err := userFS.Read(fs.DirRoot, path)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		slog.Error("Sync error: syncText: error reading clientFile '%s': %v", path, err)
+		slog.Error("Sync error: syncText: error reading clientFile", "path", path, "error", err)
 		http.Error(w, "Error reading server clientFile", http.StatusBadRequest)
 		return
 	}

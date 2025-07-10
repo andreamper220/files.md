@@ -64,8 +64,6 @@ e2eh: # headed e2e tests
 	cd tests && npm run test:headed $(if $(test),-g "$(test)")
 
 e2es: # run single test
-	killall tgbot || true
-	go run ./cmd/tgbot & \
 	cd tests && npm run test:headed -- $(if $(test),-g "$(test)")
 
 sync:

@@ -309,7 +309,7 @@ async function syncLocalFileWithServer(path) {
     console.log(`Saved server file for ${path} with timestamp ${serverFile.lastModified}`);
     saveServerFiles();
     console.log('Opening file after sync');
-    await openFile(dir, filename);
+    await openFile(path);
     console.log('File synced with server');
 }
 

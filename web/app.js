@@ -767,7 +767,7 @@ async function newFile() {
         num++;
     }
 
-    const path = dir + '/' + filename;
+    const path = joinPath(dir, filename);
     let handle = await getFileHandle(path, true);
     // TODO multidir all mem files should add path key ? Search
     addMemFile(path, {
@@ -1153,7 +1153,7 @@ window.addEventListener('focus', async () => {
 
     console.log('FOCUS');
 
-    if (editor.currentFile === undefined) {
+    if (currentEditor.path === undefined) {
         return;
     }
 

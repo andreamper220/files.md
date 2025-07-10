@@ -102,7 +102,6 @@ test('sync new files from client, ignore current file in syncTexts', async ({ pa
         window.dispatchEvent(new Event('focus'));
     });
 
-
     await page.waitForTimeout(3000);
 
     await expectFileOnServer(page, 'New file.md', 'Content');
@@ -111,6 +110,7 @@ test('sync new files from client, ignore current file in syncTexts', async ({ pa
         type: 'log',
         text: 'Skip sending current file: /New file.md'
     });
+
 });
 
 test('sync existing files from client', async ({ page }) => {
