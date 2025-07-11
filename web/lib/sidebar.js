@@ -976,7 +976,12 @@ function TreeView(root, container, options) {
         if (node.isLeaf() && !TreeUtil.getProperty(node.getOptions(), "forceParent", false)) {
             var ret = '';
             var icon = TreeUtil.getProperty(node.getOptions(), "icon", "");
-            if (node.toString() === 'chat') {
+
+            let name = node.toString();
+            if (startsWithEmoji(name)) {
+                ret += '<span class="tj_mod_icon" ><div style="width: 22px; text-align: center; transform: translateY(-2px);">' + getFirstEmoji(node.toString()) + '</div></span>';
+                name = trimFirstEmoji(name);
+            } else if (node.toString() === 'chat') {
                 ret += '<span class="tj_mod_icon" style="padding-right: 2px">' + TreeConfig.chat_icon + '</span>';
             } else if (icon != "") {
                 ret += '<span class="tj_mod_icon">' + icon + '</span>';
@@ -986,7 +991,7 @@ function TreeView(root, container, options) {
                 ret += '<span class="tj_icon">' + TreeConfig.leaf_icon + '</span>';
             }
 
-            span_desc.innerHTML = ret + node.toString() + "</span>";
+            span_desc.innerHTML = ret + name + "</span>";
             span_desc.classList.add("tj_leaf");
 
             li_outer.appendChild(span_desc);
@@ -1157,3 +1162,5 @@ var TreeConfig = {
     checklists_icon: TreeUtil.checklists_icon,
     context_menu: undefined
 };
+
+

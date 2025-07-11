@@ -245,6 +245,7 @@ function initEditor(el) {
     })
 
     // Auto-select title when clicking on first line
+    // TODO clear on second click
     newEditor.getWrapperElement().addEventListener('mousedown', function(e) {
         // Get the position where the mouse was clicked
         const coords = newEditor.coordsChar({left: e.clientX, top: e.clientY});
@@ -935,14 +936,28 @@ async function saveDirectoryHandle(directoryHandle) {
 }
 
 async function getRootDirHandle() {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
+    try {
+        const db = await initDB();
         const transaction = db.transaction('handles', 'readonly');
         const store = transaction.objectStore('handles');
         const request = store.get('savedDirectoryHandle');
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
+
+        const result = await new Promise((resolve, reject) => {
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+
+        if (result) {
+            console.log('Using saved directory handle');
+            return result;
+        } else {
+            console.log('No saved handle found, fallback to OPFS');
+            return await getOPFSDirHandle();
+        }
+    } catch (error) {
+        console.log('Error accessing saved handle, fallback to OPFS:', error);
+        return await getOPFSDirHandle();
+    }
 }
 
 // document.addEventListener('mousedown', (event) => {

@@ -31,6 +31,7 @@ const urlsToCache = [
     '/lib/codemirror-php.js',
     '/lib/codemirror-shell.js',
     '/lib/similarity.js',
+    '/lib/emoji.js',
     '/welcome.js',
     '/files.js',
     '/wasm_exec.js',
