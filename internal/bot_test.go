@@ -4319,12 +4319,13 @@ func TestShowToday_TodayCommandModeJournal(t *testing.T) {
 
 func TestScheduleForTmrw(t *testing.T) {
 	r := require.New(t)
-	savedNow := now
+
+	savedNow := sched.Now
 	defer func() {
-		now = savedNow
+		sched.Now = savedNow
 	}()
-	now = func() time.Time {
-		return time.Date(2024, 8, 11, 9, 54, 0, 0, time.UTC)
+	sched.Now = func() time.Time {
+		return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 	}
 
 	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
@@ -4350,6 +4351,6 @@ func TestScheduleForTmrw(t *testing.T) {
 	r.NoError(err)
 	r.Len(sc, 1)
 	r.Equal("Task for tomorrow.md", sc[0].Filename)
-	r.Equal(int64(1752019200), sc[0].ScheduledAt)
+	r.Equal(int64(86400), sc[0].ScheduledAt)
 	r.Equal("", sc[0].Cron)
 }

@@ -2593,9 +2593,7 @@ func (b *Bot) addToFile(dir, filename, content string) error {
 	}
 
 	header := fmt.Sprintf("#### %d %s %d, %s", now().Day(), now().Format("January"), now().Year(), now().Weekday())
-	fmt.Println(header)
 	newContent := txt.InsertTextAfterHeader(existingContent, header, content)
-	fmt.Println(existingContent)
 
 	err = b.fs.Write(dir, filename, newContent)
 	if err != nil {

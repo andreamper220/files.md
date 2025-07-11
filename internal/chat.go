@@ -66,7 +66,6 @@ func (b *Bot) saveToChat(content string, timezone *time.Location) (int, error) {
 	//	content = fmt.Sprintf("%s\n%s %s\n", imgLink, timestamp, strings.TrimSpace(content))
 	//} else {
 	content = fmt.Sprintf("%s %s\n", timestamp, content)
-	fmt.Println(content)
 	//}
 
 	md += content
