@@ -36,9 +36,10 @@ let isLoadingLocalFiles = false;
 //     ...
 //   ]
 // }
-// TODO multidir rename to memFiles
-let files = {}; // In-memory representation of files
-let server = {files: {}, media: {}, timestamps: {}, mediaTimestamp: 0};
+// TODO multidir rename to memFiles?
+let files = {}; // In-memory representation of local files
+let server = {files: {}, media: {}, timestamps: {}, mediaTimestamp: 0}; // In-memory representation of server
+
 const SERVER_STORAGE_KEY = 'server'; // If scheme is migrated, I believe it's better to introduce a new key, because for now old keys aren't removed.
 const SUPPORTED_EXTENSIONS = ['md', 'txt', 'png', 'jpg', 'jpeg', 'webp', 'gif',];
 const SYSTEM_DIRS = ['media', 'archive', '_read_', '_watch_', '_shop_', 'today', 'later', 'journal', 'habits', 'triggers', 'places', 'insights'];
