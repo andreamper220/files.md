@@ -199,12 +199,10 @@ async function syncTextsWithServer() {
             // If it is current file, skip, because we sync it separately
             // TODO if we skip current, don't take it's timestamp? We had a bug when sync was broken for 1 file
             // TODO fix missing / for root files
-            // TODO multidir add /path to server
             if (path === editor.path || path === editor2.path) {
-                console.log('Skip current file receiving from server' + path);
+                console.log('Skip receiving current file during bath sync', path);
                 continue;
             }
-
 
             try {
                 await saveTextFile(path, content)
@@ -370,7 +368,7 @@ async function syncMedia() {
                 if (!response.ok) {
                     console.error(`Failed to sync media file ${mediaFilename}:`, response.statusText);
                 } else {
-                    serverFiles['media'][mediaFilename] = {
+                    serverFiles['media/'][mediaFilename] = {
                         lastModified: 0, // We don't track binary files modifications.
                     };
                     saveServerFiles();
@@ -454,7 +452,7 @@ async function saveMediaFile(path, blob, lastModified) {
             if (serverFiles['mediaTimestamp'] === undefined || lastModified > serverFiles['mediaTimestamp']) {
                 serverFiles['mediaTimestamp'] = lastModified;
             }
-            serverFiles['media'][file.name] = {
+            serverFiles['media/'][file.name] = {
                 lastModified: lastModified,
             }
             saveServerFiles();
@@ -476,18 +474,18 @@ async function saveMediaFile(path, blob, lastModified) {
         if (lastModified > serverFiles['mediaTimestamp']) {
             serverFiles['mediaTimestamp'] = lastModified;
         }
-        serverFiles['media'][filename] = {
+        serverFiles['media/'][filename] = {
             lastModified: lastModified,
         }
         saveServerFiles();
 
         // Load file handle into files
-        files['media'][filename] = {handle: fileHandle};
+        files['media/'][filename] = {handle: fileHandle};
         fileHandle.getFile().then(file => {
-            files['media'][filename].lastModified = file.lastModified;
+            files['media/'][filename].lastModified = file.lastModified;
         });
         getImageUrl(fileHandle).then(imageUrl => {
-            files['media'][filename].imageUrl = imageUrl;
+            files['media/'][filename].imageUrl = imageUrl;
         });
     } catch (error) {
         console.error(`Error writing media file ${path}:`, error);
@@ -601,15 +599,15 @@ async function collectModifiedAndDeletedFiles() {
 }
 
 async function collectNewMediaFiles() {
-    if (!files['media']) {
+    if (!files['media/']) {
         return {
             newMedia: [],
         };
     }
 
     const newMediaFiles = [];
-    for (const filename in files['media']) {
-        if (serverFiles['media'] === undefined || !(filename in serverFiles['media'])) {
+    for (const filename in files['media/']) {
+        if (serverFiles['media/'] === undefined || !(filename in serverFiles['media/'])) {
             newMediaFiles.push(filename);
         }
     }

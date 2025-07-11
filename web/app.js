@@ -205,7 +205,6 @@ function initEditor(el) {
 
         console.log('READ LINK', path);
         // let parts = path.split('/');
-        // // TODO multidir
         // if (parts.length === 1) {
         //     path += '.md';
         //     // Does file exist in root dir?
@@ -286,10 +285,10 @@ function initEditor(el) {
                 try {
                     const fileHandle = await saveImageFile(fileName, file);
                     if (fileHandle) {
-                        if (!files['media']) {
-                            files['media'] = {};
+                        if (!files['media/']) {
+                            files['media/'] = {};
                         }
-                        files['media'][fileName] = {
+                        files['media/'][fileName] = {
                             handle: fileHandle,
                             lastModified: Date.now(),
                             imageUrl: URL.createObjectURL(file)
@@ -580,7 +579,6 @@ async function newFile() {
     const path = joinPath(dirPath, filename);
     console.log('PATH', path);
     let handle = await getFileHandle(path, true);
-    // TODO multidir all mem files should add path key ? Search
     addMemFile(path, {
         isFile: true,
         content: '',

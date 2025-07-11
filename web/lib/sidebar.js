@@ -159,7 +159,6 @@ function renderSidebar(focusDir = '') {
         existingDirs.forEach((dir, index) => {
             const dirNode = dirNodes['/' + dir];
             if (dirNode && dirNode.parent === root) {
-                console.log(dirNode.toString());
                 // Add in the end
                 root.removeChild(dirNode);
                 if (index === existingDirs.length - 1) {
@@ -172,12 +171,10 @@ function renderSidebar(focusDir = '') {
 
     // Move all other nodes down
     for (const dir in dirNodes) {
-        console.log('TRYING ot move', dir);
         if (dir === '/' ||  groupedDirs.has(toFilename(dir))) continue;
 
         const dirNode = dirNodes[dir];
         if (dirNode && dirNode.parent === root) {
-            console.log('MOVING ', dir);
             root.removeChild(dirNode);
             root.addChild(dirNode);
         }

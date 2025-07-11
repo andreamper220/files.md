@@ -119,7 +119,7 @@ class SearchModal {
         // }
 
         // If search is equal to directory
-        // TODO multidir
+        // TODO multidir?
         if (files[search]) {
             for (const filename in files[search]) {
                 results.push({
@@ -318,7 +318,6 @@ class SearchModal {
             }
 
             let {dirPath, filename} = toDirPathAndFilename(path)
-            // TODO multidir check dirPath
             // Make relative path, as bot supports only relative paths
             if (dirPath !== '/') {
                 dirPath = trimPrefix(dirPath, '/');
