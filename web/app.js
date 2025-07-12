@@ -65,22 +65,22 @@ async function init(el) {
         // document.getElementById('open-chat-modal').style.display = 'inline';
     }
 
-    let rootDirHandle = await getRootDirHandle();
-
-    // Only works in chrome
-    const permission = await rootDirHandle.queryPermission({mode: 'readwrite'});
-    console.log('PERMISSION', permission);
-    if (permission !== 'granted') {
-        document.getElementById('open-folder').style.display = 'inline';
-        // document.getElementById('new-file').style.display = 'none';
-        // document.getElementById('new-folder').style.display = 'none';
-        // document.getElementById('open-chat').style.display = 'none';
-        // document.getElementById('open-chat-modal').style.display = 'none';
-        isWelcome = true;
+    // Alert if there's no "Allow on every visit" check.
+    if (isChrome() && hasSavedLocalDir) {
+        const permission = await (await getRootDirHandle()).queryPermission({mode: 'readwrite'});
+        console.log('PERMISSION', permission);
+        if (permission !== 'granted') {
+            document.getElementById('open-folder').style.display = 'inline';
+            // document.getElementById('new-file').style.display = 'none';
+            // document.getElementById('new-folder').style.display = 'none';
+            // document.getElementById('open-chat').style.display = 'none';
+            // document.getElementById('open-chat-modal').style.display = 'none';
+            await removeSavedRootDirHandle();
+            alert('Can\'t access folder.\n\nPlease, open folder again and check "Allow on every visit" checkbox');
+        }
     }
 
-    // Why second time?
-    rootDirHandle = await getRootDirHandle();
+    let rootDirHandle = await getRootDirHandle();
 
     let perf = performance.now();
     files = await loadLocalFiles(rootDirHandle);
@@ -836,7 +836,6 @@ async function openDir() {
     let dirHandle = await window.showDirectoryPicker({'mode': 'readwrite'});
     document.getElementById('open-folder').style.display = 'none';
 
-
     // TODO check that permissions are given?
 
     await saveDirectoryHandle(dirHandle);
@@ -846,30 +845,30 @@ async function openDir() {
     initWasm();
 
     // Create welcome markdown file if empty
-    if (Object.keys(files).length === 0) {
-        const hotkeysFilename = '🎹 Hotkeys.md';
-        await saveTextFile(hotkeysFilename, HOTKEYS_CONTENT);
-        files = {};
-        files[hotkeysFilename] = {
-            path: hotkeysFilename,
-            isFile: true,
-            lastModified: 0,
-            handle: await getFileHandle(hotkeysFilename),
-        }
-
-        const welcomeFilename = '🪴 Welcome.md';
-        await saveTextFile(welcomeFilename, WELCOME_CONTENT);
-        files[welcomeFilename] = {
-            path: welcomeFilename,
-            isFile: true,
-            lastModified: 0,
-            handle: await getFileHandle(welcomeFilename),
-        }
-        await openFile('', welcomeFilename);
-        isWelcome = false;
-        renderSidebar();
-        return;
-    }
+    // if (Object.keys(files).length === 0) {
+    //     const hotkeysFilename = '🎹 Hotkeys.md';
+    //     await saveTextFile(hotkeysFilename, HOTKEYS_CONTENT);
+    //     files = {};
+    //     files[hotkeysFilename] = {
+    //         path: hotkeysFilename,
+    //         isFile: true,
+    //         lastModified: 0,
+    //         handle: await getFileHandle(hotkeysFilename),
+    //     }
+    //
+    //     const welcomeFilename = '🪴 Welcome.md';
+    //     await saveTextFile(welcomeFilename, WELCOME_CONTENT);
+    //     files[welcomeFilename] = {
+    //         path: welcomeFilename,
+    //         isFile: true,
+    //         lastModified: 0,
+    //         handle: await getFileHandle(welcomeFilename),
+    //     }
+    //     await openFile('', welcomeFilename);
+    //     isWelcome = false;
+    //     renderSidebar();
+    //     return;
+    // }
 
     isWelcome = false;
     renderSidebar();
@@ -946,6 +945,17 @@ async function getSavedRootDirHandle() {
         const store = transaction.objectStore('handles');
         const request = store.get('savedDirectoryHandle');
         request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function removeSavedRootDirHandle() {
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('handles', 'readwrite');
+        const store = transaction.objectStore('handles');
+        const request = store.delete('savedDirectoryHandle');
+        request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
     });
 }
@@ -1141,4 +1151,29 @@ function restoreEditorPos() {
     editor.refresh();
     const newTopLineY = editor.charCoords({line: topLineNumber, ch: 0}, "local").top;
     editor.scrollTo(null, newTopLineY);
+}
+
+function isChrome() {
+    var winNav = window.navigator;
+    var vendorName = winNav.vendor;
+
+    var isChromium = window.chrome;
+    var isOpera = typeof window.opr !== "undefined";
+    var isFirefox = winNav.userAgent.indexOf("Firefox") > -1;
+    var isIEedge = winNav.userAgent.indexOf("Edg") > -1;
+    var isIOSChrome = winNav.userAgent.match("CriOS");
+    var isGoogleChrome = isChromium !== null
+        && typeof isChromium !== "undefined"
+        && vendorName === "Google Inc."
+        && isOpera === false
+        && isIEedge === false
+        && (typeof winNav.userAgentData === "undefined" || winNav.userAgentData.brands.some(x => x.brand === "Google Chrome"));
+
+    if (isIOSChrome) {
+        return true;
+    } else if(isGoogleChrome) {
+        return true;
+    } else {
+        return false;
+    }
 }

@@ -31,37 +31,41 @@ async function migrateFromOPFSToLocal() {
         const opfsRoot = await navigator.storage.getDirectory();
         const localRoot = await getSavedRootDirHandle();
 
-
-        // Read current OPFS structure
-
         // Copy files to local directory
         let copiedCount = 0;
-        await walk(files, async (path, isFile) => {
-            if (isFile) {
-                try {
-                    // Read from OPFS
-                    const file = await (await getOPFSFileHandle(opfsRoot, path)).getFile();
-                    const content = await file.text();
+        const operations = [];
 
-                    // Write to local FS
-                    const fileHandle = await getFileHandle(path, true);
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(content);
-                    await writable.close();
-                    copiedCount++;
-                    console.log(`✓ Copied: ${path}`);
-                } catch (error) {
-                    console.error(`✗ Failed to copy ${path}:`, error);
-                }
+        walk(files, (path, isFile) => {
+            if (isFile) {
+                const operation = (async () => {
+                    try {
+                        // Read from OPFS
+                        const file = await (await getOPFSFileHandle(opfsRoot, path)).getFile();
+                        const content = await file.text();
+
+                        // Write to local FS
+                        const fileHandle = await getFileHandle(path, true);
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(content);
+                        await writable.close();
+                        copiedCount++;
+                        console.log(`✓ Copied: ${path}`);
+                    } catch (error) {
+                        console.error(`✗ Failed to copy ${path}:`, error);
+                    }
+                })();
+                operations.push(operation);
             } else {
                 // Create directory in local FS
-                await createDirectory(localRoot, path);
+                const operation = createDirectory(localRoot, path);
+                operations.push(operation);
             }
         });
 
-        console.log(`Migration completed! Copied ${copiedCount} files.`);
-        return { success: true, copiedCount };
+        // Wait for all operations to complete
+        await Promise.all(operations);
 
+        return { success: true, copiedCount };
     } catch (error) {
         console.error('Migration failed:', error);
         return { success: false, error };
