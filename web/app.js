@@ -129,7 +129,7 @@ function initEditor(el) {
 
     let newEditor = HyperMD.fromTextArea(el, {
         dragDrop: false,
-        viewportMargin: Infinity,
+        viewportMargin: 10,
         mode: {
             name: 'hypermd',
             math: false, // disable $math syntax$
