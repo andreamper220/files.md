@@ -726,3 +726,15 @@ body.dragging * {
     75% { color: var(--col-link);  background-color: var(--col-bg-active); opacity: 0.4; }
     100% { color: var(--col-link); background-color: transparent; opacity: 1; }
 }
+
+/*.tj_container li ul li ul li .tj_description {*/
+/*    padding-left: 120px !important;*/
+/*}*/
+
+.tj_container ul ul li span.tj_description:not(.tj_leaf) {
+    padding-left: 2em;
+}
+
+.tj_container ul ul ul li span.tj_description {
+    padding-left: 4em !important;
+}
