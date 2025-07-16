@@ -2615,12 +2615,10 @@ func (b *Bot) showToADayRecurring(params []string) error {
 	return nil
 }
 
+// addToFile adds content at the top of the file.
+// Creates a file if not exists.
 func (b *Bot) addToFile(dir, filename, content string) error {
 	existingContent, _ := b.fs.Read(dir, filename)
-	// Create if not exists?
-	//if err != nil {
-	//	return fmt.Errorf("add to file: can't get doc content of '%s': %w", filename, err)
-	//}
 
 	header := fmt.Sprintf("#### %d %s %d, %s", now().Day(), now().Format("January"), now().Year(), now().Weekday())
 	newContent := txt.InsertTextAfterHeader(existingContent, header, content)
