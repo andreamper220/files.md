@@ -10,6 +10,7 @@ const content = document.getElementById('content')
 
 const TODAY_PATH = '/Today.txt';
 const LATER_PATH = '/Later.txt';
+const DONE_PATH = '/archive/Done.txt';
 
 async function init(el) {
     // Authorize if we have one-time token in URL.
@@ -883,6 +884,9 @@ function fromHeaderToFilename(header) {
     }
     if (header === '# Later') {
         return toFilename(LATER_PATH);
+    }
+    if (header === '# Done') {
+        return toFilename(DONE_PATH);
     }
     if (header.startsWith('# ')) {
         return header.slice(2).trim() + '.md';
