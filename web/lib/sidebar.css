@@ -135,3 +135,15 @@
 	/*// Make less visible than color-tx-alt*/
 	color: color-mix(in srgb, var(--col-tx-alt) 70%, transparent);
 }
+
+#sidebar {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+#tree {
+	flex: 1;
+	overflow-y: auto;
+	overflow-x: hidden;
+}

@@ -46,48 +46,48 @@
 <!--TODO rename to just sidebar-->
 <div id="open-sidebar" onclick="toggleSidebar()" style="display: none"></div>
 <div id="sidebar">
-        <div id="toolbar">
-            <button id="new-file" title="New File (⌘N)" onclick="newFile()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 32 32">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M16 25V7M7 16h18"/>
-                </svg>
-            </button>
-            <button id="new-folder" title="New Folder (⌘⇧N)" onclick="newFolder()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 32 32">
-                    <path stroke-linecap="round" stroke-width="2" d="M28 11v13a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h6c3 0 3 3 5 3h9.003C27.108 9 28 9.895 28 11z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-8M12 17h8"/>
-                </svg>
-            </button>
-            <button id="remove-file" title="Delete Current File (⌘D)" onclick="removeCurrentFile()">
-                <?xml version="1.0" encoding="utf-8"?>
-                <svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: translateY(-1px)">
-                    <path d="M20.5001 7H3.5" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-                    <path d="M18.8332 8.5L18.3732 15.3991C18.1962 18.054 18.1077 19.3815 17.2427 20.1907C16.3777 21 15.0473 21 12.3865 21H11.6132C8.95235 21 7.62195 21 6.75694 20.1907C5.89194 19.3815 5.80344 18.054 5.62644 15.3991L5.1665 8.5" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-                    <path d="M6.5 6C6.55588 6 6.58382 6 6.60915 5.99936C7.43259 5.97849 8.15902 5.45491 8.43922 4.68032C8.44784 4.65649 8.45667 4.62999 8.47434 4.57697L8.57143 4.28571C8.65431 4.03708 8.69575 3.91276 8.75071 3.8072C8.97001 3.38607 9.37574 3.09364 9.84461 3.01877C9.96213 3 10.0932 3 10.3553 3H13.6447C13.9068 3 14.0379 3 14.1554 3.01877C14.6243 3.09364 15.03 3.38607 15.2493 3.8072C15.3043 3.91276 15.3457 4.03708 15.4286 4.28571L15.5257 4.57697C15.5433 4.62992 15.5522 4.65651 15.5608 4.68032C15.841 5.45491 16.5674 5.97849 17.3909 5.99936C17.4162 6 17.4441 6 17.5 6" stroke-width="1.5" fill="none"/>
-                </svg>
-                <!--                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 32 32" style="transform: translateY(-1px)">-->
-                <!--                            <ellipse cx="16" cy="8" stroke-linejoin="round" stroke-width="2" rx="11" ry="3"/>-->
-                <!--                            <path  stroke-linejoin="round" stroke-width="2" d="M5 8l3 18s1 2 8 2 8-2 8-2l3-18"/>-->
-                <!--                            <path  stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.5 16.5l-5 5M13.5 16.5l5 5"/>-->
-                <!--                        </svg>-->
-            </button>
-            <button id="open-folder" title="Select local folder" onClick="openDir()" style="display: none">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 32 32">
-                    <path stroke-linecap="round" stroke-width="2" d="M28 11v13a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h6c3 0 3 3 5 3h9.003C27.108 9 28 9.895 28 11z"/>
-                </svg>
-            </button>
+    <div id="toolbar">
+        <button id="new-file" title="New File (⌘N)" onclick="newFile()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 32 32">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M16 25V7M7 16h18"/>
+            </svg>
+        </button>
+        <button id="new-folder" title="New Folder (⌘⇧N)" onclick="newFolder()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 32 32">
+                <path stroke-linecap="round" stroke-width="2" d="M28 11v13a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h6c3 0 3 3 5 3h9.003C27.108 9 28 9.895 28 11z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-8M12 17h8"/>
+            </svg>
+        </button>
+        <button id="remove-file" title="Delete Current File (⌘D)" onclick="removeCurrentFile()">
+            <?xml version="1.0" encoding="utf-8"?>
+            <svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: translateY(-1px)">
+                <path d="M20.5001 7H3.5" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                <path d="M18.8332 8.5L18.3732 15.3991C18.1962 18.054 18.1077 19.3815 17.2427 20.1907C16.3777 21 15.0473 21 12.3865 21H11.6132C8.95235 21 7.62195 21 6.75694 20.1907C5.89194 19.3815 5.80344 18.054 5.62644 15.3991L5.1665 8.5" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                <path d="M6.5 6C6.55588 6 6.58382 6 6.60915 5.99936C7.43259 5.97849 8.15902 5.45491 8.43922 4.68032C8.44784 4.65649 8.45667 4.62999 8.47434 4.57697L8.57143 4.28571C8.65431 4.03708 8.69575 3.91276 8.75071 3.8072C8.97001 3.38607 9.37574 3.09364 9.84461 3.01877C9.96213 3 10.0932 3 10.3553 3H13.6447C13.9068 3 14.0379 3 14.1554 3.01877C14.6243 3.09364 15.03 3.38607 15.2493 3.8072C15.3043 3.91276 15.3457 4.03708 15.4286 4.28571L15.5257 4.57697C15.5433 4.62992 15.5522 4.65651 15.5608 4.68032C15.841 5.45491 16.5674 5.97849 17.3909 5.99936C17.4162 6 17.4441 6 17.5 6" stroke-width="1.5" fill="none"/>
+            </svg>
+            <!--                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 32 32" style="transform: translateY(-1px)">-->
+            <!--                            <ellipse cx="16" cy="8" stroke-linejoin="round" stroke-width="2" rx="11" ry="3"/>-->
+            <!--                            <path  stroke-linejoin="round" stroke-width="2" d="M5 8l3 18s1 2 8 2 8-2 8-2l3-18"/>-->
+            <!--                            <path  stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.5 16.5l-5 5M13.5 16.5l5 5"/>-->
+            <!--                        </svg>-->
+        </button>
+        <button id="open-folder" title="Select local folder" onClick="openDir()" style="display: none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 32 32">
+                <path stroke-linecap="round" stroke-width="2" d="M28 11v13a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h6c3 0 3 3 5 3h9.003C27.108 9 28 9.895 28 11z"/>
+            </svg>
+        </button>
 <!--            TODO add icon for saving, would swith opfs to local-->
-            <!--        <button id="move-file" title="Move file" onclick="openMoveModal()">-->
-            <!--            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 32 32">-->
-            <!--                <path stroke="#535358" stroke-linecap="round" stroke-width="2" d="M5 16h21"/>-->
-            <!--                <path stroke="#535358" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 8l8 8-8 8"/>-->
-            <!--            </svg>-->
-            <!--        </button>-->
-            <button id="close-sidebar" onclick="toggleSidebar()">×</button>
-        </div>
-        <div id="tree">
-        </div>
+        <!--        <button id="move-file" title="Move file" onclick="openMoveModal()">-->
+        <!--            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 32 32">-->
+        <!--                <path stroke="#535358" stroke-linecap="round" stroke-width="2" d="M5 16h21"/>-->
+        <!--                <path stroke="#535358" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 8l8 8-8 8"/>-->
+        <!--            </svg>-->
+        <!--        </button>-->
+        <button id="close-sidebar" onclick="toggleSidebar()">×</button>
+    </div>
+    <div id="tree">
+    </div>
     <div class="resize"
          role="separator"
          tabindex="0"
