@@ -984,7 +984,7 @@ func (b *Bot) ShowToday(_ []string) error {
 	if len(todayChecklistMD) != 0 {
 		tasks := txt.IncompleteChecklistItems(todayChecklistMD)
 		for _, task := range tasks {
-			if len(task) >= maxTitleLengthForMobile {
+			if len([]rune(task)) >= maxTitleLengthForMobile {
 				cmd := tg.NewCmd(consts.CmdShowLongItem, []string{fs.Hash(fs.TodayFilename), fs.Hash(task)})
 				btn := tg.NewBtn(txt.Emoji(i18n.Emoji("eyes"), task), cmd)
 				kb.AddRow(btn)
@@ -1013,7 +1013,7 @@ func (b *Bot) ShowToday(_ []string) error {
 			block = strings.TrimSpace(block[8:])
 		}
 
-		if len(block) >= maxTitleLengthForMobile {
+		if len([]rune(block)) >= maxTitleLengthForMobile {
 			cmd := tg.NewCmd(consts.CmdShowLongItemFromInbox, []string{strconv.Itoa(msgIndex)})
 			btn := tg.NewBtn(txt.Emoji(i18n.Emoji("eyes"), block), cmd)
 			kb.AddRow(btn)
@@ -1642,7 +1642,7 @@ func (b *Bot) showChecklist(params []string) error {
 
 	kb := tg.NewKeyboard(nil)
 	for _, item := range items {
-		if len(item) >= maxTitleLengthForMobile {
+		if len([]rune(item)) >= maxTitleLengthForMobile {
 			cmd := tg.NewCmd(consts.CmdShowLongItem, []string{fs.Hash(checklist), fs.Hash(item)})
 			btn := tg.NewBtn(txt.Emoji(i18n.Emoji("eyes"), item), cmd)
 			kb.AddRow(btn)
