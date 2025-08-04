@@ -1083,7 +1083,7 @@ function toggleSidebar() {
     const openSidebar = document.getElementById('open-sidebar');
 
     if (sidebar.style.display === 'none') {
-        sidebar.style.display = 'block';
+        sidebar.style.display = 'flex';
         openSidebar.style.display = 'none';
     } else {
         sidebar.style.display = 'none';
