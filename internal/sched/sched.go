@@ -91,7 +91,7 @@ func FilenamesAndSchedules(scheduledTasks []userconfig.Schedule) map[string]stri
 
 func formatTaskDate(scheduledAt int64) string {
 	today := Now().Truncate(24 * time.Hour)
-	taskDate := time.Unix(scheduledAt, 0).Truncate(24 * time.Hour)
+	taskDate := time.Unix(scheduledAt, 0).In(Now().Location()).Truncate(24 * time.Hour)
 
 	diffDays := int(taskDate.Sub(today).Hours() / 24)
 

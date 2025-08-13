@@ -1064,6 +1064,7 @@ func TestSettingsMainPanel(t *testing.T) {
 		tg.NewBtn("-", tg.NewCmd("nothing", nil)),
 		tg.NewBtn("⚡️ Quick buttons", tg.NewCmd("c_quick_btns", nil)),
 		tg.NewBtn("➡️ Move to buttons", tg.NewCmd("c_move_btns", nil)),
+		tg.NewBtn("🌍 Timezone", tg.NewCmd("timezone", nil)),
 		tg.NewBtn("🏠 Today", tg.NewCmd("today", nil)),
 	},
 	), tgram.LastSentKeyboard)
@@ -1600,6 +1601,14 @@ func TestShowSchedule(t *testing.T) {
 	}()
 	now = func() time.Time {
 		return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	}
+
+	savedSchedNow := sched.Now
+	defer func() {
+		sched.Now = savedSchedNow
+	}()
+	sched.Now = func() time.Time {
+		return time.Date(1970, 10, 1, 0, 0, 0, 0, time.UTC)
 	}
 
 	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
