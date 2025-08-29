@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-func jsl(logger *log.Logger, certDir string, hosts ...string) *http.Server {
+func ssl(logger *log.Logger, certDir string, hosts ...string) *http.Server {
 	autocertManager := autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
 		HostPolicy: autocert.HostWhitelist(hosts...),
