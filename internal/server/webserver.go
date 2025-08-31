@@ -207,13 +207,13 @@ type FilteredWriter struct {
 }
 
 func (fw *FilteredWriter) Write(p []byte) (n int, err error) {
-	//message := string(p)
-	//for _, pattern := range fw.ignorePatterns {
-	//	if strings.Contains(message, pattern) {
-	//		return len(p), nil
-	//	}
-	//}
-	//
+	message := string(p)
+	for _, pattern := range fw.ignorePatterns {
+		if strings.Contains(message, pattern) {
+			return len(p), nil
+		}
+	}
+
 	return fw.writer.Write(p)
 }
 
