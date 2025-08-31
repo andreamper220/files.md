@@ -200,7 +200,7 @@ func (b *Bot) Reply(u Update) error {
 
 		if callbackQueryID, ok := u.CallbackQueryID(); ok {
 			// We can tolerate an error here, that won't affect UX
-			if cmd.Name == consts.CmdComplete || cmd.Name == consts.CmdCompleteHabit || cmd.Name == consts.CmdCompleteFromChat {
+			if cmd.Name == consts.CmdComplete || cmd.Name == consts.CmdCompleteHabit || cmd.Name == consts.CmdCompleteFromInbox {
 				_ = b.tg.AnswerCallbackQuery(callbackQueryID, completedMsg())
 			} else if cmd.Name == consts.CmdShare {
 				_ = b.tg.AnswerCallbackQuery(callbackQueryID, "Shared 💚!")
@@ -280,7 +280,7 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		consts.CmdSchedule:                    b.schedule,
 		consts.CmdScheduleForTmrw:             b.scheduleForTmrw,
 		consts.CmdComplete:                    b.complete,
-		consts.CmdCompleteFromChat:            b.completeFromChat,
+		consts.CmdCompleteFromInbox:           b.completeFromChat,
 		consts.CmdPostpone:                    b.postpone,
 		consts.CmdPomodoro:                    b.togglePomodoro,
 		consts.CmdShowScheduleForDayRecurring: b.showToADayRecurring,
@@ -864,7 +864,7 @@ func (b *Bot) showMoveTo(params []string) error {
 
 	b.delAllKeyboards()
 
-	msg := b.tr("Saved to <b>inbox</b>!")
+	msg := b.tr("Saved!")
 	if b.cfg.TasksOnlyMode() {
 		msg = b.tr("Saved to <b>today</b>!")
 	}
@@ -1046,8 +1046,8 @@ func (b *Bot) ShowToday(_ []string) error {
 			btn := tg.NewBtn(txt.Emoji(i18n.Emoji("eyes"), title), cmd)
 			kb.AddRow(btn)
 		} else {
-			cmd := tg.NewCmd(consts.CmdCompleteFromChat, []string{strconv.Itoa(msgIndex)})
-			btn := tg.NewBtn(txt.Emoji(i18n.Emoji("chat"), title), cmd)
+			cmd := tg.NewCmd(consts.CmdCompleteFromInbox, []string{strconv.Itoa(msgIndex)})
+			btn := tg.NewBtn(txt.Emoji(i18n.Emoji(title), title), cmd)
 			kb.AddRow(btn)
 		}
 
@@ -1582,7 +1582,7 @@ func (b *Bot) showLongItemFromInbox(params []string) error {
 					tg.NewRow(
 						tg.NewBtn(i18n.StrBack, tg.NewCmd(consts.CmdShowToday, []string{})),
 						tg.NewBtn(i18n.AddEmoji("Move"), tg.NewCmd(consts.CmdShowMoveTo, []string{msgIndexStr})),
-						tg.NewBtn(i18n.AddEmoji("Archive"), tg.NewCmd(consts.CmdCompleteFromChat, []string{msgIndexStr})),
+						tg.NewBtn(i18n.AddEmoji("Archive"), tg.NewCmd(consts.CmdCompleteFromInbox, []string{msgIndexStr})),
 					),
 				})
 
