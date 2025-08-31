@@ -890,7 +890,7 @@ function TreeView(root, container, options) {
 
         if (node.shouldBlink) {
             span_desc.classList.add('sidebar-blink');
-            setTimeout(() => span_desc.classList.remove('sidebar-blink'), 1500);
+            setTimeout(() => span_desc.classList.remove('sidebar-blink'), 4000);
             node.shouldBlink = false;
         }
 
