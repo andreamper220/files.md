@@ -138,12 +138,12 @@ func NewBot(userID int64, tg Chat, fs *fs.FS, db Database, cfg *userconfig.Confi
 
 // Reply to incoming text message, command or inline query
 func (b *Bot) Reply(u Update) error {
-	// Handle inline queries
+	// Handle inline queries.
 	if _, ok := u.InlineQueryID(); ok {
 		return b.answerSearch(u)
 	}
 
-	// Handle messages in channels
+	// Handle messages from channels.
 	_, isChannel := u.ChannelID()
 	if isChannel {
 		channelName, _ := u.ChannelName()
@@ -154,6 +154,7 @@ func (b *Bot) Reply(u Update) error {
 		return b.addToFile(fs.DirRoot, fs.Filename(channelName), u.MsgText())
 	}
 
+	// Handle plugins.
 	for _, plugin := range BotPlugins {
 		if plugin.CanHandle(u.MsgText()) {
 			output, err := plugin.Handle(u.MsgText())
@@ -212,12 +213,12 @@ func (b *Bot) Reply(u Update) error {
 		return nil
 	}
 
-	// Handle images
+	// Handle images.
 	if _, hasImage := u.PhotoOrImageID(); hasImage {
 		return b.saveFromImage(u)
 	}
 
-	// Handle regular text messages
+	// Handle regular text messages.
 	return b.saveFromTextMsg(u)
 }
 

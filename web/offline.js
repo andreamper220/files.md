@@ -34,9 +34,7 @@ const urlsToCache = [
     '/lib/emoji.js',
     '/welcome.js',
     '/files.js',
-    '/wasm_exec.js',
     '/app.js',
-    '/wasm.js',
     '/inbox.js',
     '/modals.js',
 ];

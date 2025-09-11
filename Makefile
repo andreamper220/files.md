@@ -41,18 +41,6 @@ lint:
 format:
 	gofumpt -w .
 
-wasm:
-	GOOS=js GOARCH=wasm go build -o web/chat/chat.wasm web/chat/main.go && cp /usr/local/go/misc/wasm/wasm_exec.js web/chat/
-
-watch: # watch for changes and rebuild wasm
-	@echo "👀 Watching for changes in ./*.(js|go)..."
-	@fswatch -r internal pkg cmd | while read f; do \
-		echo "Rebuilding WASM..."; \
-		GOOS=js GOARCH=wasm go build -o web/chat.wasm ./cmd/wasm && \
-		cp /usr/local/go/lib/wasm/wasm_exec.js web/ && \
-		echo "✅ WASM rebuilt at $$(date)"; \
-	done
-
 e2e: # make e2e test="create and move"
 	killall tgbot || true
 	go run ./cmd/tgbot & \
