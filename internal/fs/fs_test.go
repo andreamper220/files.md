@@ -26,14 +26,14 @@ func TestIsChecklistItem(t *testing.T) {
 	r.True(IsChecklistItem("-checklist-item"))
 }
 
-func TestTitle(t *testing.T) {
+func TestDisplayName(t *testing.T) {
 	r := require.New(t)
 
 	title := DisplayName("filename")
 	r.Equal("Filename", title)
 }
 
-func TestTitleWithSpace(t *testing.T) {
+func TestDisplayNameWithSpace(t *testing.T) {
 	r := require.New(t)
 
 	title := DisplayName(" filename ")

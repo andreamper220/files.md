@@ -75,8 +75,8 @@ type FS struct {
 // File represents a file or directory
 type File struct {
 	Name        string // Filename with extension
-	DisplayName string
 	Hash        string
+	DisplayName string
 	Ctime       int64
 	IsMultiline bool
 	IsDir       bool
@@ -106,8 +106,16 @@ func NewFS(absRootPath string, backend afero.Fs) (*FS, error) {
 	return &FS{absRootPath, backend}, nil
 }
 
-func NewFile(name, hash, title string, ctime int64, isMultiline, isDir bool, parentDir string) File {
-	return File{name, hash, title, ctime, isMultiline, isDir, parentDir}
+func NewFile(name, hash, displayName string, ctime int64, isMultiline, isDir bool, parentDir string) File {
+	return File{
+		Name:        name,
+		Hash:        hash,
+		DisplayName: displayName,
+		Ctime:       ctime,
+		IsMultiline: isMultiline,
+		IsDir:       isDir,
+		ParentDir:   parentDir,
+	}
 }
 
 // CreateDirsIfNotExist creates specified directories for a user if they do not exist.
