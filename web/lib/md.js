@@ -54,41 +54,50 @@ async function addChecklistItem(path, item, checked = false) {
     await write(path, result);
 }
 
-async function removeChecklistItem(path, itemOrHash) {
-    let md = '';
-    try {
-        md = await read(path);
-        md = normNewLines(md);
-    } catch (err) {
-        md = '';
+function extractTitleAndContent(text, maxTitleLen) {
+    if (text.length === 0) {
+        throw new Error('extract title: empty msg');
     }
 
-    let removedItem = '';
-    const lines = md.split('\n');
-    const newLines = [];
+    const parts = text.split('\n');
+    let title = ucfirst(parts[0].trim());
 
-    for (const line of lines) {
-        const trimmedLine = line.trim();
-
-        // Preserve invalid lines
-        if (trimmedLine.length < 6) {
-            newLines.push(trimmedLine);
-            continue;
+    if (hasImage(title)) {
+        if (parts.length > 1) {
+            title = ucfirst(parts[1].trim());
         }
 
-        const itemText = trimmedLine.substring(6);
-        if (hash(itemText) === itemOrHash || itemText === itemOrHash) {
-            removedItem = itemText;
-            continue;
+        if (title === '' || parts.length === 1) {
+            const now = new Date();
+            const formatted = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })
+                    .replace(/\//g, '.') + ' ' +
+                now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+            title = `Img ${formatted}`;
         }
-
-        newLines.push(trimmedLine);
     }
 
-    const result = newLines.join('\n');
-    await write(path, result);
-    return removedItem;
+    if ([...title].length > maxTitleLen) {
+        title = [...title].slice(0, maxTitleLen).join('') + '...';
+    }
+
+    // TODO add sanitize
+    // const sanitizedTitle = sanitizeFilename(title);
+    const sanitizedTitle = title;
+    let content = text;
+
+    // If title is the same as content, we don't need to save it
+    if (sanitizedTitle === content) {
+        content = '';
+    }
+
+    // If title is already in the content, remove it.
+    if (content.startsWith(sanitizedTitle)) {
+        content = content.substring(sanitizedTitle.length).trim();
+    }
+
+    return [sanitizedTitle, content];
 }
+
 
 async function addHeaderAndText(path, header, text, atStart = false) {
     const now = new Date();

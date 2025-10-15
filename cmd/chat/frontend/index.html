@@ -36,7 +36,7 @@
         } else {
             (async () => {
                 let update = await window.newUpdate(msg, null)
-                processResponse(await window.addMsg(update));
+                processResponse(await window.addToInbox(update));
             })();
         }
 
@@ -48,7 +48,7 @@
 
     async function sendCommand(command) {
         let update = await window.newUpdate('', await window.newCmd(command.substring(1), null));
-        processResponse(await window.addMsg(update));
+        processResponse(await window.addToInbox(update));
     }
 
     function processResponse(response) {
@@ -82,7 +82,7 @@
                     button.classList.add('button'); // Add a class for styling
                     button.onclick = async () => {
                         let update = await window.newUpdate('', btn.Cmd)
-                        processResponse(await window.addMsg(update));
+                        processResponse(await window.addToInbox(update));
                     };
                     rowContainer.appendChild(button);
                 });
@@ -93,7 +93,7 @@
                 button.classList.add('button'); // Add a class for styling
                 button.onclick = async () => {
                     let update = await window.newUpdate('', row.Cmd)
-                    processResponse(await window.addMsg(update));
+                    processResponse(await window.addToInbox(update));
                 };
                 buttonContainer.appendChild(button);
             }

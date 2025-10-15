@@ -11,16 +11,26 @@ const READ_PATH = '/Read.txt';
 const SHOP_PATH = '/Shop.txt';
 const WATCH_PATH = '/Watch.txt';
 
+const MAX_TITLE_LENGTH = 100;
+
 // Add event listener for input changes
 chatInput.addEventListener('input', autoResize);
 // Initial resize to set proper height
 autoResize();
 
-async function addMsg() {
+async function addToInbox() {
     const text = chatInput.value.trim();
     if (!text) return;
 
-    await saveToInbox(text);
+    const now = new Date();
+    const timestamp = now.toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    const formattedContent = `\n\`${timestamp}\` ${text}\n`;
+    await writeAtEnd(INBOX_PATH, formattedContent);
+
     chatInput.value = '';
     chatIsClean = false;
     await loadMessages();
@@ -91,17 +101,6 @@ async function toggleInboxModal() {
         closeInboxModal();
     } else {
         openInboxModal();
-    }
-}
-
-
-
-async function moveMessagesFromInbox(msgs, moveToCallback) {
-    let allMsgs = parseMessages(await read(INBOX_PATH));
-    // TODO exclude only first occurence
-    if (moveToCallback(msgs)) {
-        allMsgs = allMsgs.filter(m => !msgs.includes(m.index.toString()));
-        await write(INBOX_PATH, formatMessages(allMsgs));
     }
 }
 
@@ -218,31 +217,14 @@ async function loadMessages() {
     }
 }
 
-async function saveData() {
-
-}
-
 function initInbox() {
     chatInput.addEventListener('keydown', async function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            await addMsg();
+            await addToInbox();
             autoResize();
         }
     });
-}
-
-async function saveToInbox(content) {
-    const now = new Date();
-    const timestamp = now.toLocaleTimeString('en-US', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-
-    const formattedContent = `\n\`${timestamp}\` ${content}\n`;
-
-    await writeAtEnd(INBOX_PATH, formattedContent);
 }
 
 async function receive(modifiedPaths) {
@@ -293,120 +275,164 @@ async function receive(modifiedPaths) {
         renderSidebar('', modifiedPaths);
     }
 }
+function scrollToBottom() {
+    setTimeout(function () {
+        inbox.scrollTop = inbox.scrollHeight;
+    }, 100);
+}
 
-function renderMessages() {
-    if (messages.length === 0) {
-        inbox.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-title">Free your head</div>
-                <div class="empty-desc">Drop whatever’s on your mind here</div>
-            </div>
-        `;
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function autoResize() {
+    if (chatInput.value === '') {
+        chatInput.style.height = '';
         return;
     }
 
-    const recentFiles = getRecentlyModifiedFiles();
-    const recentFilesButtons = recentFiles.map(filename => `
-   <div class="btn-wrapper">
-       <button class="action-btn to-recent-btn" data-filename="${filename}">
-           ${filename.replace(/\.md$/, '').slice(0, 10)}${filename.replace(/\.md$/, '').length > 10 ? '…' : ''}
-       </button>
-       <span class="btn-label">To ${filename.replace(/\.md$/, '')}</span>
-    </div>
-    `).join('');
+    if (chatInput.value.split('\n').length <= 1) {
+        return;
+    }
 
-    // add own class every other message
-    inbox.innerHTML = messages.map((message, i) => `
-        <div class="message ${i % 2 === 1 ? 'own' : ''}" data-text="${message.text}">
-            <div class="message-content" 
-                 contenteditable="true" 
-                 data-text="${message.text}"
-                 spellcheck="false">${escapeHtml(message.text)}</div>
-            <div class="message-hover-zone"></div>
-            <div class="message-footer">
-                <span class="message-time">${message.timestamp}</span>
-                <div class="message-actions">
-                    ${recentFilesButtons}
-                    <div class="btn-wrapper">
-                    <button class="action-btn to-file-btn" data-text="${message.text}">
-                        
-<?xml version="1.0" encoding="utf-8"?>
-<svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M13 3H8.2C7.0799 3 6.51984 3 6.09202 3.21799C5.71569 3.40973 5.40973 3.71569 5.21799 4.09202C5 4.51984 5 5.0799 5 6.2V17.8C5 18.9201 5 19.4802 5.21799 19.908C5.40973 20.2843 5.71569 20.5903 6.09202 20.782C6.51984 21 7.0799 21 8.2 21H12M13 3L19 9M13 3V7.4C13 7.96005 13 8.24008 13.109 8.45399C13.2049 8.64215 13.3578 8.79513 13.546 8.89101C13.7599 9 14.0399 9 14.6 9H19M19 9V12M17 19H21M19 17V21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-</svg>
-                    </button>
-                    <span class="btn-label">To File</span>
-                    </div>
-                     <div class="btn-wrapper"> 
-                    <button class="action-btn submenu-btn to-dir-btn" data-text="${message.text}">
-                        <svg width="32px" height="32px" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="none"> <path stroke-linecap="round" stroke-width="3" fill="none" d="M28 11v13a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h6c3 0 3 3 5 3h9.003C27.108 9 28 9.895 28 11z"/> </svg>
-                    </button>
-                        <span class="btn-label">To Dir</span>
-                    </div>
-                   <div class="btn-wrapper">
-                    <button class="action-btn to-checklist-btn" data-checklist="Today.txt">
-<?xml version="1.0" encoding="utf-8"?>
-<svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="m20.215 2.387-8.258 10.547-2.704-3.092a1 1 0 1 0-1.506 1.316l3.103 3.548a1.5 1.5 0 0 0 2.31-.063L21.79 3.62a1 1 0 1 0-1.575-1.233zM20 11a1 1 0 0 0-1 1v6.077c0 .459-.021.57-.082.684a.364.364 0 0 1-.157.157c-.113.06-.225.082-.684.082H5.923c-.459 0-.57-.022-.684-.082a.363.363 0 0 1-.157-.157c-.06-.113-.082-.225-.082-.684V5.5a.5.5 0 0 1 .5-.5l8.5.004a1 1 0 1 0 0-2L5.5 3A2.5 2.5 0 0 0 3 5.5v12.577c0 .76.082 1.185.319 1.627.224.419.558.753.977.977.442.237.866.319 1.627.319h12.154c.76 0 1.185-.082 1.627-.319.42-.224.754-.558.978-.977.236-.442.318-.866.318-1.627V12a1 1 0 0 0-1-1z" stroke="none"/></svg>   
-                    </button>
-                    <span class="btn-label">To Do</span>
-                    </div>
-                       <div class="btn-wrapper">
-                    <button class="action-btn to-journal-btn" data-text="${message.text}">
-                        <svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 
-                            4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 
-                            18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 
-                            12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 
-                            18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 
-                            5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" 
-                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                        </svg>
-                    </button>
-                        <span class="btn-label">To Journal</span>
-                    </div>
-                       <div class="btn-wrapper">
-                    <button class="action-btn to-checklist-btn" data-checklist="Read.txt">
-<?xml version="1.0" encoding="utf-8"?>
-<svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M4 19V6.2C4 5.0799 4 4.51984 4.21799 4.09202C4.40973 3.71569 4.71569 3.40973 5.09202 3.21799C5.51984 3 6.0799 3 7.2 3H16.8C17.9201 3 18.4802 3 18.908 3.21799C19.2843 3.40973 19.5903 3.71569 19.782 4.09202C20 4.51984 20 5.0799 20 6.2V17H6C4.89543 17 4 17.8954 4 19ZM4 19C4 20.1046 4.89543 21 6 21H20M9 7H15M9 11H15M19 17V21"  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-</svg>
-                    </button>
-                        <span class="btn-label">To Read</span>
-                    </div>
-                       <div class="btn-wrapper">
-                    <button class="action-btn to-checklist-btn" data-checklist="Shop.txt">
-<?xml version="1.0" encoding="utf-8"?>
-<svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path clip-rule="evenodd" d="M2 1C1.44772 1 1 1.44772 1 2C1 2.55228 1.44772 3 2 3H3.21922L6.78345 17.2569C5.73276 17.7236 5 18.7762 5 20C5 21.6569 6.34315 23 8 23C9.65685 23 11 21.6569 11 20C11 19.6494 10.9398 19.3128 10.8293 19H15.1707C15.0602 19.3128 15 19.6494 15 20C15 21.6569 16.3431 23 18 23C19.6569 23 21 21.6569 21 20C21 18.3431 19.6569 17 18 17H8.78078L8.28078 15H18C20.0642 15 21.3019 13.6959 21.9887 12.2559C22.6599 10.8487 22.8935 9.16692 22.975 7.94368C23.0884 6.24014 21.6803 5 20.1211 5H5.78078L5.15951 2.51493C4.93692 1.62459 4.13696 1 3.21922 1H2ZM18 13H7.78078L6.28078 7H20.1211C20.6742 7 21.0063 7.40675 20.9794 7.81078C20.9034 8.9522 20.6906 10.3318 20.1836 11.3949C19.6922 12.4251 19.0201 13 18 13ZM18 20.9938C17.4511 20.9938 17.0062 20.5489 17.0062 20C17.0062 19.4511 17.4511 19.0062 18 19.0062C18.5489 19.0062 18.9938 19.4511 18.9938 20C18.9938 20.5489 18.5489 20.9938 18 20.9938ZM7.00617 20C7.00617 20.5489 7.45112 20.9938 8 20.9938C8.54888 20.9938 8.99383 20.5489 8.99383 20C8.99383 19.4511 8.54888 19.0062 8 19.0062C7.45112 19.0062 7.00617 19.4511 7.00617 20Z" stroke="none"/>
-</svg>
-                    </button>
-                        <span class="btn-label">To Shop</span>
-                    </div>
-                       <div class="btn-wrapper">
-                    <button class="action-btn to-checklist-btn" data-index="${message.index}" data-checklist="Watch.txt">
-                        <?xml version="1.0" encoding="utf-8"?>
-                        <svg fill="var(--col-link)" stroke="none" width="32px" height="32px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18,6H14.41l2.3-2.29a1,1,0,1,0-1.42-1.42L12,5.54l-1.17-2a1,1,0,1,0-1.74,1L10,6H6A3,3,0,0,0,3,9v8a3,3,0,0,0,3,3v1a1,1,0,0,0,2,0V20h8v1a1,1,0,0,0,2,0V20a3,3,0,0,0,3-3V9A3,3,0,0,0,18,6Zm1,11a1,1,0,0,1-1,1H6a1,1,0,0,1-1-1V9A1,1,0,0,1,6,8H18a1,1,0,0,1,1,1Z" stroke="none"/></svg>
-                    </button>                    
-                        <span class="btn-label">To Watch</span>
-                    </div>
-                       <div class="btn-wrapper">
-                    <button class="action-btn to-archive-btn" data-index="${message.index}">
-                        <?xml version="1.0" encoding="utf-8"?>
-                            <svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20.5001 7H3.5" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-<!--                            <path d="M20.5001 6H3.5" stroke-width="2.5" stroke-linecap="round" fill="none"/>-->
-                            <path d="M18.8332 8.5L18.3732 15.3991C18.1962 18.054 18.1077 19.3815 17.2427 20.1907C16.3777 21 15.0473 21 12.3865 21H11.6132C8.95235 21 7.62195 21 6.75694 20.1907C5.89194 19.3815 5.80344 18.054 5.62644 15.3991L5.1665 8.5" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-                            <path d="M6.5 6C6.55588 6 6.58382 6 6.60915 5.99936C7.43259 5.97849 8.15902 5.45491 8.43922 4.68032C8.44784 4.65649 8.45667 4.62999 8.47434 4.57697L8.57143 4.28571C8.65431 4.03708 8.69575 3.91276 8.75071 3.8072C8.97001 3.38607 9.37574 3.09364 9.84461 3.01877C9.96213 3 10.0932 3 10.3553 3H13.6447C13.9068 3 14.0379 3 14.1554 3.01877C14.6243 3.09364 15.03 3.38607 15.2493 3.8072C15.3043 3.91276 15.3457 4.03708 15.4286 4.28571L15.5257 4.57697C15.5433 4.62992 15.5522 4.65651 15.5608 4.68032C15.841 5.45491 16.5674 5.97849 17.3909 5.99936C17.4162 6 17.4441 6 17.5 6" stroke-width="1.5" fill="none"/>
-                        </svg>
-                    </button>
-                        <span class="btn-label">To Archive</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `).join('');
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 250) + 'px';
+}
 
-    attachEventListeners();
+function sendCmd(cmd, params) {
+    log('Sending CMD to wasm', cmd, params)
+    let cmdObj = {
+        n: cmd,
+        t: "cmd",
+        p: params.map(p => p.toString()),
+    }
+    wasmReplyCmd(JSON.stringify(cmdObj));
+}
+
+function getRecentlyModifiedFiles() {
+    if (files === undefined) return [];
+
+    const entries = [];
+    for (const filename in files) {
+        const content = files[filename];
+        if (filename && content &&
+            ![
+                toFilename(INBOX_PATH),
+                toFilename(CONFIG_PATH),
+                toFilename(TODAY_PATH),
+                toFilename(LATER_PATH),
+                toFilename(WATCH_PATH),
+                toFilename(READ_PATH),
+                toFilename(SHOP_PATH),
+            ].includes(filename)) {
+            entries.push([filename, content]);
+        }
+    }
+
+    for (let i = 0; i < entries.length - 1; i++) {
+        for (let j = i + 1; j < entries.length; j++) {
+            const aTime = new Date(entries[i][1].lastModified || 0);
+            const bTime = new Date(entries[j][1].lastModified || 0);
+            if (aTime < bTime) {
+                // Swap
+                const temp = entries[i];
+                entries[i] = entries[j];
+                entries[j] = temp;
+            }
+        }
+    }
+
+    // Take first 3 and extract filenames
+    const result = [];
+    const limit = Math.min(3, entries.length);
+    for (let i = 0; i < limit; i++) {
+        result.push(entries[i][0]);
+    }
+
+    return result;
+}
+
+chatInput.addEventListener('paste', async (e) => {
+    const items = e.clipboardData.items;
+
+    for (const item of items) {
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            const fileName = generateSafeFileName(file.name);
+
+            const saved = await writeMediaFile(fileName, file);
+            if (saved) {
+                const imageMarkdown = `![${fileName}](media/${fileName})\n`;
+
+                const cursorPos = chatInput.selectionStart;
+                const textBefore = chatInput.value.substring(0, cursorPos);
+                const textAfter = chatInput.value.substring(chatInput.selectionEnd);
+
+                chatInput.value = textBefore + imageMarkdown + textAfter;
+
+                const newCursorPos = cursorPos + imageMarkdown.length;
+                chatInput.setSelectionRange(newCursorPos, newCursorPos);
+                chatInput.focus();
+            }
+            break;
+        }
+    }
+});
+
+function todayJournalFilename() {
+    const now = new Date();
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const monthIndex = parseInt(now.toLocaleDateString('en-US', { month: 'numeric', })) - 1;
+    const year = parseInt(now.toLocaleDateString('en-US', { year: 'numeric'}));
+    const month = (monthIndex + 1).toString().padStart(2, '0');
+    return `${year}.${month} ${monthNames[monthIndex]}.md`;
+}
+
+function todayHeader(timezone) {
+    const now = new Date();
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const dayNames = [
+        'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
+    ];
+
+    const day = parseInt(now.toLocaleDateString('en-US', { day: 'numeric', timeZone: timezone }));
+    const monthIndex = parseInt(now.toLocaleDateString('en-US', { month: 'numeric', timeZone: timezone })) - 1;
+    const year = parseInt(now.toLocaleDateString('en-US', { year: 'numeric', timeZone: timezone }));
+    const dayIndex = new Date(now.toLocaleDateString('en-US', { timeZone: timezone })).getDay();
+
+    return `#### ${day} ${monthNames[monthIndex]} ${year}, ${dayNames[dayIndex]}`;
+}
+
+async function addToJournal(text) {
+    text = text.trim();
+    const journalFilename = todayJournalFilename();
+    const journalPath = `journal/${journalFilename}`;
+    await addHeaderAndText(journalPath, todayHeader(), text);
+}
+
+async function moveFromInbox(text, callback) {
+    callback(text);
+    const inboxContent = await read(INBOX_PATH);
+    const lines = normNewLines(inboxContent).split('\n');
+    let filteredLines = [];
+    // remove lines that has `xx:xx` + record
+    const timePattern = /^\`\d{2}:\d{2}\`\s*/;
+    for (const line of lines) {
+        if (line.replace(timePattern, '').trim() !== text.trim()) {
+            filteredLines.push(line);
+        }
+    }
+
+    await write(INBOX_PATH, filteredLines.join('\n'));
 }
 
 function attachEventListeners() {
@@ -656,21 +682,27 @@ function attachEventListeners() {
     });
 
     inbox.querySelectorAll('.to-archive-btn').forEach(btn => {
-        btn.addEventListener('click', function (e) {
+        btn.addEventListener('click', async function (e) {
             e.stopPropagation();
             const selectedMessages = document.querySelectorAll('.message.selected');
-            let indices = [];
+            let msgs = [];
             let messagesToRemove = [];
             if (selectedMessages.length > 0) {
-                indices = Array.from(selectedMessages).map(msg => msg.dataset.index);
+                msgs = Array.from(selectedMessages).map(msg => msg.dataset.text);
                 messagesToRemove = selectedMessages;
             } else {
-                indices = [btn.dataset.index];
+                msgs = [btn.closest('.message').dataset.text];
                 messagesToRemove = [btn.closest('.message')];
             }
 
-            sendCmd('mv', ['archive', indices.join(',')]);
-            log(indices);
+            for (const msg of msgs) {
+                const [title, content] = extractTitleAndContent(msg, MAX_TITLE_LENGTH);
+                const path = joinPath(btn.dataset.dir, title);
+                for (const msg of msgs) {
+                    await moveFromInbox(msg, async msg => {await write(path, content)});
+                }
+            }
+
             messagesToRemove.forEach(message => {
                 message.classList.add('removing');
                 setTimeout(() => {
@@ -722,170 +754,122 @@ function attachEventListeners() {
     });
 }
 
-function saveEdit(noteId, newText) {
-    const note = messages.find(n => n.id == noteId);
-    if (note && newText.trim() !== '') {
-        note.text = newText.trim();
-        saveData();
-    }
-}
-
-function scrollToBottom() {
-    setTimeout(function () {
-        inbox.scrollTop = inbox.scrollHeight;
-    }, 100);
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function autoResize() {
-    if (chatInput.value === '') {
-        chatInput.style.height = '';
+function renderMessages() {
+    if (messages.length === 0) {
+        inbox.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-title">Free your head</div>
+                <div class="empty-desc">Drop whatever’s on your mind here</div>
+            </div>
+        `;
         return;
     }
 
-    if (chatInput.value.split('\n').length <= 1) {
-        return;
-    }
+    const recentFiles = getRecentlyModifiedFiles();
+    const recentFilesButtons = recentFiles.map(filename => `
+    <div class="btn-wrapper">
+       <button class="action-btn to-recent-btn" data-filename="${filename}">
+           ${filename.replace(/\.md$/, '').slice(0, 10)}${filename.replace(/\.md$/, '').length > 10 ? '…' : ''}
+       </button>
+       <span class="btn-label">To ${filename.replace(/\.md$/, '')}</span>
+    </div>
+    `).join('');
 
-    chatInput.style.height = 'auto';
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 250) + 'px';
-}
+    // add own class every other message
+    inbox.innerHTML = messages.map((message, i) => `
+        <div class="message ${i % 2 === 1 ? 'own' : ''}" data-text="${message.text}">
+            <div class="message-content" 
+                 contenteditable="true" 
+                 data-text="${message.text}"
+                 spellcheck="false">${escapeHtml(message.text)}</div>
+            <div class="message-hover-zone"></div>
+            <div class="message-footer">
+                <span class="message-time">${message.timestamp}</span>
+                <div class="message-actions">
+                    ${recentFilesButtons}
+                    <div class="btn-wrapper">
+                        <button class="action-btn to-file-btn" data-text="${message.text}">
+                            <?xml version="1.0" encoding="utf-8"?>
+                            <svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M13 3H8.2C7.0799 3 6.51984 3 6.09202 3.21799C5.71569 3.40973 5.40973 3.71569 5.21799 4.09202C5 4.51984 5 5.0799 5 6.2V17.8C5 18.9201 5 19.4802 5.21799 19.908C5.40973 20.2843 5.71569 20.5903 6.09202 20.782C6.51984 21 7.0799 21 8.2 21H12M13 3L19 9M13 3V7.4C13 7.96005 13 8.24008 13.109 8.45399C13.2049 8.64215 13.3578 8.79513 13.546 8.89101C13.7599 9 14.0399 9 14.6 9H19M19 9V12M17 19H21M19 17V21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            </svg>
+                        </button>
+                    <span class="btn-label">To File</span>
+                    </div>
+                    
+                    <div class="btn-wrapper"> 
+                    <button class="action-btn submenu-btn to-dir-btn" data-text="${message.text}">
+                        <svg width="32px" height="32px" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="none"> <path stroke-linecap="round" stroke-width="3" fill="none" d="M28 11v13a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h6c3 0 3 3 5 3h9.003C27.108 9 28 9.895 28 11z"/> </svg>
+                    </button>
+                    <span class="btn-label">To Dir</span>
+                    </div>
+                    
+                    <div class="btn-wrapper">
+                    <button class="action-btn to-checklist-btn" data-checklist="Today.txt">
+                        <?xml version="1.0" encoding="utf-8"?>
+                        <svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="m20.215 2.387-8.258 10.547-2.704-3.092a1 1 0 1 0-1.506 1.316l3.103 3.548a1.5 1.5 0 0 0 2.31-.063L21.79 3.62a1 1 0 1 0-1.575-1.233zM20 11a1 1 0 0 0-1 1v6.077c0 .459-.021.57-.082.684a.364.364 0 0 1-.157.157c-.113.06-.225.082-.684.082H5.923c-.459 0-.57-.022-.684-.082a.363.363 0 0 1-.157-.157c-.06-.113-.082-.225-.082-.684V5.5a.5.5 0 0 1 .5-.5l8.5.004a1 1 0 1 0 0-2L5.5 3A2.5 2.5 0 0 0 3 5.5v12.577c0 .76.082 1.185.319 1.627.224.419.558.753.977.977.442.237.866.319 1.627.319h12.154c.76 0 1.185-.082 1.627-.319.42-.224.754-.558.978-.977.236-.442.318-.866.318-1.627V12a1 1 0 0 0-1-1z" stroke="none"/></svg>   
+                    </button>
+                    <span class="btn-label">To Do</span>
+                    </div>
+                    
+                    <div class="btn-wrapper">
+                        <button class="action-btn to-journal-btn" data-text="${message.text}">
+                            <svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 
+                                4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 
+                                18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 
+                                12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 
+                                18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 
+                                5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" 
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            </svg>
+                        </button>
+                        <span class="btn-label">To Journal</span>
+                    </div>
+                    
+                    <div class="btn-wrapper">
+                        <button class="action-btn to-checklist-btn" data-checklist="Read.txt">
+                            <?xml version="1.0" encoding="utf-8"?>
+                            <svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 19V6.2C4 5.0799 4 4.51984 4.21799 4.09202C4.40973 3.71569 4.71569 3.40973 5.09202 3.21799C5.51984 3 6.0799 3 7.2 3H16.8C17.9201 3 18.4802 3 18.908 3.21799C19.2843 3.40973 19.5903 3.71569 19.782 4.09202C20 4.51984 20 5.0799 20 6.2V17H6C4.89543 17 4 17.8954 4 19ZM4 19C4 20.1046 4.89543 21 6 21H20M9 7H15M9 11H15M19 17V21"  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            </svg>
+                        </button>
+                        <span class="btn-label">To Read</span>
+                    </div>
+                    
+                    <div class="btn-wrapper">
+                        <button class="action-btn to-checklist-btn" data-checklist="Shop.txt">
+                            <?xml version="1.0" encoding="utf-8"?>
+                            <svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path clip-rule="evenodd" d="M2 1C1.44772 1 1 1.44772 1 2C1 2.55228 1.44772 3 2 3H3.21922L6.78345 17.2569C5.73276 17.7236 5 18.7762 5 20C5 21.6569 6.34315 23 8 23C9.65685 23 11 21.6569 11 20C11 19.6494 10.9398 19.3128 10.8293 19H15.1707C15.0602 19.3128 15 19.6494 15 20C15 21.6569 16.3431 23 18 23C19.6569 23 21 21.6569 21 20C21 18.3431 19.6569 17 18 17H8.78078L8.28078 15H18C20.0642 15 21.3019 13.6959 21.9887 12.2559C22.6599 10.8487 22.8935 9.16692 22.975 7.94368C23.0884 6.24014 21.6803 5 20.1211 5H5.78078L5.15951 2.51493C4.93692 1.62459 4.13696 1 3.21922 1H2ZM18 13H7.78078L6.28078 7H20.1211C20.6742 7 21.0063 7.40675 20.9794 7.81078C20.9034 8.9522 20.6906 10.3318 20.1836 11.3949C19.6922 12.4251 19.0201 13 18 13ZM18 20.9938C17.4511 20.9938 17.0062 20.5489 17.0062 20C17.0062 19.4511 17.4511 19.0062 18 19.0062C18.5489 19.0062 18.9938 19.4511 18.9938 20C18.9938 20.5489 18.5489 20.9938 18 20.9938ZM7.00617 20C7.00617 20.5489 7.45112 20.9938 8 20.9938C8.54888 20.9938 8.99383 20.5489 8.99383 20C8.99383 19.4511 8.54888 19.0062 8 19.0062C7.45112 19.0062 7.00617 19.4511 7.00617 20Z" stroke="none"/>
+                            </svg>
+                        </button>
+                    <span class="btn-label">To Shop</span>
+                    </div>
+                    
+                    <div class="btn-wrapper">
+                    <button class="action-btn to-checklist-btn" data-index="${message.index}" data-checklist="Watch.txt">
+                        <?xml version="1.0" encoding="utf-8"?>
+                        <svg fill="var(--col-link)" stroke="none" width="32px" height="32px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18,6H14.41l2.3-2.29a1,1,0,1,0-1.42-1.42L12,5.54l-1.17-2a1,1,0,1,0-1.74,1L10,6H6A3,3,0,0,0,3,9v8a3,3,0,0,0,3,3v1a1,1,0,0,0,2,0V20h8v1a1,1,0,0,0,2,0V20a3,3,0,0,0,3-3V9A3,3,0,0,0,18,6Zm1,11a1,1,0,0,1-1,1H6a1,1,0,0,1-1-1V9A1,1,0,0,1,6,8H18a1,1,0,0,1,1,1Z" stroke="none"/></svg>
+                    </button>                    
+                        <span class="btn-label">To Watch</span>
+                    </div>
+                   
+                    <div class="btn-wrapper">
+                        <button class="action-btn to-archive-btn" data-dir="archive">
+                            <?xml version="1.0" encoding="utf-8"?>
+                                <svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20.5001 7H3.5" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                                <path d="M18.8332 8.5L18.3732 15.3991C18.1962 18.054 18.1077 19.3815 17.2427 20.1907C16.3777 21 15.0473 21 12.3865 21H11.6132C8.95235 21 7.62195 21 6.75694 20.1907C5.89194 19.3815 5.80344 18.054 5.62644 15.3991L5.1665 8.5" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                                <path d="M6.5 6C6.55588 6 6.58382 6 6.60915 5.99936C7.43259 5.97849 8.15902 5.45491 8.43922 4.68032C8.44784 4.65649 8.45667 4.62999 8.47434 4.57697L8.57143 4.28571C8.65431 4.03708 8.69575 3.91276 8.75071 3.8072C8.97001 3.38607 9.37574 3.09364 9.84461 3.01877C9.96213 3 10.0932 3 10.3553 3H13.6447C13.9068 3 14.0379 3 14.1554 3.01877C14.6243 3.09364 15.03 3.38607 15.2493 3.8072C15.3043 3.91276 15.3457 4.03708 15.4286 4.28571L15.5257 4.57697C15.5433 4.62992 15.5522 4.65651 15.5608 4.68032C15.841 5.45491 16.5674 5.97849 17.3909 5.99936C17.4162 6 17.4441 6 17.5 6" stroke-width="1.5" fill="none"/>
+                            </svg>
+                        </button>
+                        <span class="btn-label">To Archive</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
 
-function sendCmd(cmd, params) {
-    log('Sending CMD to wasm', cmd, params)
-    let cmdObj = {
-        n: cmd,
-        t: "cmd",
-        p: params.map(p => p.toString()),
-    }
-    wasmReplyCmd(JSON.stringify(cmdObj));
-}
-
-function getRecentlyModifiedFiles() {
-    if (files === undefined) return [];
-
-    const entries = [];
-    for (const filename in files) {
-        const content = files[filename];
-        if (filename && content &&
-            ![
-                toFilename(INBOX_PATH),
-                toFilename(CONFIG_PATH),
-                toFilename(TODAY_PATH),
-                toFilename(LATER_PATH),
-                toFilename(WATCH_PATH),
-                toFilename(READ_PATH),
-                toFilename(SHOP_PATH),
-            ].includes(filename)) {
-            entries.push([filename, content]);
-        }
-    }
-
-    for (let i = 0; i < entries.length - 1; i++) {
-        for (let j = i + 1; j < entries.length; j++) {
-            const aTime = new Date(entries[i][1].lastModified || 0);
-            const bTime = new Date(entries[j][1].lastModified || 0);
-            if (aTime < bTime) {
-                // Swap
-                const temp = entries[i];
-                entries[i] = entries[j];
-                entries[j] = temp;
-            }
-        }
-    }
-
-    // Take first 3 and extract filenames
-    const result = [];
-    const limit = Math.min(3, entries.length);
-    for (let i = 0; i < limit; i++) {
-        result.push(entries[i][0]);
-    }
-
-    return result;
-}
-
-chatInput.addEventListener('paste', async (e) => {
-    const items = e.clipboardData.items;
-
-    for (const item of items) {
-        if (item.kind === 'file' && item.type.startsWith('image/')) {
-            e.preventDefault();
-            const file = item.getAsFile();
-            const fileName = generateSafeFileName(file.name);
-
-            const saved = await writeMediaFile(fileName, file);
-            if (saved) {
-                const imageMarkdown = `![${fileName}](media/${fileName})\n`;
-
-                const cursorPos = chatInput.selectionStart;
-                const textBefore = chatInput.value.substring(0, cursorPos);
-                const textAfter = chatInput.value.substring(chatInput.selectionEnd);
-
-                chatInput.value = textBefore + imageMarkdown + textAfter;
-
-                const newCursorPos = cursorPos + imageMarkdown.length;
-                chatInput.setSelectionRange(newCursorPos, newCursorPos);
-                chatInput.focus();
-            }
-            break;
-        }
-    }
-});
-
-function todayJournalFilename() {
-    const now = new Date();
-    const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    const monthIndex = parseInt(now.toLocaleDateString('en-US', { month: 'numeric', })) - 1;
-    const year = parseInt(now.toLocaleDateString('en-US', { year: 'numeric'}));
-    const month = (monthIndex + 1).toString().padStart(2, '0');
-    return `${year}.${month} ${monthNames[monthIndex]}.md`;
-}
-
-function todayHeader(timezone) {
-    const now = new Date();
-    const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    const dayNames = [
-        'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
-    ];
-
-    const day = parseInt(now.toLocaleDateString('en-US', { day: 'numeric', timeZone: timezone }));
-    const monthIndex = parseInt(now.toLocaleDateString('en-US', { month: 'numeric', timeZone: timezone })) - 1;
-    const year = parseInt(now.toLocaleDateString('en-US', { year: 'numeric', timeZone: timezone }));
-    const dayIndex = new Date(now.toLocaleDateString('en-US', { timeZone: timezone })).getDay();
-
-    return `#### ${day} ${monthNames[monthIndex]} ${year}, ${dayNames[dayIndex]}`;
-}
-
-async function addToJournal(text) {
-    text = text.trim();
-    const journalFilename = todayJournalFilename();
-    const journalPath = `journal/${journalFilename}`;
-    await addHeaderAndText(journalPath, todayHeader(), text);
-}
-
-async function moveFromInbox(text, callback) {
-    callback(text);
-    const inboxContent = await read(INBOX_PATH);
-    const lines = normNewLines(inboxContent).split('\n');
-    let filteredLines = [];
-    // remove lines that has `xx:xx` + record
-    const timePattern = /^\`\d{2}:\d{2}\`\s*/;
-    for (const line of lines) {
-        if (line.replace(timePattern, '').trim() !== text.trim()) {
-            filteredLines.push(line);
-        }
-    }
-
-    await write(INBOX_PATH, filteredLines.join('\n'));
+    attachEventListeners();
 }
