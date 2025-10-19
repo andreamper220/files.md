@@ -63,11 +63,6 @@ func AddHeaderAndText(existingContent, header, newContent string) string {
 			insertIndex = i
 			break
 		}
-		// If we encounter an empty line, insert before it
-		if strings.TrimSpace(lines[i]) == "" {
-			insertIndex = i
-			break
-		}
 		insertIndex = i + 1
 	}
 

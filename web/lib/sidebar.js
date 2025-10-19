@@ -1282,5 +1282,3 @@ var TreeConfig = {
     checklists_icon: TreeUtil.checklists_icon,
     context_menu: undefined
 };
-
-

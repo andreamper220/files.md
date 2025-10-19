@@ -119,28 +119,27 @@ async function addHeaderAndText(path, header, text, atStart = false) {
         formattedContent = `${timestamp} ${text}`;
     }
 
-    let existingText = '';
+    let existingContent = '';
     try {
-        existingText = await read(path);
-        existingText = normNewLines(existingText);
-        existingText = existingText.trim();
+        existingContent = await read(path);
     } catch (err) {
-        existingText = '';
+        existingContent = '';
     }
+    existingContent = normNewLines(existingContent);
+    existingContent = existingContent.trim();
 
     let result;
-    if (!existingText.includes(header)) {
-        if (existingText === "") {
+    if (!existingContent.includes(header)) {
+        if (existingContent === "") {
             result = `${header}\n${formattedContent}`;
         } else {
-            result = atStart
-                ? `${header}\n${formattedContent}\n\n${existingText}`
-                : `${existingText}\n\n${header}\n${formattedContent}`;
+            result = `${header}\n${formattedContent}\n\n${existingContent}`;
         }
     } else {
-        const lines = existingText.split("\n");
+        const lines = existingContent.split("\n");
         let headerIndex = -1;
 
+        // Find the header line
         for (let i = 0; i < lines.length; i++) {
             if (lines[i] === header) {
                 headerIndex = i;
@@ -149,29 +148,26 @@ async function addHeaderAndText(path, header, text, atStart = false) {
         }
 
         if (headerIndex === -1) {
-            if (atStart) {
-                result = `${header}\n${formattedContent}\n\n${existingText}`;
-            } else {
-                result = `${existingText}\n\n${header}\n${formattedContent}`;
-            }
+            result = `${header}\n${formattedContent}\n\n${existingContent}`;
         } else {
+            // Find where to insert (after the last line belonging to this header)
             let insertIndex = headerIndex + 1;
+
+            // Look for the next header or end of content
             for (let i = headerIndex + 1; i < lines.length; i++) {
                 if (lines[i].startsWith("###")) {
-                    insertIndex = i;
-                    break;
-                }
-                if (lines[i].trim() === "") {
                     insertIndex = i;
                     break;
                 }
                 insertIndex = i + 1;
             }
 
+            // Insert the new content
             const newLines = [];
             newLines.push(...lines.slice(0, insertIndex));
             newLines.push(formattedContent);
 
+            // Add empty line after new content if there's content following and it's not empty
             if (insertIndex < lines.length && lines[insertIndex].trim() !== "") {
                 newLines.push("");
             }
