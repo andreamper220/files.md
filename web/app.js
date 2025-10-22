@@ -17,7 +17,7 @@ const LATER_PATH = '/Later.txt';
 const DONE_PATH = '/archive/Done.txt';
 const LOG_PATH = '/archive/Log.txt';
 
-async function init(el) {
+async function init() {
     // Authorize if we have one-time token in URL.
     const urlParams = new URLSearchParams(window.location.search);
     const oneTimeToken = urlParams.get('token');
@@ -887,4 +887,9 @@ function logf(prefix, color, args) {
         writeAtEnd(LOG_PATH, logMsg);
     } catch (error) {
     }
+}
+
+let operationCounter = 0;
+function opId() {
+    return `${++operationCounter}`;
 }

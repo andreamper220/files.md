@@ -673,7 +673,6 @@ async function getFileStatus(path) {
 
 // TODO split into two, sometimes we need just compare
 async function isContentEqual(path, content) {
-    log('checking content for', path);
     let fileHandle = await getFileHandle(path);
     if (fileHandle === null) {
         // TODO fix once Chromium fixes the bug
@@ -908,8 +907,11 @@ function saveServerFiles() {
     localStorage.setItem(SERVER_STORAGE_KEY, JSON.stringify(server));
 }
 
-// TODO save old file
+// Should be atomic?
 async function openFile(path, saveToHistory = true, el = 'editor-textarea') {
+    const id = opId();
+    log(`Opening file: ${path} in element: ${el}, opId: ${id}`, id);
+
     // Why we do normalize here as well?
     path = path.normalize('NFC');
     const memFile = getMemFile(path);
@@ -917,17 +919,17 @@ async function openFile(path, saveToHistory = true, el = 'editor-textarea') {
         return;
     }
 
+    // Save the old file
+    // TODO what if we open same file?
     if (el === 'editor-textarea') {
         currentEditor = editor;
     } else if (el === 'editor2-textarea') {
         currentEditor = editor2;
     }
-
-    // Sync previous file
-    // TODO what if we open same file?
     if (currentEditor.path !== undefined) {
-        log('sync previous file');
+        log('Began syncing previous file');
         await syncCurrentFile(false);
+        log('Finished syncing previous file');
     }
 
     if (path === INBOX_PATH) {
@@ -1010,7 +1012,7 @@ async function openFile(path, saveToHistory = true, el = 'editor-textarea') {
     }
 
     const end = performance.now();
-    log(`File ${path} opened in: ${(end - start).toFixed(3)} milliseconds`);
+    log(`File ${path} opened in: ${(end - start).toFixed(3)} milliseconds, opId: ${id}`);
 
     // Once we spent enough time in file, set viewportMargin to infinity to prevent artefacts.
     // Artefacts can be observed during text selection (cmd+a).
@@ -1049,86 +1051,6 @@ async function syncCurrentFile(syncWithServer = true) {
         return path === window.currentEditor.path;
     }
 
-    // Track in-editor renaming.
-    if (path !== INBOX_PATH) {
-        const filename = toFilename(path);
-        try {
-            // TODO track if no first line?
-            const firstLine = currentEditor.getValue().split('\n')[0];
-            let newFilename = ucfirst(fromHeaderToFilename(firstLine));
-            // If filename is empty, generate an available "Untitled" name
-            // TODO check for forbidden filename chars
-            // TODO We don't handle txt renaming here
-            let hasEmptyName = newFilename.trim() === '.md';
-            if (hasEmptyName) {
-                let hasOldName = !filename.startsWith('Untitled');
-                if (hasOldName) {
-                    newFilename = 'Untitled.md';
-                    let counter = 1;
-                    // TODO multidir
-                    // while (files[dir][newFilename]) {
-                    //     newFilename = `Untitled ${counter}.md`;
-                    //     counter++;
-                    // }
-                } else {
-                    // TODO add tests
-                    // Already renamed to untitled
-                    newFilename = filename;
-                }
-            }
-
-            const hasFilenameChanged = newFilename.toLowerCase() !== filename.toLowerCase();
-            if (hasFilenameChanged) {
-                log('Filename has changed from ', filename, 'to', newFilename);
-                // Change the file immediately, because on further await calls it can be synced by syncTexts.
-                currentEditor.path = joinPath(toDirPath(path), newFilename);
-
-                // 1. Remove file with old filename
-                // 2. Create file with new filename
-
-                let content = getCurrentContent();
-                // TODO every await means we can can have RC due to editor content change
-                await remove(path);
-                log('Removed due to filename change', path);
-
-                // Get fresher content after await.
-                // if (isCurrentEditorSame()) {
-                //     content = getCurrentContent();
-                // }
-
-                // if (isCurrentEditorSame()) {
-                //     content = getCurrentContent();
-                //     // Change current file if the editor is unchanged.
-                // }
-                const newPath = joinPath(toDirPath(path), newFilename);
-                addMemFile(newPath, {
-                    isFile: true,
-                    content: content,
-                    lastModified: 0,
-                    path: newPath,
-                    handle: await getFileHandle(newPath, true),
-                });
-                await writeIfContentIsDifferent(newPath, getCurrentContent());
-                setServerFile(newPath, content, 0);
-                saveServerFiles();
-                log('Created', newPath);
-
-                await renderSidebar();
-
-                // Used further for syncing.
-                // filename = newFilename;
-
-                // Let's call it a day?
-                isSyncingCurrentFile = false;
-                return;
-            }
-        } catch (error) {
-            console.error('Error during filename change:', error);
-            isSyncingCurrentFile = false;
-            return;
-        }
-    }
-
     if (path === INBOX_PATH) {
         // Try to load local changes.
         if (chatIsClean) {
@@ -1145,7 +1067,6 @@ async function syncCurrentFile(syncWithServer = true) {
 
                 let localLastModified = file.lastModified;
                 // TODO inmemory lastmodified should be reloaded
-                let chatFileExists = inMemoryLastModified !== undefined;
                 if (inMemoryLastModified !== localLastModified) {
                     log(files);
                     await openFile(INBOX_PATH);
@@ -1167,6 +1088,84 @@ async function syncCurrentFile(syncWithServer = true) {
             }
         }
 
+        isSyncingCurrentFile = false;
+        return;
+    }
+
+    // Track in-editor renaming based on header.
+    const filename = toFilename(path);
+    try {
+        // TODO track if no first line?
+        const firstLine = currentEditor.getValue().split('\n')[0];
+        let newFilename = ucfirst(fromHeaderToFilename(firstLine));
+        // If filename is empty, generate an available "Untitled" name
+        // TODO check for forbidden filename chars
+        // TODO We don't handle txt renaming here
+        let hasEmptyName = newFilename.trim() === '.md';
+        if (hasEmptyName) {
+            let hasOldName = !filename.startsWith('Untitled');
+            if (hasOldName) {
+                newFilename = 'Untitled.md';
+                let counter = 1;
+                // TODO multidir
+                // while (files[dir][newFilename]) {
+                //     newFilename = `Untitled ${counter}.md`;
+                //     counter++;
+                // }
+            } else {
+                // TODO add tests
+                // Already renamed to untitled
+                newFilename = filename;
+            }
+        }
+
+        const hasFilenameChanged = newFilename.toLowerCase() !== filename.toLowerCase();
+        if (hasFilenameChanged) {
+            log('Filename has changed from ', filename, 'to', newFilename);
+            // Change the file immediately, because on further await calls it can be synced by syncTexts.
+            currentEditor.path = joinPath(toDirPath(path), newFilename);
+
+            // 1. Remove file with old filename
+            // 2. Create file with new filename
+
+            let content = getCurrentContent();
+            // TODO every await means we can can have RC due to editor content change
+            await remove(path);
+            log('Removed due to filename change', path);
+
+            // Get fresher content after await.
+            // if (isCurrentEditorSame()) {
+            //     content = getCurrentContent();
+            // }
+
+            // if (isCurrentEditorSame()) {
+            //     content = getCurrentContent();
+            //     // Change current file if the editor is unchanged.
+            // }
+            const newPath = joinPath(toDirPath(path), newFilename);
+            addMemFile(newPath, {
+                isFile: true,
+                content: content,
+                lastModified: 0,
+                path: newPath,
+                handle: await getFileHandle(newPath, true),
+            });
+            await writeIfContentIsDifferent(newPath, getCurrentContent());
+            setServerFile(newPath, content, 0);
+            saveServerFiles();
+            log('Created', newPath);
+
+            await renderSidebar();
+
+            // Used further for syncing.
+            // filename = newFilename;
+
+            // Let's call it a day?
+            isSyncingCurrentFile = false;
+            return;
+        }
+    } catch (error) {
+        console.error('Error during filename change:', error);
         isSyncingCurrentFile = false;
         return;
     }
