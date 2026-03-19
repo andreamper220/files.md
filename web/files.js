@@ -1124,8 +1124,6 @@ async function syncCurrentEditor(syncWithServer = true) {
             }
         }
 
-        isMessingWithCurrentEditor = false;
-
         if (syncWithServer) {
             try {
                 await syncLocalFileWithServer(INBOX_PATH);
@@ -1133,6 +1131,10 @@ async function syncCurrentEditor(syncWithServer = true) {
                 console.error('Error during sync with server:', error);
             }
         }
+
+        // We had a bug when this was released before syncLocalFileWithServer.
+        // Sync local file with server produced concurent requests and race coditions with writing timestamps.
+        isMessingWithCurrentEditor = false;
 
         return;
     }
@@ -1285,8 +1287,6 @@ async function syncCurrentEditor(syncWithServer = true) {
         isSaving = false;
     }
 
-    isMessingWithCurrentEditor = false;
-
     if (syncWithServer) {
         try {
             await syncLocalFileWithServer(path);
@@ -1294,6 +1294,10 @@ async function syncCurrentEditor(syncWithServer = true) {
             console.error('Error during sync with server:', error);
         }
     }
+
+    // We had a bug when this was released before syncLocalFileWithServer.
+    // Sync local file with server produced concurent requests and race coditions with writing timestamps.
+    isMessingWithCurrentEditor = false;
 }
 
 function hash(str) {
