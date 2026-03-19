@@ -1128,6 +1128,7 @@ async function syncCurrentEditor(syncWithServer = true) {
             try {
                 await syncLocalFileWithServer(INBOX_PATH);
             } catch (error) {
+                isMessingWithCurrentEditor = false;
                 console.error('Error during sync with server:', error);
             }
         }
@@ -1291,6 +1292,7 @@ async function syncCurrentEditor(syncWithServer = true) {
         try {
             await syncLocalFileWithServer(path);
         } catch (error) {
+            isMessingWithCurrentEditor = false;
             console.error('Error during sync with server:', error);
         }
     }
