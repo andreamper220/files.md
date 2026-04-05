@@ -11,11 +11,11 @@ import (
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slog"
 
-	"github.com/zakirullin/files.md/pkg/txt"
 	"github.com/zakirullin/files.md/server"
 	"github.com/zakirullin/files.md/server/db"
 	"github.com/zakirullin/files.md/server/fs"
 	"github.com/zakirullin/files.md/server/journal"
+	"github.com/zakirullin/files.md/server/pkg/txt"
 	"github.com/zakirullin/files.md/server/sched"
 	"github.com/zakirullin/files.md/server/userconfig"
 )

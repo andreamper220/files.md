@@ -14,14 +14,14 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/afero"
 
-			"github.com/zakirullin/files.md/pkg/tg"
-	"github.com/zakirullin/files.md/pkg/txt"
+	"github.com/zakirullin/files.md/server/pkg/tg"
+	"github.com/zakirullin/files.md/server/pkg/txt"
 	"github.com/zakirullin/files.md/server"
 	"github.com/zakirullin/files.md/server/config"
-"github.com/zakirullin/files.md/server/db"
+	"github.com/zakirullin/files.md/server/db"
 	"github.com/zakirullin/files.md/server/fs"
 	"github.com/zakirullin/files.md/server/i18n"
-"github.com/zakirullin/files.md/server/sched/worker"
+	"github.com/zakirullin/files.md/server/sched/worker"
 	"github.com/zakirullin/files.md/server/sync"
 	"github.com/zakirullin/files.md/server/userconfig"
 )

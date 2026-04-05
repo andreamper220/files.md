@@ -3,8 +3,8 @@ package userconfig
 import (
 	"fmt"
 
-	"github.com/zakirullin/files.md/pkg/tg"
 	"github.com/zakirullin/files.md/server/consts"
+	"github.com/zakirullin/files.md/server/pkg/tg"
 )
 
 var AvailableQuickBtns = []tg.Btn{

@@ -11,7 +11,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-	"github.com/zakirullin/files.md/pkg/txt"
+	"github.com/zakirullin/files.md/server/pkg/txt"
 )
 
 var (

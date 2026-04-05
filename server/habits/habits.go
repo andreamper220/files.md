@@ -10,9 +10,9 @@ import (
 
 	"github.com/rivo/uniseg"
 
-	"github.com/zakirullin/files.md/pkg/txt"
 	"github.com/zakirullin/files.md/server/fs"
 	"github.com/zakirullin/files.md/server/i18n"
+	"github.com/zakirullin/files.md/server/pkg/txt"
 )
 
 // [1 => false, <year day> => 0, 1...]

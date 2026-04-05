@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/zakirullin/files.md/pkg/tg"
+	"github.com/zakirullin/files.md/server/pkg/tg"
 )
 
 // FakeDB is a fake database, used for testing

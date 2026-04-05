@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/zakirullin/files.md/pkg/tg"
-	"github.com/zakirullin/files.md/pkg/txt"
 	"github.com/zakirullin/files.md/server/config"
 	"github.com/zakirullin/files.md/server/consts"
 	i18n2 "github.com/zakirullin/files.md/server/i18n"
+	"github.com/zakirullin/files.md/server/pkg/tg"
+	"github.com/zakirullin/files.md/server/pkg/txt"
 	"github.com/zakirullin/files.md/server/userconfig"
 )
 
