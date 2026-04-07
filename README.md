@@ -1,6 +1,6 @@
 <img src="https://github.com/zakirullin/files.md/raw/main/web/icon.png" alt="Files.md logo" title="Files.md" align="right" height="76" />
 
-# Files.md 
+# Files.md  
 A simple application for your `.md` files.
 
 <img src="https://github.com/zakirullin/files.md/raw/main/web/app.png" alt="Files.md screenshot" title="Files.md"/>
@@ -12,14 +12,18 @@ You can store whole your life:
 
 All in plain `.md` files, locally.  
 
+You can try it out:
+https://app.files.md
+
 ## Why?
-1) I used `files.md` to grow my knowledge base about Software Development and Brain.
-2) I added new notes to the knowledge base. One idea per note.
+
+1) I used `files.md` to grow my knowledge about Software Development and Brain.
+2) I added new notes to the base. One idea per note.
 3) I made connections between notes. Everything should be connected, just as in our brain.
 4) I spend time travelling through notes and thinking it through.
-5) Software development and brain-related notes suddenly appeared to be very related.
-6) I got the insight.
-7) I wrote an article about [Cogitnive Load in Software Development](https://github.com/zakirullin/cognitive-load).
+5) Software development and brain-related notes suddenly appeared very related.
+6) **I got the insight**.
+7) I wrote an article about [Cognitive Load in Software Development](https://github.com/zakirullin/cognitive-load).
 
 Many considered it a great write-up.  
 
@@ -40,10 +44,22 @@ And it saves everything to `.md` files nicely.
 ## Telegram Bot 🤖
 <img src="https://github.com/zakirullin/files.md/raw/main/web/bot.png" alt="Telegram Bot screenshot" title="Telegram Bot"/>
 
-When we are focused and distracting information comes in, we want to get rid of it as quickly as possible. To do that, just send whatever is distracting you to the bot. Then choose how you want to save it - as a task, a note, or a journal entry. By default, it will be saved as today's task.
+When we are focused and distracting information comes in, we want to get rid of it as quickly as possible.  
+To do that, just send whatever is distracting you to the bot. Then choose how you want to save it - as a task, a note, or a journal entry.  
 
-It works like a regular chat, so it's easier to use because there's less resistance. We're used to sending messages to friends, now we're going to send stuff to the bot.
+It works like a regular chat, so it's easier to use because there's less resistance.  
+We're used to sending messages to friends, now we're going to send stuff to the bot.
 
+## Another note-taking app?
+Maybe. What could set it apart, is the simplicity.  
+The whole project should fit into one person's head.  
+
+1) Client app is located at `web/`. Offline-first PWA application, with no build systems whatsoever, just open `web/index.html` file.
+2) Server is located at `server/`. It 
+
+
+
+## Run your own Bot
 1) Install [Go](https://go.dev/doc/install)
 2) Register new telegram bot via [@BotFather](https://t.me/BotFather)
 3) Copy your bot token to `.env` file (see `.env.example`)

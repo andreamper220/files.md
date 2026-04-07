@@ -1,74 +1,164 @@
-async function getOPFSDirHandle() {
-    const root = await navigator.storage.getDirectory();
-    const entries = [];
-    for await (const entry of root.values()) {
-        entries.push(entry);
+// In-memory FS that mimics the File System Access API.
+// Used when OPFS is unavailable (e.g. file:// protocol).
+class MemFile {
+    constructor(name, content = '') {
+        this.kind = 'file';
+        this.name = name;
+        this._content = content;
+        this._lastModified = Date.now();
     }
 
-    if (entries.length === 0) {
-        async function createFiles(obj, dirHandle) {
-            for (const [name, data] of Object.entries(obj)) {
-                if (data.isFile) {
-                    const fileHandle = await dirHandle.getFileHandle(name, { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(data.content);
-                    await writable.close();
+    async getFile() {
+        const content = this._content;
+        const lastModified = this._lastModified;
+        const name = this.name;
+        return {
+            name,
+            lastModified,
+            size: new Blob([content]).size,
+            type: '',
+            text: async () => content,
+            arrayBuffer: async () => new TextEncoder().encode(content).buffer,
+        };
+    }
+
+    async createWritable(opts = {}) {
+        let buffer = opts.keepExistingData ? this._content : '';
+        let pos = opts.keepExistingData ? buffer.length : 0;
+        const self = this;
+        return {
+            async write(data) {
+                if (typeof data === 'string') {
+                    buffer = buffer.slice(0, pos) + data + buffer.slice(pos + data.length);
+                    pos += data.length;
                 } else {
-                    const subDirHandle = await dirHandle.getDirectoryHandle(removeTrailingSlash(name), { create: true });
-                    await createFiles(data, subDirHandle);
+                    const text = typeof data === 'string' ? data : await new Blob([data]).text();
+                    buffer = buffer.slice(0, pos) + text + buffer.slice(pos + text.length);
+                    pos += text.length;
                 }
-            }
-        }
-        await createFiles(DEFAULT_FILES, root);
+            },
+            async seek(offset) {
+                pos = offset;
+            },
+            async close() {
+                self._content = buffer;
+                self._lastModified = Date.now();
+            },
+        };
     }
 
-    return root;
+    async remove() {
+        if (this._parent) {
+            delete this._parent._entries[this.name];
+        }
+    }
 }
 
-async function migrateFromOPFSToLocal() {
-    try {
-        log('Starting migration from OPFS to Local FS...');
-        const opfsRoot = await navigator.storage.getDirectory();
-        const localRoot = await getSavedRootDirHandle();
+class MemDir {
+    constructor(name) {
+        this.kind = 'directory';
+        this.name = name;
+        this._entries = {};
+    }
 
-        // Copy files to local directory
-        let copiedCount = 0;
-        const operations = [];
-
-        walk(files, (path, isFile) => {
-            if (isFile) {
-                const operation = (async () => {
-                    try {
-                        // Read from OPFS
-                        const file = await (await getOPFSFileHandle(opfsRoot, path)).getFile();
-                        const content = await file.text();
-
-                        // Write to local FS
-                        const fileHandle = await getFileHandle(path, true);
-                        const writable = await fileHandle.createWritable();
-                        await writable.write(content);
-                        await writable.close();
-                        copiedCount++;
-                        log(`✓ Copied: ${path}`);
-                    } catch (error) {
-                        console.error(`✗ Failed to copy ${path}:`, error);
-                    }
-                })();
-                operations.push(operation);
+    async getDirectoryHandle(name, opts = {}) {
+        if (!this._entries[name]) {
+            if (opts.create) {
+                const dir = new MemDir(name);
+                this._entries[name] = dir;
             } else {
-                // Create directory in local FS
-                const operation = createDirectory(localRoot, path);
-                operations.push(operation);
+                const err = new DOMException(`Directory "${name}" not found.`, 'NotFoundError');
+                err.name = 'NotFoundError';
+                throw err;
             }
-        });
+        }
+        const entry = this._entries[name];
+        if (entry.kind !== 'directory') {
+            throw new DOMException(`"${name}" is not a directory.`, 'TypeMismatchError');
+        }
+        return entry;
+    }
 
-        // Wait for all operations to complete
-        await Promise.all(operations);
+    async getFileHandle(name, opts = {}) {
+        if (!this._entries[name]) {
+            if (opts.create) {
+                const file = new MemFile(name);
+                file._parent = this;
+                this._entries[name] = file;
+            } else {
+                const err = new DOMException(`File "${name}" not found.`, 'NotFoundError');
+                err.name = 'NotFoundError';
+                throw err;
+            }
+        }
+        const entry = this._entries[name];
+        if (entry.kind !== 'file') {
+            throw new DOMException(`"${name}" is not a file.`, 'TypeMismatchError');
+        }
+        return entry;
+    }
 
-        return { success: true, copiedCount };
-    } catch (error) {
-        console.error('Migration failed:', error);
-        return { success: false, error };
+    async *values() {
+        for (const entry of Object.values(this._entries)) {
+            yield entry;
+        }
+    }
+}
+
+function buildMemFS(obj, parent) {
+    for (const [name, data] of Object.entries(obj)) {
+        if (data.isFile) {
+            const file = new MemFile(name, data.content || '');
+            file._parent = parent;
+            parent._entries[name] = file;
+        } else {
+            const dirName = removeTrailingSlash(name);
+            const dir = new MemDir(dirName);
+            parent._entries[dirName] = dir;
+            buildMemFS(data, dir);
+        }
+    }
+}
+
+let _memFSRoot = null;
+function getMemFSRoot() {
+    if (!_memFSRoot) {
+        _memFSRoot = new MemDir('');
+        buildMemFS(DEFAULT_FILES, _memFSRoot);
+    }
+    return _memFSRoot;
+}
+
+async function getOPFSDirHandle() {
+    // OPFS requires a secure context (https or localhost), not available on file://
+    try {
+        const root = await navigator.storage.getDirectory();
+        const entries = [];
+        for await (const entry of root.values()) {
+            entries.push(entry);
+        }
+
+        if (entries.length === 0) {
+            async function createFiles(obj, dirHandle) {
+                for (const [name, data] of Object.entries(obj)) {
+                    if (data.isFile) {
+                        const fileHandle = await dirHandle.getFileHandle(name, { create: true });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(data.content);
+                        await writable.close();
+                    } else {
+                        const subDirHandle = await dirHandle.getDirectoryHandle(removeTrailingSlash(name), { create: true });
+                        await createFiles(data, subDirHandle);
+                    }
+                }
+            }
+            await createFiles(DEFAULT_FILES, root);
+        }
+
+        return root;
+    } catch (e) {
+        console.warn('OPFS unavailable, using in-memory FS:', e.message);
+        return getMemFSRoot();
     }
 }
 
