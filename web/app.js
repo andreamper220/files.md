@@ -90,10 +90,11 @@ async function init() {
     renderSidebar();
     log(`Sidebar built in: ${(performance.now() - perf).toFixed(3)} milliseconds`);
 
-    // perf = performance.now();
-    openInbox();
-    // showRandomFile();
-    // log(`Random file opened in: ${(performance.now() - perf).toFixed(3)} milliseconds`);
+    if (isMemFS) {
+        openFile('/🪴 Welcome.md');
+    } else {
+        openInbox();
+    }
 
     perf = performance.now();
     await syncTextsWithServer();

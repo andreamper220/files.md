@@ -75,6 +75,7 @@ class MemDir {
 }
 
 let memFSRoot = null;
+let isMemFS = false;
 function getMemFSRoot() {
     if (memFSRoot) return memFSRoot;
 
@@ -126,6 +127,7 @@ async function getOPFSDirHandle() {
         return root;
     } catch (e) {
         console.warn('OPFS unavailable, using in-memory FS:', e.message);
+        isMemFS = true;
         return getMemFSRoot();
     }
 }
