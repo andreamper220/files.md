@@ -4,7 +4,6 @@
 // Web folder is our doc root.
 const urlsToCache = [
     '/',
-    '/index.js',
     '/favicon.ico',
     '/icon.png',
     '/icon_small.png',
@@ -39,6 +38,7 @@ const urlsToCache = [
     '/lib/emoji.js',
     '/lib/fs.js',
     '/lib/md.js',
+    '/app.js',
     '/welcome.js',
     '/files.js',
     '/editor.js',
