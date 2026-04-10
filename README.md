@@ -42,9 +42,9 @@ Enough to do the real work.
 Many considered it a great write-up.  
 
 All this activity helped me to:
-- **Think deeply**  
+- **Think deeply** (which is very important in AI-age)
+- **Develop a systemic understanding across domains**
 - **Write insightful texts**
-- **Connect knowledge across domains**  
 
 To achieve all that, **you'll have to use your brain**. Not advanced workflows or AI automations.  
 
