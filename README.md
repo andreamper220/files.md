@@ -19,7 +19,7 @@ Maybe. But this time:
 - Only necessary features, **restrictions foster creativity**
 - No need to install anything, all you need is a browser
 - Works offline, Progressive Web Application
-- Local first
+- Local first, you own all your files
 - No telemetry or whatsoever - truly Open Source
 - Radically simple code
 - Portable, no build systems, just open `web/index.html` 
