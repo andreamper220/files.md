@@ -55,6 +55,12 @@ Only now I send notes and ideas to the bot.
 
 And it saves everything to `.md` files nicely.  
 
+## Journaling 💚
+
+## Tasks ✅
+
+## Checklists 🛒
+
 ## Telegram Bot 🤖
 <img src="https://github.com/zakirullin/files.md/raw/main/web/bot.png" alt="Telegram Bot screenshot" title="Telegram Bot"/>
 
@@ -63,7 +69,6 @@ To do that, just send whatever is distracting you to the bot. Then choose how yo
 
 It works like a regular chat, so it's easier to use because there's less resistance.  
 We're used to sending messages to friends, now we're going to send stuff to the bot.
-
 
 ## Run your own Bot
 1) Install [Go](https://go.dev/doc/install)
