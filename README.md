@@ -85,6 +85,25 @@ Bot's artifacts can be seen in `./storage/<USER_ID>` folder
 $ make init_server host=<YOUR_SSH_HOST> salt=<YOUR_SECRET_SALT>
 ```
 
+## Scripts
+All scripts are in `cmd/` and can be run on your knowledge base directory:
+```bash
+# f = path to files.md repo
+
+# Convert [[wikilinks]] to standard markdown links [Name](/path.md)
+go run /abs/path/to/files.md/cmd/tomdlinks/tomdlinks.go --dry-run .
+go run /abs/path/to/files.md/cmd/tomdlinks/tomdlinks.go .
+
+# Insert backlinks into notes (adds links back to referencing files)
+go run /abs/path/to/files.md/cmd/backlink/backlink.go
+
+# Shift timestamps in journal files by N hours (useful after timezone change)
+go run /abs/path/to/files.md/cmd/shifttime/shifttime.go
+
+# Parse Whoop CSV export and print 10-day journal summary
+go run /abs/path/to/files.md/cmd/whoop/whoop.go ./path-to-whoop-export
+```
+
 ## Repository structure
 `/cmd/server` - entrypoint for telegram bot (stable release)  
 `/cmd/bot` - entrypoint for local standalone bot (beta version)  
