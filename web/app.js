@@ -645,7 +645,7 @@ window.addEventListener('focus', async () => {
     document.getElementById('chat-input').focus();
 
     const savedDirectoryHandle = await getRootDirHandle();
-    // check if granted
+    // TODO check if access granted
 
     // Sync media first, so that new images for current file would be loaded
     await syncMedia();

@@ -25,7 +25,7 @@ e2eh: # headed e2e tests
 	go run ./cmd/server & \
 	cd tests && npm run test:headed $(if $(test),-g "$(test)")
 
-e2es: # run single test
+e2es: # run single test, e2es test="name"
 	cd tests && npm run test -- $(if $(test),-g "$(test)")
 
 e2esh: # run single test headed

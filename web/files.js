@@ -977,9 +977,10 @@ async function openFile(path, saveToHistory = true, el = 'editor-textarea') {
     } else if (el === 'editor2-textarea') {
         currentEditor = editor2;
     }
-    if (currentEditor.path !== undefined && currentEditor.path !== path) {
+    let newFileIsOpened = currentEditor.path !== undefined && currentEditor.path !== path;
+    if (newFileIsOpened) {
         log('Began syncing previous file');
-        await syncCurrentEditor(false);
+        await syncCurrentEditor(true);
         log('Finished syncing previous file');
     }
 
@@ -1052,14 +1053,6 @@ async function openFile(path, saveToHistory = true, el = 'editor-textarea') {
         log('cursor not null');
         currentEditor.setCursor(cursorPos);
         currentEditor.scrollTo(null, 0);
-        // const editorScrollHeight = currentEditor.getScrollInfo().clientHeight;
-        // Only scroll if editor'sheight more than current screen height
-        // const contentFitsTheScreen = editorScrollHeight <= window.innerHeight;
-        // log('FITS', contentFitsTheScreen);
-        // if (contentFitsTheScreen) {
-        // let margin = 500;
-        // currentEditor.scrollIntoView(cursorPos, margin);
-        // }
         // TODO only focus if there's no quick dialogue
         currentEditor.focus();
     } else {
@@ -1079,13 +1072,13 @@ async function openFile(path, saveToHistory = true, el = 'editor-textarea') {
 }
 
 // 0) Read content from local fs
-// 1) Save current content to local filesystem
+// 1) Save current editor content to local filesystem if there's diff
 // 2) Sync it with the server
-// TODO add hash of last read file comparison, merge on conflict (in which scenarious in can happen tho?)
+// TODO add hash of last read file comparison, merge on conflict (in which scenarios in can happen though?)
 // TODO It should be atomic.
 // If currentEditor is changed during the execution of this function, we'll have RC.
-// So, wherever we change currentEditor reference, we should lock via isSyncingCurrentEditor.
-async function syncCurrentEditor(syncWithServer = true) {
+// So, wherever we change currentEditor reference, we should lock via isMessingWithCurrentEditor.
+async function syncCurrentEditor(switchAwayEditor = false) {
     if (files === undefined || debug || currentEditor.path === undefined) {
         return;
     }
@@ -1131,7 +1124,9 @@ async function syncCurrentEditor(syncWithServer = true) {
                 if (inMemoryLastModified !== localLastModified) {
                     log(files);
                     isMessingWithCurrentEditor = false;
-                    await openFile(INBOX_PATH);
+                    if (!switchAwayEditor) {
+                        await openFile(INBOX_PATH);
+                    }
                     return;
                 }
             } catch (e) {
@@ -1143,7 +1138,7 @@ async function syncCurrentEditor(syncWithServer = true) {
 
         isMessingWithCurrentEditor = false;
 
-        if (syncWithServer) {
+        if (!switchAwayEditor) {
             try {
                 await syncLocalFileWithServer(INBOX_PATH);
             } catch (error) {
@@ -1252,7 +1247,9 @@ async function syncCurrentEditor(syncWithServer = true) {
         // Changes only from local system
         try {
             isMessingWithCurrentEditor = false;
-            await openFile(path, false);
+            if (!switchAwayEditor) {
+                await openFile(path, false);
+            }
         } catch (error) {
             console.error('Error opening file:', error);
             isMessingWithCurrentEditor = false;
@@ -1304,7 +1301,7 @@ async function syncCurrentEditor(syncWithServer = true) {
 
     isMessingWithCurrentEditor = false;
 
-    if (syncWithServer) {
+    if (!switchAwayEditor) {
         try {
             await syncLocalFileWithServer(path);
         } catch (error) {
