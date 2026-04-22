@@ -794,7 +794,6 @@ async function renderMessages() {
                  contenteditable="true"
                  data-text="${escapeHtml(message.text)}"
                  spellcheck="false">${escapeHtml(message.text)}</div>
-            <div class="message-hover-zone"></div>
             <div class="message-footer">
                 <span class="message-time">${message.timestamp}</span>
                 <div class="message-actions">

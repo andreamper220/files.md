@@ -181,27 +181,9 @@
     bottom: -4px;
 }
 
-.message-hover-zone {
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 50px;
-}
-
-.message-hover-zone:hover + .message-footer .message-actions {
+.message:hover .message-actions {
     opacity: 1;
 }
-
-.message-actions:hover {
-    opacity: 1;
-}
-
-/*Disable action buttons when typing*/
-/*.message-content:focus ~ .message-hover-zone:hover + .message-footer .message-actions,*/
-/*.message-content:focus ~ .message-footer .message-actions {*/
-/*    opacity: 0 !important;*/
-/*}*/
 
 .message-time {
     position: absolute;
