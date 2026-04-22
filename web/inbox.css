@@ -180,6 +180,7 @@
 
 .message:hover .message-actions {
     opacity: 1;
+    transition-delay: 0.2s;
 }
 
 .message-time {
