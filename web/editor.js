@@ -228,14 +228,11 @@ function initEditor(el) {
                     if (isHeaderSelection) {
                         // Clear selection and move cursor to start of line 1
                         cm.setCursor({line: 1, ch: 0});
-                        cm.replaceRange('\n', {line: 1, ch: 0});
-                        cm.setCursor({line: 1, ch: 0});
                         return;
                     }
                 } else {
                     // No selection, just move cursor to next line
                     cm.setCursor({line: 1, ch: 0});
-                    cm.replaceSelection('\n');
                     return;
                 }
             }

@@ -180,7 +180,6 @@ test('sync existing files from client', async ({ page }) => {
 
 test('get changes for current file from server', async ({ page }) => {
     await createFileOnServer('File.md', 'test content');
-    // await page.waitForTimeout(1000);
     await createFileOnServer('Another.md', '*italic*');
 
     await setup(page);
