@@ -82,16 +82,18 @@ Only this time, I was sending messages to the bot:
     <img src="https://github.com/zakirullin/files.md/raw/main/web/bot.gif" alt="Telegram Bot" title="Telegram Bot" width="350"/>
 </div>
 
-That's it.   
+That's it, the note is saved in the `brain` directory.   
 
-Later I open [app.files.md](https://app.files.md) and make some connections between new and old notes.
+Later I open [app.files.md](https://app.files.md) and make some connections between new and old notes.  
 
 - You can start with no structure at all, 0 folders
 - One idea per note
 - A note should be understood without context
 - Related notes should be linked between each other
 
-That's all you need to take notes.  
+That's all you need to take notes. 
+
+My friends and I have been using this setup for five years and it works well.  
 
 Telegram bot: [@FilesMDBot](https://t.me/FilesMDBot) (other messengers will follow).  
 
