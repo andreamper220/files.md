@@ -178,7 +178,7 @@
     bottom: -4px;
 }
 
-.message:hover .message-actions {
+.message:hover:not(:has(.complete-btn:hover)) .message-actions {
     opacity: 1;
     transition-delay: 0.17s;
 }
