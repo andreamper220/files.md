@@ -14,7 +14,6 @@ You can store whole your life:
 All in plain `.md` files, locally. LLM-friendly.
 
 Try it out: [app.files.md](https://app.files.md).  
-There's also a [Telegram bot](https://t.me/FilesMDBot).  
 
 ## Another note-taking app?
 Maybe. But this time: 
@@ -22,7 +21,7 @@ Maybe. But this time:
 - No need to install anything, all you need is a browser
 - Works offline
 - Local first, you own all your files
-- Fully open source, you can tweak it however you want
+- Free and open source, you can tweak it however you want
 - Extremely simple code. **One person or an LLM can fit the whole project in head**
 - Portable, no build systems, just open `web/index.html` 
 - Out of the box synchronization
@@ -44,7 +43,7 @@ Many considered it a great write-up.
 
 All this activity helped me to:
 - **Think deeply** (which is very important in the AI-age)
-- **Think in systems and see a bigger picture**
+- **Think systematically and see the bigger picture**
 - **Write insightful texts**
 
 To achieve all that, **you'll have to use your brain**, not advanced templates or AI workflows.  
@@ -71,8 +70,8 @@ There's another path.
 ## How to take notes 🗒️
 Leonardo da Vinci, Charles Darwin, Jules Verne and many others took notes using just pen and paper.  
 
-You don't need to learn advanced tools to start taking notes.
-It's even better if you reuse something familiar.
+You don't need to learn advanced tools to start taking notes.  
+It's even better if you reuse familiar mental models.  
 For me that was chatting with friends.  
 
 Only this time, I was sending messages to the bot:  
@@ -83,12 +82,13 @@ Only this time, I was sending messages to the bot:
 
 That's it, the note is saved in the `brain` directory.   
 
-Later I open [app.files.md](https://app.files.md) and make some connections between new and old notes.  
+Later I open [app.files.md](https://app.files.md) and make some connections between new and old notes. I think through notes.    
 
 - You can start with no structure at all, 0 folders
 - One idea per note
 - A note should be understood without context
 - Related notes should be linked between each other
+- Notes should be revisited and thought through
 
 That's all you need to take notes. 
 
@@ -142,8 +142,19 @@ The only thing that matters is your calmness.
 ## Journaling 💚
 
 ## Tasks ✅
+You're in flow. A colleague comes in and ask you to reply to his email.  
+You don't hold this task in your head, it takes energy.  
+You send a message to the bot and continue being in the flow.  
+
+<files md record>
+
+No energy is spent, no flow is interrupted.  
 
 ## Checklists 🛒
+A good friend of yours recommends you a book.  
+You've run out of butter and cheese.  
+Things like these are easy to remember, but again they drain your mental energy.  
+
 
 ## Files structure
 You don't have to think about the structure, it is predefined.  
@@ -159,7 +170,6 @@ You don't have to think about the structure, it is predefined.
 - Archive: `archive/*`, `archive/Done.md` - completed items
 - Inbox: `Inbox.md` - incoming messages, append-only chat log
 - Config: `config.json` - per-user settings
-
 
 Scheme is also available at [files.md/llms.txt](https://files.md/llms.txt).  
 You can copy-paste it into `CLAUDE.md` or `AGENTS.md`, so that your AI agent would understand the structure.  
