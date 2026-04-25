@@ -34,7 +34,7 @@ Enough to do the real work.
 1) I used `files.md` to grow my knowledge about brain and software development
 2) I added new notes to either `brain` or `dev` folders. One idea per note
 3) I made connections between the notes. Everything is connected, just as in our brain
-4) I spend time travelling through the notes and thinking it through
+4) **I spent time travelling through the notes and thinking it through**
 5) At some point, `brain` and `dev` notes appeared very related
 6) I interconnected the knowledge, **I got the insight**
 7) I wrote an article about [Cognitive Load in Software Development](https://github.com/zakirullin/cognitive-load)
@@ -57,15 +57,15 @@ I'll quote [I Deleted My Second Brain](https://www.joanwestenberg.com/i-deleted-
 > 
 > **Eventually, I realized I had created a new problem: deferral. The more my system grew, the more I deferred the work of thought to some future self who would sort, tag, distill, and extract the gold.**
 
-The Second Brain is fancy. _It is thrilling._
+The Second Brain is fancy. _Sounds thrilling._
 Advanced guru templates, plugins...  
 One wants to scrape the wisdom of the whole internet.  
-There’s some beauty in this neat system. Every new note brings dopamine.  
-_Second brain gets better and better._  
+There's some beauty in this neat system. Every new note brings dopamine.  
+_Second Brain gets better and better._  
 
 However, the first brain never actually gets smarter. _The actual job is postponed._  
 
-There's another path.  
+There is another path.  
 
 ## How to take notes 🗒️
 Leonardo da Vinci, Charles Darwin, Jules Verne and many others took notes using just pen and paper.  
@@ -80,29 +80,31 @@ Only this time, I was sending messages to the bot:
     <img src="https://github.com/zakirullin/files.md/raw/main/docs/img/bot.gif" alt="Telegram Bot" title="Telegram Bot" width="350"/>
 </div>
 
-That's it, the `.md` note is saved in the `brain` directory.   
+That's it, the `.md` note is saved in the `brain` directory.  
 
-Later I open [app.files.md](https://app.files.md) and make some connections between new and old notes. I think through notes.    
+Later I open [app.files.md](https://app.files.md) and make some connections between new and old notes.  
 
 - You can start with no structure at all, 0 folders
 - One idea per note
 - A note should be understood without context
 - Related notes should be linked between each other
-- Notes should be revisited and thought through
+- **Notes should be revisited and thought through**
 
-That's all you need to take notes. 
+That's all you need to take notes.  
 
 My friends and I have been using this setup for five years and it works well.  
 
 Telegram bot: [@FilesMDBot](https://t.me/FilesMDBot) (other messengers will follow).  
 
-You can use do the same in the web app, open `Today` section.  
+You can do the same in the web app.  
+
+P.S. A really good book on the topic: *How to Take Smart Notes* by Sönke Ahrens.  
 
 ## Knowledge vs Experience
 If your goal is to:
-- do research
-- write an article or a book
-- develop a deeper, more structured understanding of something
+- Do research
+- Write an article or a book
+- Develop a deeper, more structured understanding of something
 
 Then taking notes is perfectly fine.  
 
@@ -175,12 +177,11 @@ Things like these are easy to remember, but again they drain your mental energy.
 You don't have to think about the structure, it is predefined.  
 
 - Notes: `brain/Note.md` (`<category>/*.md`)
-- Projects: `My project.md` (`*.md`) - project, important or index notes
+- Projects: `My project.md` (`/*.md`) - projects, important notes
 - Tasks: `Today.md`, `Later.md` - checklist-based task lists
 - Checklists: `Read.md`, `Watch.md`, `Shop.md` - built-in checklists
 - Journal: `journal/2024.08 August.md` (`journal/<YYYY>.<MM> <Month>.md`)
-- Habits: `habits/Morning workout.md` (`habits/*.md`)
-- Insights: `insights/2024 Habits.md` (`insights/<YYYY> Habits.md`)
+- Habits: `habits/Ate consciously.md` (`habits/*.md`)
 - Media: `media/*` - images (png, jpg, webp, gif)
 - Archive: `archive/*`, `archive/Done.md` - completed items
 - Inbox: `Inbox.md` - incoming messages, append-only chat log
