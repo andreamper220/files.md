@@ -137,25 +137,27 @@ This experience helped me to discover that I don't like taking notes with tradit
 At the same time, chatting with friends is effortless for me. That's how the bot for taking notes appeared.  
 
 ## No productivity, no planning no stress
-The only thing that matters is your calmness.
-
-## Journaling 💚
+The only thing that matters is your calmness.  
+Same well-familiar messaging pattern is reused for everything.  
 
 ## Tasks ✅
 You're in the flow. A colleague comes in and asks you to send the report.  
-You don't hold this task in your head, it takes energy.  
+You don't hold this task in your head, it takes energy.
+You drop a message and continue being in the flow.  
 
 <div align="center">
-    <img src="https://github.com/zakirullin/files.md/raw/main/docs/img/task1.png" title="Adding a task"/>
-</div>
-
-You send a message to the bot and continue being in the flow.  
-
-<div align="center">
-    <img src="https://github.com/zakirullin/files.md/raw/main/docs/img/task2.png" title="Adding a task"/>
+    <img src="https://github.com/zakirullin/files.md/raw/main/docs/img/task.png" title="Adding a task" width="350"/>
 </div>
 
 No energy is spent, no flow is interrupted. 
+
+## Journaling 💚
+Drop a message.  
+Hover over a bubble and press "To journal".  
+
+<div align="center">
+    <img src="https://github.com/zakirullin/files.md/raw/main/docs/img/journal.png" title="Journaling" width="450"/>
+</div>
 
 ## Checklists 🛒
 A good friend of yours recommends you a book.  
