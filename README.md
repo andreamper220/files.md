@@ -70,11 +70,10 @@ There is another path.
 ## How to take notes 🗒️
 Leonardo da Vinci, Charles Darwin, Jules Verne and many others took notes using just pen and paper.  
 
-You don't need to learn advanced tools to start taking notes.  
-It's even better if you reuse familiar mental models.  
-For me that was chatting with friends.  
+You don't need to learn anything new to start taking notes.    
+We'll reuse a well familiar pattern: chatter with friends.  
 
-Only this time, I was sending messages to the bot:  
+Only this time, we are going to messages to the bot:  
 
 <div align="center">
     <img src="https://github.com/zakirullin/files.md/raw/main/docs/img/bot.gif" alt="Telegram Bot" title="Telegram Bot" width="350"/>
@@ -82,7 +81,7 @@ Only this time, I was sending messages to the bot:
 
 That's it, the `.md` note is saved in the `brain` directory.  
 
-Later I open [app.files.md](https://app.files.md) and make some connections between new and old notes.  
+Later you can open [app.files.md](https://app.files.md) and make some connections between new and old notes.  
 
 - You can start with no structure at all, 0 folders
 - One idea per note
@@ -98,7 +97,15 @@ Telegram bot: [@FilesMDBot](https://t.me/FilesMDBot) (other messengers will foll
 
 You can do the same in the web app.  
 
-P.S. A really good book on the topic: *How to Take Smart Notes* by Sönke Ahrens.  
+P.S. A really good book on the topic: *How to Take Smart Notes* by Sönke Ahrens.   
+
+## Self-help through taking notes?
+**Harm suffered at the emotional level must be healed at the emotional level.**  
+
+Not through intellectual work, reading or taking notes.  
+No amount of self-help books can heal emotional wounds.  
+What can help is psychotherapy, rescripting and chair work. Meditation.  
+**Healing happens by feeling.**    
 
 ## Knowledge vs Experience
 If your goal is to:
@@ -108,7 +115,7 @@ If your goal is to:
 
 Then taking notes is perfectly fine.  
 
-However, when it comes to self-help, collecting too many notes **can prevent us from actual experience.**  
+However, when it comes to actual change, collecting too many notes **can prevent us from actual experience.**  
 
 - **We don’t let new experiences emerge because we already have knowledge**
 - We think we understand, but in reality **we just know**
@@ -191,6 +198,8 @@ Scheme is also available at [files.md/llms.txt](https://files.md/llms.txt).
 You can copy-paste it into `CLAUDE.md` or `AGENTS.md`, so that your AI agent would understand the structure.  
 
 ## Telegram Bot 🤖
+Use `/app` to link your bot the the web app.  
+
 <img src="https://github.com/zakirullin/files.md/raw/main/web/bot.png" alt="Telegram Bot screenshot" title="Telegram Bot"/>
 
 When we are focused and distracting information comes in, we want to get rid of it as quickly as possible.  
