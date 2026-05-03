@@ -373,10 +373,6 @@
                         preventDefault: function () {},
                         stopPropagation: function () {}
                     });
-                    // _mouseDown may have armed _mouseUp expecting a real mouseup
-                    // that will never come on touch — unbind so a later unrelated
-                    // mouse interaction doesn't fire it with stale _cinfo.
-                    _this.lineDiv.removeEventListener('mouseup', _this._mouseUp, false);
                 };
                 this.lineDiv = cm.display.lineDiv;
                 var el = this.el = cm.getWrapperElement();
@@ -384,14 +380,18 @@
                     // PATCHED, added global event listener, so that even if our cm is not focused - pointer would appear on links
                     /* ON  */ function () {
                         _this.lineDiv.addEventListener("mousedown", _this._mouseDown, false);
+                        // PATCHED
                         _this.lineDiv.addEventListener("touchstart", _this._touchStart, false);
+                        // PATCHED
                         _this.lineDiv.addEventListener("touchend", _this._touchEnd, false);
                         document.addEventListener("keydown", _this._keyDown, false);  // Changed to document
                         document.addEventListener("keyup", _this._keyUp, false);      // Add keyup
                     },
                     /* OFF */ function () {
                         _this.lineDiv.removeEventListener("mousedown", _this._mouseDown, false);
+                        // PATCHED
                         _this.lineDiv.removeEventListener("touchstart", _this._touchStart, false);
+                        // PATCHED
                         _this.lineDiv.removeEventListener("touchend", _this._touchEnd, false);
                         document.removeEventListener("keydown", _this._keyDown, false);  // Changed to document
                         document.removeEventListener("keyup", _this._keyUp, false);      // Remove keyup
