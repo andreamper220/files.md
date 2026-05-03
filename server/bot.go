@@ -1675,7 +1675,7 @@ func (b *Bot) showStart(params []string) error {
 		}
 	}
 
-	err := b.showHTML("Welcome!<br><br>You can send me any stuff and I'll save it to files!<br><br>By default <code>Full Mode</code> is enabled, it can feel overwhelming. You can switch to notes only or tasks only mode in /settings command.", nil)
+	err := b.showHTML("Welcome!\n\nYou can send me any stuff and I'll save it to files!\n\nBy default <code>Full Mode</code> is enabled, it can feel overwhelming. You can switch to notes only or tasks only mode in /settings command.", nil)
 	if err != nil {
 		return err
 	}
