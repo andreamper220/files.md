@@ -1675,6 +1675,8 @@ func (b *Bot) showStart(params []string) error {
 		}
 	}
 
+	_ = b.showHTML("Welcome!<br><br>You can send me any stuff and I'll save it to files!<br><br>By default `Full Mode` is enabled, it can feel overwhelming. You can switch to notes only or tasks only mode in /settings command.", nil)
+
 	// Default to full mode, people don't like to choose.
 	return b.setFullMode(nil)
 }
