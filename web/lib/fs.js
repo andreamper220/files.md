@@ -5,6 +5,13 @@ function sanitizeFilename(filename) {
     return FORBIDDEN_FILENAME_CHARS.reduce((result, ch) => result.replaceAll(ch, ''), filename);
 }
 
+function findForbiddenChar(name) {
+    for (const ch of FORBIDDEN_FILENAME_CHARS) {
+        if (name.includes(ch)) return ch;
+    }
+    return null;
+}
+
 async function getFileHandle(path, create = false) {
     let dir, filename;
     if (path.includes('/')) {

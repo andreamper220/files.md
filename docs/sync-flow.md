@@ -108,6 +108,17 @@ Two mechanisms, running in parallel:
 
 The client's `server.files` object holds the triple `(content, lastModified, lastClientModified)` per path - this is the client's view of what the server thinks the world looks like, and the basis for deciding which files to include in the next `modified`/`deleted` lists. Persisted to `localStorage` under `SERVER_STORAGE_KEY`.
 
+### Auth gate: `lastServerOk`
+
+The auth token lives in an HttpOnly cookie, so JS can't see it directly. Instead, every successful response from the server stamps `localStorage.lastServerOk` with `Date.now()` via `markServerOk()` (files.js). `hasLastServerOk()` returns true if that key exists - which it only can if the server has previously accepted us. Use this as the gate before kicking off sync work: no stamp ⇒ no token ⇒ skip the request entirely. The flag is set in:
+
+- `app.js` after the `/token` exchange returns 200
+- `post()` after a 2xx JSON response (covers `/syncTexts` and friends)
+- `syncLocalFileWithServer` after `/syncText` 2xx
+- `syncMedia` after each `/syncMedias`, `/syncMedia` upload, and `/syncMedia` download 2xx
+
+If the server later 401s, the stamp stays - but the request will simply fail and no sync state advances, so we don't need to clear it.
+
 ## Where the recent bug lived, in one sentence
 
 The `switchAwayEditor` flag was added so that `syncCurrentEditor`, when called from `openFile`'s "save previous editor" path, does not take the orange `Reload` branch - the one that recursed into `openFile` without an `el`. That recursion used to rotate the global `currentEditor` under the outer `openFile`'s feet, which then wrote `.path` onto the wrong editor instance (the red node in the openFile diagram), producing a poisoned state that the red `Rename` block later turned into a destructive file duplication.

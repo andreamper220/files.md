@@ -1364,11 +1364,18 @@ function buildFolderMenu(item, dirPath) {
     addNewDirItem(item, dirPath);
 
     item('Rename', async () => {
-        const newName = prompt('Rename folder:', dirName);
-        if (newName === null) return;
-        const trimmed = newName.trim();
-        if (!trimmed || trimmed === dirName) return;
-        if (trimmed.includes('/')) { alert('Folder name cannot contain "/"'); return; }
+        let attempt = dirName;
+        let trimmed;
+        while (true) {
+            const newName = prompt('Rename folder:', attempt);
+            if (newName === null) return;
+            trimmed = newName.trim();
+            if (!trimmed || trimmed === dirName) return;
+            const badDirChar = findForbiddenChar(trimmed);
+            if (badDirChar === null) break;
+            alert(`Folder name cannot contain "${badDirChar}"`);
+            attempt = trimmed;
+        }
         try {
             const editorWasInside = pathIsInsideDir(currentEditor.path);
             const oldEditorPath = currentEditor.path;
@@ -1414,11 +1421,18 @@ function buildFileMenu(item, filePath) {
 
     item('Rename', async () => {
         const displayName = fileName.endsWith('.md') ? fileName.slice(0, -3) : fileName;
-        const newName = prompt('Rename file:', displayName);
-        if (newName === null) return;
-        const trimmed = newName.trim();
-        if (!trimmed) return;
-        if (trimmed.includes('/')) { alert('File name cannot contain "/"'); return; }
+        let attempt = displayName;
+        let trimmed;
+        while (true) {
+            const newName = prompt('Rename file:', attempt);
+            if (newName === null) return;
+            trimmed = newName.trim();
+            if (!trimmed) return;
+            const badFileChar = findForbiddenChar(trimmed);
+            if (badFileChar === null) break;
+            alert(`File name cannot contain "${badFileChar}"`);
+            attempt = trimmed;
+        }
         const finalName = fileName.endsWith('.md') && !trimmed.endsWith('.md') ? trimmed + '.md' : trimmed;
         if (finalName === fileName) return;
         const newPath = (parentDir === '/' ? '' : parentDir) + '/' + finalName;

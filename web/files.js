@@ -12,6 +12,16 @@ let isSyncingFileWithServer = {}; // path -> bool, prevents concurrent server sy
 let needsResyncWithServer = {}; // path -> bool, flags that another sync was requested while one was in flight
 let isLoadingLocalFiles = false;
 
+const LAST_SERVER_OK_KEY = 'lastServerOk';
+
+function markServerOk() {
+    localStorage.setItem(LAST_SERVER_OK_KEY, Date.now().toString());
+}
+
+function hasLastServerOk() {
+    return localStorage.getItem(LAST_SERVER_OK_KEY) !== null;
+}
+
 // The types of files we have:
 // - serverFile, file on server
 // - localFile, file on local fs
@@ -323,6 +333,7 @@ async function syncLocalFileWithServer(path) {
                 log(`Server responded with ${response.status}`);
                 return;
             }
+            markServerOk();
             let json = await response.json();
 
             // For the cases when server was updated only on server, we move lastSyncedAt pointer,
@@ -417,6 +428,7 @@ async function syncMedia() {
                 });
 
                 if (response.ok) {
+                    markServerOk();
                     server['media'][mediaFilename] = {
                         isFile: true,
                         lastModified: 0, // We don't track binary files modifications.
@@ -445,6 +457,8 @@ async function syncMedia() {
         });
         if (!response.ok) {
             console.error(`Server responded with ${response.status}`);
+        } else {
+            markServerOk();
         }
 
         const serverData = await response.json();
@@ -471,6 +485,7 @@ async function syncMedia() {
                     console.error(`Failed to download ${filename}: ${response.status}`);
                     continue;
                 }
+                markServerOk();
 
                 const blob = await response.blob();
                 await saveMediaFile(`media/${filename}`, blob, lastModified);
@@ -1169,7 +1184,12 @@ async function syncCurrentEditor(switchAwayEditor = false) {
     try {
         // TODO track if no first line?
         const firstLine = currentEditor.getValue().split('\n')[0];
-        let newFilename = sanitizeFilename(ucfirst(fromHeaderToFilename(firstLine)));
+        const rawFromHeader = ucfirst(fromHeaderToFilename(firstLine));
+        const badHeaderChar = findForbiddenChar(rawFromHeader);
+        if (badHeaderChar !== null) {
+            showToast(`Filename cannot contain "${badHeaderChar}"`);
+        }
+        let newFilename = sanitizeFilename(rawFromHeader);
         // If filename is empty, generate an available "Untitled" name
         // TODO We don't handle txt renaming here
         let hasEmptyName = newFilename.trim() === '.md';
@@ -1368,6 +1388,7 @@ async function post(endpoint, data) {
         if (!response.ok) {
             return null;
         }
+        markServerOk();
 
         const json = await response.json();
 

@@ -870,6 +870,74 @@ func TestTodayQuickMenuFilled(t *testing.T) {
 	), tgram.LastSentKeyboard)
 }
 
+func TestTodayMultilineTaskShownAsLong(t *testing.T) {
+	r := require.New(t)
+
+	savedCtime := fs.Ctime
+	defer func() { fs.Ctime = savedCtime }()
+	fs.Ctime = func(fi os.FileInfo) int64 { return 0 }
+
+	mode := userconfig.DefaultConfig.Mode
+	userconfig.DefaultConfig.Mode = userconfig.ModeTasks
+	defer func() { userconfig.DefaultConfig.Mode = mode }()
+
+	savedNow := now
+	defer func() { now = savedNow }()
+	now = func() time.Time { return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC) }
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	err = userFS.Write("/", "Today.md", "- [ ] `00:00` First task\nsome continuation")
+	r.NoError(err)
+
+	tgram := tg.NewFakeTG()
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), fakeConfig())
+	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("today", nil)))
+	r.NoError(err)
+
+	hash := inboxMsgHash(t, userFS, 0)
+	r.Equal("<b>1</b> left"+wideSpacer, tgram.LastSentText)
+	r.Equal(tg.NewKeyboard([]tg.Row{
+		tg.NewBtn("👀 First task", tg.NewCmd(CmdShowLongItemFromToday, []string{hash})),
+	}), tgram.LastSentKeyboard)
+}
+
+func TestTodayMixedSingleAndMultilineTasks(t *testing.T) {
+	r := require.New(t)
+
+	savedCtime := fs.Ctime
+	defer func() { fs.Ctime = savedCtime }()
+	fs.Ctime = func(fi os.FileInfo) int64 { return 0 }
+
+	mode := userconfig.DefaultConfig.Mode
+	userconfig.DefaultConfig.Mode = userconfig.ModeTasks
+	defer func() { userconfig.DefaultConfig.Mode = mode }()
+
+	savedNow := now
+	defer func() { now = savedNow }()
+	now = func() time.Time { return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC) }
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	content := "- [ ] `00:00` First task\n" +
+		"- [ ] `00:00` Second task\nextra detail line"
+	err = userFS.Write("/", "Today.md", content)
+	r.NoError(err)
+
+	tgram := tg.NewFakeTG()
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), fakeConfig())
+	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("today", nil)))
+	r.NoError(err)
+
+	first := inboxMsgHash(t, userFS, 0)
+	second := inboxMsgHash(t, userFS, 1)
+	r.Equal("<b>2</b> left"+wideSpacer, tgram.LastSentText)
+	r.Equal(tg.NewKeyboard([]tg.Row{
+		tg.NewBtn("First task", tg.NewCmd(CmdComplete, []string{first})),
+		tg.NewBtn("👀 Second task", tg.NewCmd(CmdShowLongItemFromToday, []string{second})),
+	}), tgram.LastSentKeyboard)
+}
+
 // TODO Today.md
 //func TestTodayWithMultilineTasks(t *testing.T) {
 //	r := require.New(t)

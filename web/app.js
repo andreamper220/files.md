@@ -41,6 +41,7 @@ async function init() {
 
             if (response.ok) {
                 // Server sets the auth cookie via Set-Cookie on this response.
+                markServerOk();
                 const url = new URL(window.location);
                 url.searchParams.delete('token');
                 window.history.replaceState({}, '', url);
@@ -59,11 +60,9 @@ async function init() {
     if (hasSavedLocalDir) {
         isMemFS = false;
         document.getElementById('open-folder').style.display = 'none';
-        // document.getElementById('open-chat-modal').style.display = 'inline';
     } else {
         document.getElementById('open-folder').style.display = 'inline';
         isMemFS = true;
-        // document.getElementById('open-chat-modal').style.display = 'inline';
     }
 
     // Alert if there's no "Allow on every visit" check.
@@ -318,6 +317,19 @@ async function getImageUrl(fileHandle) {
 // Normalize text to use only \n as line endings
 function normNewLines(text) {
     return text.replace(/\r\n|\r/g, '\n');
+}
+
+function showToast(msg, ms = 1500) {
+    const toast = document.createElement('div');
+    toast.textContent = msg;
+    toast.style.cssText = `
+        position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+        background: var(--col-bg-alt); color: var(--col-tx); padding: 8px 16px; border-radius: 5px;
+        border: 1px solid var(--col-border);
+        z-index: 9999; font-size: 14px;
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), ms);
 }
 
 function initDB() {

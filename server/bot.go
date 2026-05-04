@@ -1050,7 +1050,8 @@ func (b *Bot) ShowToday(_ []string) error {
 			}
 		}
 
-		if len([]rune(title)) >= maxHeaderLengthForMobile || txt.HasImage(block) {
+		isMultiline := len(parts) > 1
+		if len([]rune(title)) >= maxHeaderLengthForMobile || txt.HasImage(block) || isMultiline {
 			cmd := tg.NewCmd(CmdShowLongItemFromToday, []string{msgHash})
 			btn := tg.NewBtn(txt.Emoji(i18n.Emoji("eyes"), title), cmd)
 			kb.AddRow(btn)

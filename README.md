@@ -47,7 +47,7 @@ That's it. Nothing to learn or setup.
 - Open a local folder to persist changes  
 - That's it  
 
-Occasionally hit force-refresh (`cmd`+`shift`+`r`) the app to get new updates.  
+Occasionally hit force-refresh (`Cmd`+`Shift`+`R`) to get new updates.  
 
 ## Telegram bot 
 1) Open [@FilesMDBot](https://t.me/FilesMDBot)
@@ -61,9 +61,9 @@ Pin the bot in your contact list, so that it is easily accessible.
 Leonardo da Vinci, Charles Darwin, Jules Verne and many others took notes using just pen and paper.
 
 You don't need to learn anything new to start taking notes.   
-We'll use a familiar pattern: chatting with friends.  
+It is going to be a well-familiar pattern: chatting with friends.  
 
-Only this time, we are going to messages to the bot (or to the web app):  
+Only this time, we are going to send messages to the bot (or to the web app):  
 
 <div align="center">
     <img src="https://github.com/zakirullin/files.md/raw/main/web/img/bot.gif" alt="Telegram Bot" title="Telegram Bot" width="350"/>
@@ -105,8 +105,7 @@ Click "To File", then select "brain" directory.
 5) At some point, `brain` and `dev` notes appeared very related
 6) I interconnected the knowledge, **I got the insight**
 7) I wrote an article about [Cognitive Load in Software Development](https://github.com/zakirullin/cognitive-load)
-
-Many considered it a great write-up.
+8) Many considered it a great write-up
 
 All this activity helped me to:
 - **Think deeply** (which is very important in the AI-age)
@@ -140,9 +139,9 @@ Use your brain to think through the notes. Apply and experience the knowledge.
 
 ## When to take notes
 If your goal is to:
+- Develop a deeper, more structured understanding of something
 - Do research
 - Write an article or a book
-- Develop a deeper, more structured understanding of something
 
 Then taking notes is perfectly fine.  
 
@@ -153,7 +152,7 @@ However, when it comes to personal changes, it can do more harm than good. See b
 
 Not through intellectual work and taking notes.  
 Reading without action is entertainment. A form of procrastination.  
-No amount of self-help books can heal emotional wounds.  
+**No amount of self-help books can heal emotional wounds.**  
 What can help is psychotherapy, rescripting and chair work. Meditation.  
 **Healing happens by feeling.**  
 
@@ -217,8 +216,9 @@ No energy is spent, no flow is interrupted.
 Add only small, actionable items.  
 Not things like `Plan a vacation`.  
 Add the first tiny step of what should be done anyway.     
-Not what you wish to be done, but don't have motivation yet.  
-**Your tasks should not create a feeling of guilt**.  
+Not what you wish to be done, but don't have motivation just yet.  
+**Your task list should not create a feeling of guilt**.  
+It should clear your head.  
 
 ## Journal 💚
 Are you feeling good about something? Send a message.  
