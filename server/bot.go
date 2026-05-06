@@ -949,7 +949,7 @@ func (b *Bot) showMoveTo(params []string) error {
 
 	b.delAllKeyboards()
 
-	msg := b.tr("Saved to <b>today</b>!")
+	msg := b.tr("Saved!")
 	if err := b.showHTML(msg, &kb); err != nil {
 		return fmt.Errorf("move: %w", err)
 	}
