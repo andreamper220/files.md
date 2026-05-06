@@ -225,16 +225,16 @@ Things like these are easy to remember, but again they drain your mental energy.
 ## Files structure 🗂
 You don't have to think about the structure, it is predefined.  
 
-- Chat: `Chat.md` - incoming messages, chat's tasks, append-only chat log
-- Notes: `brain/Note.md` (`<category>/*.md`, files in subfolders)
-- Projects: `My project.md` (`/*.md`, files in the root directory) - projects, important notes
+- Chat: `Chat.md`
+- Notes: `brain/Note.md` (`<category>/*.md`, files in subfolder)
+- Projects: `My project.md` (`/*.md`, files in the root folder)
 - Checklists: `Read.md`, `Watch.md`, `Shop.md`, `MyChecklist_.md`
 - Journal: `journal/2024.08 August.md` (`journal/<YYYY>.<MM> <Month>.md`)
-- Tasks: `Later.md` - checklist-based task lists
+- Tasks: `Later.md`
 - Habits: `habits/Ate consciously.md` (`habits/*.md`)
-- Media: `media/*` - images (png, jpg, webp, gif)
-- Archive: `archive/*`, `archive/Done.md` - completed items
-- Config: `config.json` - per-user settings
+- Media: `media/*` (png, jpg, webp, gif)
+- Archive: `archive/*`
+- Config: `config.json`
 
 Scheme is also available at [files.md/llms.txt](https://files.md/llms.txt).  
 You can copy-paste it into `CLAUDE.md` or `AGENTS.md`, so that your AI agent would understand the structure.  
