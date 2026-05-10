@@ -465,25 +465,6 @@ async function syncMediaFiles() {
         let filesProcessed = 0;
         for (const fileInfo of serverData.files) {
             const {filename, lastModified} = fileInfo;
-
-            // Skip download if the file already exists locally - media
-            // files are write-once (binary, not edited), so a local copy
-            // is byte-for-byte identical to the server's copy. Mark the
-            // file as known to the server, otherwise collectNewMediaFiles
-            // would treat it as a fresh local file and upload it back.
-            if (await exists(`media/${filename}`)) {
-                log(`Skipping media file (already exists): ${filename}`);
-                server['media'][filename] = {
-                    isFile: true,
-                    lastModified: lastModified,
-                };
-                // TODO quite fragile, one problematic image shouldn't break others
-                if (lastModified > (server['mediaTimestamp'] || 0)) {
-                    server['mediaTimestamp'] = lastModified;
-                }
-                saveServerFiles();
-                continue;
-            }
             log(`Downloading media file: ${filename}`);
 
             try {
