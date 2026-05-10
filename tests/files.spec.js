@@ -162,6 +162,68 @@ test('create new in root', async ({ page }) => {
     expect(codeMirrorContent).toBe("# New file\nBody content");
 });
 
+// Regression: reopening the currently-open file from the sidebar used to
+// race with the periodic save. openFile() skipped syncCurrentText when the
+// new path matched currentEditor.path, and then the isSameFile branch
+// would replace the editor's still-dirty body with the (empty) disk
+// content, silently dropping whatever the user had just typed.
+test('reopening same file immidiately after file change preserves dirty content', async ({ page }) => {
+    await page.evaluate(() => {
+        window.getTemporaryStorageDirHandle = async function() {
+            const root = await navigator.storage.getDirectory();
+            const testFiles = [
+                { name: 'README.md', content: 'Hello world' },
+            ];
+            for (const fileData of testFiles) {
+                try {
+                    await root.getFileHandle(fileData.name);
+                } catch (error) {
+                    const fileHandle = await root.getFileHandle(fileData.name, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(fileData.content);
+                    await writable.close();
+                }
+            }
+            return root;
+        };
+    });
+
+    await page.evaluate(() => {
+        init(document.getElementById("editor"));
+    });
+
+    // Drive the editor to a known file first - openFile()'s multi-await
+    // window can leave currentEditor.path undefined when the click on
+    // #new-file fires, which throws inside toDirPath().
+    await page.click('#sidebar >> text=README');
+    await expect(page.locator('.CodeMirror').first()).toContainText('# README');
+
+    await page.click('#new-file');
+    await expect(page.locator('#sidebar >> text=New file')).toBeVisible();
+
+    // Type a long body so we can detect even partial loss.
+    const body = 'Line one of the new note\n'
+        + 'Line two has a bit more text in it\n'
+        + 'Line three with even more content to make the body sizeable\n'
+        + 'Line four to round it off';
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.type(body);
+
+    // Immediately reopen the same file via the sidebar - no settle wait.
+    // The fix in openFile() must save the dirty body before reading from
+    // disk, otherwise the disk's empty body would clobber what we typed.
+    await page.click('#sidebar >> text=New file');
+
+    // Wait for openFile() to finish, otherwise we'd be inspecting the
+    // editor mid-load and could accidentally catch the dirty (still-good)
+    // value before the buggy isSameFile branch overwrites it.
+    await page.waitForTimeout(1000);
+    const codeMirrorContent = await page.evaluate(() =>
+        document.querySelector('.CodeMirror').CodeMirror.getValue()
+    );
+    expect(codeMirrorContent).toBe(`# New file\n${body}`);
+});
+
 test('file is not renamed on select all and change', async ({ page }) => {
     await page.evaluate(() => {
         window.getTemporaryStorageDirHandle = async function() {
