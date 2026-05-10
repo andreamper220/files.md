@@ -124,10 +124,6 @@
 /*	!*border: 1px solid transparent;*!*/
 /*}*/
 
-.group-end:not(.expanded) {
-	margin-bottom: 15px;
-}
-
 .tree-group_title {
 	font-size: 0.8em;
 	/*text-transform: uppercase;*/

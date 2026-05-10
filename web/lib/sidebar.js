@@ -780,19 +780,7 @@ function TreeView(root, container, options) {
     }
 
     function shouldShowGroupHeaders() {
-        var groupCount = 0;
-        var children = root.getChildren();
-
-        if (children.length > 0) {
-            groupCount = 1; // First group
-            for (var i = 0; i < children.length; i++) {
-                if (children[i].isGroupEnd) {
-                    groupCount++;
-                }
-            }
-        }
-
-        return groupCount > 1;
+        return false;
     }
 
     function renderNode(node) {
