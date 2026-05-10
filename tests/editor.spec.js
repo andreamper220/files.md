@@ -23,18 +23,19 @@ test('should open markdown file via quick panel and see bold text formatting', a
     await page.locator('#search-input').fill('Markdown');
     await page.keyboard.press('Enter');
 
-    await page.waitForTimeout(1000);
+    // Read the main editor's value directly. Two CodeMirror instances live
+    // in the DOM (editor + editor2), so a `.CodeMirror` selector hits a
+    // strict-mode violation, and `.first()` is racy because either editor
+    // may finish initialising sooner than the other under load.
+    await expect.poll(async () => {
+        return await page.evaluate(() => window.editor && window.editor.getValue && window.editor.getValue());
+    }).toContain('**Bold text**');
 
-    const codeMirrorContent = await page.locator('.CodeMirror').textContent();
-
+    const codeMirrorContent = await page.evaluate(() => window.editor.getValue());
     expect(codeMirrorContent).toContain('**Bold text**');
     expect(codeMirrorContent).toContain('**bold**');
     expect(codeMirrorContent).toContain('__bold__');
-
-    await expect(page.locator('.CodeMirror')).toContainText('Bold text');
-    await expect(page.locator('.CodeMirror')).toContainText('**bold**');
-
-    await expect(page.locator('.CodeMirror')).toContainText('using');
+    expect(codeMirrorContent).toContain('using');
 });
 
 test('insert link', async ({page}) => {
