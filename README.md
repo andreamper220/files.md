@@ -109,12 +109,13 @@ Drop them in chat, then sort into matching checklists.
 ## How to take notes
 1) I used [files.md](https://files.md) to grow my knowledge about brain and software development
 2) I added new notes to either `brain` or `dev` folders. One idea per note
-3) I made connections between the notes in the web app (typed `[` and selected a relevant note). Everything is connected, just as in our brain
-4) **I spent time travelling through the notes and thinking it through**
-5) At some point, `brain` and `dev` notes appeared very related
-6) An interconnection between domains produced an insight
-7) I wrote an article based on that insight: [Cognitive Load in Software Development](https://github.com/zakirullin/cognitive-load)
-8) Many considered it a great write-up
+3) I made connections between the relevant notes in the web app (typed `[` and selected a relevant note)
+4) Everything is connected, just as in our brain
+5) **I spent time travelling through the notes and thinking it through**
+6) At some point, `brain` and `dev` notes appeared very related
+7) An interconnection between domains produced an insight
+8) I wrote an article based on that insight: [Cognitive Load in Software Development](https://github.com/zakirullin/cognitive-load)
+9) Many considered it a great write-up
 
 All this activity helped me to:
 - **Think deeply** (which is very important in the AI-age)
@@ -196,23 +197,23 @@ You can copy-paste it into `CLAUDE.md` or `AGENTS.md`, so that your AI agent wou
 
 ## Hotkeys
 
-| Hotkey                     | Action                         |
-|----------------------------|--------------------------------|
-| `[`                        | Trigger file link autocomplete |  
-| `Cmd+P` / `Ctrl+P`         | Open file search modal         |
-| `Cmd+N` / `Ctrl+N`         | New file                       |
-| `Cmd+M` / `Ctrl+M`         | Move file                      |
-| `Cmd+D` / `Ctrl+D`         | Delete file                    |
-| `Cmd+Enter` / `Ctrl+Enter` | Open chat                     |
-| `Cmd+Shift+Enter` / `Ctrl+Shift+Enter` | Toggle chat dialog            |
-| `Cmd+[` / `Ctrl+[`         | Go to previous file            |
-| `Cmd+]` / `Ctrl+]`         | Go to next file                |
-| `Cmd+~` / `Ctrl+~`         | Toggle sidebar                 |
-| `Cmd+B` / `Ctrl+B`         | Toggle **bold**                |
-| `Cmd+I` / `Ctrl+I`         | Toggle *italic*                |
-| `Cmd+Y` / `Ctrl+Y`         | Insert checkbox                |
-| `Cmd/Ctrl` + `Click`       | Copy inline text / open link   |
-| `Ctrl+Cmd+Space`           | Insert emoji (macOS)           |
+| Hotkey                     | Action                       |
+|----------------------------|------------------------------|
+| `[`                        | Insert a link to a file      |  
+| `Cmd+P` / `Ctrl+P`         | Open file search modal       |
+| `Cmd+N` / `Ctrl+N`         | New file                     |
+| `Cmd+M` / `Ctrl+M`         | Move file                    |
+| `Cmd+D` / `Ctrl+D`         | Delete file                  |
+| `Cmd+Enter` / `Ctrl+Enter` | Open chat                    |
+| `Cmd+Shift+Enter` / `Ctrl+Shift+Enter` | Toggle chat dialog           |
+| `Cmd+[` / `Ctrl+[`         | Go to previous file          |
+| `Cmd+]` / `Ctrl+]`         | Go to next file              |
+| `Cmd+~` / `Ctrl+~`         | Toggle sidebar               |
+| `Cmd+B` / `Ctrl+B`         | Toggle **bold**              |
+| `Cmd+I` / `Ctrl+I`         | Toggle *italic*              |
+| `Cmd+Y` / `Ctrl+Y`         | Insert checkbox              |
+| `Cmd/Ctrl` + `Click`       | Copy inline text / open link |
+| `Ctrl+Cmd+Space`           | Insert emoji (macOS)         |
 
 ## Useful scripts for your files
 All scripts are in `cmd` and can be run **inside your files directory**. Install [Go](https://go.dev/doc/install) first.

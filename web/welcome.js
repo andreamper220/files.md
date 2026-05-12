@@ -279,7 +279,7 @@ const WELCOME_FILES = {
             "\n" +
             "| Hotkey | Action |\n" +
             "| -------- | -------- |\n" +
-            "| `[` | Trigger file link autocomplete |\n" +
+            "| `[` | Insert a link to a file |\n" +
             "\n" +
             "| Hotkey | Action |\n" +
             "| -------- |-------- |\n" +

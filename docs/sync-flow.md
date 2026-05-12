@@ -9,7 +9,7 @@ flowchart TD
     U[User: sidebar click, link click, popstate] -->|openFile| OF[openFile]
     Timer1[setInterval 1000ms saver] -->|syncCurrentEditor| SCE[syncCurrentEditor]
     Focus[focusin / focus event] -->|syncCurrentEditor| SCE
-    Timer2[setInterval syncTextsWithServer + syncMedia] -->|syncTextsWithServer| STS[syncTextsWithServer]
+    Timer2[setInterval syncTextsWithServer + syncMediaFiles] -->|syncTextsWithServer| STS[syncTextsWithServer]
 
     OF -->|save previous editor before swapping| SCE
     SCE -->|switchAwayEditor=false: end of fn| SLF[syncLocalFileWithServer]
@@ -114,7 +114,7 @@ The auth token lives in an HttpOnly cookie, so JS can't see it directly. Instead
 
 - `app.js` after the `/issuePermanentToken` exchange returns 200
 - `post()` after a 2xx response (covers all `/syncFilenames`, `/syncFile`, `/syncMediaFilenames`, `/syncMediaFile` upload calls now that they go through this helper)
-- `syncMedia` directly after the raw `POST /syncMediaFile` download (binary blob, can't share `post()`)
+- `syncMediaFiles` directly after the raw `POST /syncMediaFile` download (binary blob, can't share `post()`)
 
 If the server later 401s, the stamp stays - but the request will simply fail and no sync state advances, so we don't need to clear it.
 

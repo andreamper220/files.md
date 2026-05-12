@@ -204,6 +204,18 @@ func (b *Bot) moveFromChat(
 	for _, h := range msgHashes {
 		idx, ok := hashToBlockIndex[h]
 		if !ok {
+			// Recurring-schedule callback_data is tight on Telegram's 64-byte
+			// limit so the picker truncates msgHash to its prefix. Fall back
+			// to prefix match here.
+			for full, i := range hashToBlockIndex {
+				if strings.HasPrefix(full, h) {
+					idx = i
+					ok = true
+					break
+				}
+			}
+		}
+		if !ok {
 			return fmt.Errorf("msgHash %q not found in inbox", h)
 		}
 		resolvedBlockIndices = append(resolvedBlockIndices, idx)

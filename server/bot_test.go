@@ -2541,6 +2541,49 @@ func TestSchedule(t *testing.T) {
 	r.Equal("0 0 * * 1-5", sc[0].Cron)
 }
 
+// The recurring picker truncates the chat msgHash to its 4-char prefix to fit
+// Telegram's 64-byte callback_data limit when a cron expression is also packed
+// in. moveFromChat must accept the prefix and still locate the inbox entry.
+func TestScheduleRepeatedWithTruncatedHash(t *testing.T) {
+	r := require.New(t)
+
+	mode := userconfig.DefaultConfig.Mode
+	userconfig.DefaultConfig.Mode = userconfig.ModeFull
+	defer func() {
+		userconfig.DefaultConfig.Mode = mode
+	}()
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	err = userFS.CreateSystemDirs()
+	r.NoError(err)
+
+	tgram := tg.NewFakeTG()
+
+	cfg := fakeConfig()
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), cfg)
+
+	err = bot.Reply(tg.NewUpd(-1, "Task"))
+	r.NoError(err)
+
+	fullHash := inboxMsgHash(t, userFS, 0)
+	truncated := fullHash[:4]
+
+	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("sc", []string{truncated, "345600", "0 0 * * 1-5"})))
+	r.NoError(err)
+
+	laterMD, err := userFS.Read(fs.DirUserRoot, fs.LaterFilename)
+	r.NoError(err)
+	items, _ := txt.ChecklistItems(laterMD)
+	r.Contains(items, "Task")
+
+	sc, err := cfg.Schedules()
+	r.NoError(err)
+	r.Len(sc, 1)
+	r.Equal("Task", sc[0].Filename)
+	r.Equal("0 0 * * 1-5", sc[0].Cron)
+}
+
 func TestScheduleNoRepeat(t *testing.T) {
 	r := require.New(t)
 
