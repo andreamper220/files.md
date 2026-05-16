@@ -154,7 +154,13 @@ body {
     transform: translateX(0);
 }
 
-/* Trigger when sidebar hidden AND editor2 is translated out (hiding/hidden) */
+/* Previously this pair shrank editor1 to 50% (with a row flex direction)
+   when the sidebar was hidden and editor2 was open, so the two editors
+   sat side-by-side. That made editor1 visibly "jump" because its width
+   changed and its centered content re-flowed. Editor2 is `position:
+   fixed` and already overlays on the right, so editor1 doesn't need to
+   shrink - leaving it at full width keeps the content in place. */
+/*
 body:has(#sidebar[style*="display: none"]):has(#editor2-container.show) #content {
     flex-direction: row;
 }
@@ -162,6 +168,7 @@ body:has(#sidebar[style*="display: none"]):has(#editor2-container.show) #content
 body:has(#sidebar[style*="display: none"]):has(#editor2-container.show) #editor-container {
     flex: 0 0 50%;
 }
+*/
 
 #editor {
     flex: 1;
@@ -257,10 +264,16 @@ a:hover {
     padding: 2em calc((100% - var(--normal-width)) / 2);
 }
 
-/* Remove centering only when editor2 is actively shown */
+/* Previously this stripped editor1's horizontal centering padding when
+   editor2 was open, snapping the content from its centered position to
+   the left edge - a visible "jump". Disabled: the centering rule above
+   stays in effect, so editor1's content stays put when editor2 opens
+   as a fixed overlay on the right. */
+/*
 #content:has(#editor2-container.show) .CodeMirror-scroll {
     padding: 2em 0;
 }
+*/
 
 .CodeMirror-lines::after {
     content: "";
