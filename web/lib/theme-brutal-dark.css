@@ -259,13 +259,14 @@
     text-indent: -5px !important;
 }
 
-/* Code chip: slate-dark tile with bright-lime text and a thin lime
-   border - reads as a terminal-style token instead of a popping chip. */
+/* Code chip: dark tile with bright-purple text and matching border -
+   same terminal-token style the chip had when it was slate-dark/lime,
+   re-skinned to the purple accent. */
 .cm-s-hypermd-light span.cm-inline-code:not(.cm-formatting):not(.cm-hmd-indented-code) {
     font-family: var(--font-mono-brutal) !important;
     background: #28251F !important;
-    color: #C1F970 !important;
-    border: 1px solid #C1F970 !important;
+    color: #D88FFF !important;
+    border: 1px solid #D88FFF !important;
     border-radius: 4px !important;
     padding: 0.2em 0.5em !important;
     font-weight: 600 !important;
