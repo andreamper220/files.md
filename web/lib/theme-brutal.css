@@ -261,14 +261,11 @@
     border-bottom: 3px solid var(--color-neo-orange) !important;
 }
 
-/* Blockquote: keep the dark-theme behavior verbatim - the only
-   customization is recoloring the `:before` left bar to neo-blue. The
-   `>` marker visibility, padding, text colour, indent and bar
-   thickness all come from hypermd.css + app.css's
-   `pre.HyperMD-quote-1 { text-indent: -10px; padding-inline-start: 24px }`
-   pair, which renders correctly out of the box. */
+/* Blockquote: dark-theme behavior, plus a thicker 4px neo-blue left bar
+   so it matches the codeblock's left border weight. */
 .cm-s-hypermd-light pre.HyperMD-quote-1:before {
     background: var(--color-neo-blue) !important;
+    width: 4px !important;
 }
 
 /* Inline code: lime-green chip with bold mono text and a thin dark
