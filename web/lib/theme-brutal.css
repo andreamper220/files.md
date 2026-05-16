@@ -93,6 +93,16 @@
         stroke: var(--color-neo-orange) !important;
     }
 
+    /* The `×` glyph in Space Mono sits high in its line-box, so it
+       visually lifts off the arrow row in light mode. In dark mode it
+       already looks fine because theme-dark.css overrides --font back
+       to system-ui (loads after brutal-dark). Match that by forcing a
+       sans-serif on the button only - so the glyph renders at a
+       natural baseline regardless of body font. */
+    #close-editor2 {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    }
+
     #open-sidebar {
         background: var(--col-bg-active);
     }
