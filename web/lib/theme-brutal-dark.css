@@ -37,12 +37,12 @@
     --col-accent: #E8E3D8;
 }
 
-/* Checkbox icon: glyph PNG colorized to bright orange (#FF6B35) so it
-   matches the ol/ul marker color. The filter chain normalizes the PNG to
-   black first, then rotates the hue toward warm orange. */
+/* Checkbox icon: glyph PNG colorized to the muted-burnt-amber
+   `--color-neo-orange` (#B86A40), matching the ol/ul markers and code
+   chip text color. */
 .cm-s-hypermd-light span.cm-formatting-task.hmd-hidden-token {
     background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAwCAMAAAA8VkqRAAAAclBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACa4vOeAAAAJXRSTlMADcjpDswcLZOzsvOYBvWdbtvTX0D69+ORa1dRJCDtuaF7ZDkoQyuUXgAAAMhJREFUOMvt0reywjAUhOFjKxmcrgMZboL//V8Rm6GwkNUx0LClvhkVZ1fEZoqHqMwO7wuUSb0YxcJKxtLpxIt2SzJRykkQp5RgdAjaIKRJCEn6gWdA9OzRoqLVRscQnc9bdtXX/eyurOF7N3erLVDPwCGHxoVwamH1LwGUBfBbhrCvoLlMitL9DY8trLtJg7qoCj18VAN1OYE/YJBuDe1RJtBVo5wbqPb+GL5yWG1GLX0YZYw5iQ93yQ/yAHfZzu5qt/mxr97VFS15JGSVM0C6AAAAAElFTkSuQmCC") !important;
-    filter: brightness(0) saturate(100%) invert(54%) sepia(75%) saturate(2461%) hue-rotate(343deg) brightness(101%) contrast(101%);
+    filter: brightness(0) saturate(100%) invert(45%) sepia(35%) saturate(1100%) hue-rotate(340deg) brightness(95%) contrast(92%);
 }
 
 #toolbar svg {
@@ -186,16 +186,17 @@
     font-weight: 400;
 }
 
-/* Ol/ul markers in bright orange to match the checkbox glyph - separates
-   list affordances visually from the blue quote-bar/`>` marker. */
+/* Ol/ul markers in the same muted-burnt-amber as the code chip and the
+   hover-orange (`--color-neo-orange`) - separates list affordances
+   visually from the blue quote-bar/`>` marker. */
 .cm-s-hypermd-light span.cm-formatting-list-ol {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-    color: #FF6B35 !important;
+    color: var(--color-neo-orange) !important;
     font-weight: 700 !important;
 }
 
 .cm-s-hypermd-light .cm-formatting-list-ul {
-    color: #FF6B35 !important;
+    color: var(--color-neo-orange) !important;
 }
 
 .cm-s-hypermd-light .cm-strong {
@@ -259,14 +260,14 @@
     text-indent: -5px !important;
 }
 
-/* Code chip: dark tile with bright-purple text and matching border -
-   same terminal-token style the chip had when it was slate-dark/lime,
-   re-skinned to the purple accent. */
+/* Code chip: dark tile with muted-burnt-amber text and matching border -
+   reuses the same `--color-neo-orange` hover hue (tree-item hover,
+   search-result focus, action-btn hover, etc.) so accents stay coherent. */
 .cm-s-hypermd-light span.cm-inline-code:not(.cm-formatting):not(.cm-hmd-indented-code) {
     font-family: var(--font-mono-brutal) !important;
     background: #28251F !important;
-    color: #D88FFF !important;
-    border: 1px solid #D88FFF !important;
+    color: var(--color-neo-orange) !important;
+    border: 1px solid var(--color-neo-orange) !important;
     border-radius: 4px !important;
     padding: 0.2em 0.5em !important;
     font-weight: 600 !important;
