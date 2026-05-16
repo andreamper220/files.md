@@ -3330,8 +3330,25 @@
       var lineObj = getLine(doc, line);
       var lineLen = lineObj.text.length;
       var start, end;
+      // PATCHED: pull the line's padding-bottom off the rendered pre
+      // so we can clamp the selection rect's bottom. Without this the
+      // brutal theme's H1 (which uses padding-bottom + a linear-gradient
+      // HR drawn inside that padding) gets selected far below the text.
+      var linePadBottom = 0;
+      try {
+        var _viewIdx = line - cm.display.viewFrom;
+        var _viewNode = cm.display.view && cm.display.view[_viewIdx];
+        var _pre = _viewNode && _viewNode.node;
+        if (_pre && _pre.nodeType === 1) {
+          linePadBottom = parseFloat(getComputedStyle(_pre).paddingBottom) || 0;
+        }
+      } catch (e) { /* fall through with 0 */ }
       function coords(ch, bias) {
-        return charCoords(cm, Pos(line, ch), "div", lineObj, bias)
+        var c = charCoords(cm, Pos(line, ch), "div", lineObj, bias);
+        if (linePadBottom > 0) {
+          c = {left: c.left, right: c.right, top: c.top, bottom: c.bottom - linePadBottom};
+        }
+        return c;
       }
 
       function wrapX(pos, dir, side) {

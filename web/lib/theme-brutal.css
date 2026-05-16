@@ -359,7 +359,7 @@
     color: var(--col-tx-alt) !important;
 }
 .action-btn:hover {
-    background: color-mix(in srgb, var(--color-neo-orange) 20%, transparent) !important;
+    background: var(--color-neo-orange) !important;
 }
 /* Selected/pinned message uses neo-orange for parity with the sidebar's
    selected-row treatment. */
