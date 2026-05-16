@@ -230,16 +230,27 @@
     transition: background .15s, color .15s;
 }
 
-/* Selected (cursor on the line) or hover: lime-green chip + blue text,
+/* Active line (cursor on the line): lime-green chip + blue text,
    no underline. CodeMirror tags the active line's pre with
-   `.CodeMirror-activeline`. */
+   `.CodeMirror-activeline`. Slight horizontal padding so the chip
+   extends just past the text edges instead of clipping exactly to
+   the glyphs. */
 .cm-s-hypermd-light pre.CodeMirror-activeline span.cm-link,
-.cm-s-hypermd-light pre.CodeMirror-activeline span.cm-string.cm-url.cm-hmd-barelink,
-.cm-s-hypermd-light span.cm-link:hover,
-.cm-s-hypermd-light span.cm-string.cm-url.cm-hmd-barelink:hover {
+.cm-s-hypermd-light pre.CodeMirror-activeline span.cm-string.cm-url.cm-hmd-barelink {
     background: var(--color-neo-lime) !important;
     color: var(--color-neo-blue) !important;
     border-bottom: none !important;
+    padding: 0.05em 0.2em !important;
+}
+
+/* Hover: orange chip + dark text, matching the sidebar's selected-row
+   highlight so the "clickable" affordance is consistent across the UI. */
+.cm-s-hypermd-light span.cm-link:hover,
+.cm-s-hypermd-light span.cm-string.cm-url.cm-hmd-barelink:hover {
+    background: var(--color-neo-orange) !important;
+    color: #1A1A1A !important;
+    border-bottom: none !important;
+    padding: 0.05em 0.2em !important;
 }
 
 /* Blockquote: soft light-blue gradient strip with a thick neo-blue left
