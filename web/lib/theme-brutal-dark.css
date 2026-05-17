@@ -300,15 +300,8 @@
 }
 
 .cm-s-hypermd-light img.hmd-image {
-    border-radius: 0 !important;
-    border: 2px solid var(--col-border) !important;
-    box-shadow: 4px 4px 0 0 var(--color-neo-lime) !important;
-}
-.cm-s-hypermd-light pre.CodeMirror-line:nth-child(3n+2 of pre.CodeMirror-line:has(img.hmd-image)) img.hmd-image {
-    box-shadow: 4px 4px 0 0 var(--color-neo-orange) !important;
-}
-.cm-s-hypermd-light pre.CodeMirror-line:nth-child(3n of pre.CodeMirror-line:has(img.hmd-image)) img.hmd-image {
-    box-shadow: 4px 4px 0 0 var(--color-neo-blue) !important;
+    border-radius: 7px !important;
+    border: none !important;
 }
 
 .cm-s-hypermd-light pre.HyperMD-hr {

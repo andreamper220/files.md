@@ -404,7 +404,7 @@ function todayHeader(timezone) {
 }
 
 async function addToJournal(text) {
-    text = text.trim();
+    text = ucfirst(text.trim());
     const journalFilename = todayJournalFilename();
     const journalPath = `journal/${journalFilename}`;
     const journalHeader = todayHeader().replace(/^#### /, '## ');
@@ -602,7 +602,7 @@ function attachEventListeners() {
                 searchModal.close();
             } else {
                 const message = btn.closest('.message');
-                const text = message.querySelector('.message-content').textContent;
+                const text = ucfirst(message.querySelector('.message-content').textContent);
                 // Keep this message's action row visible while the picker is
                 // open - mouse leaves the bubble as soon as the modal grabs
                 // focus, otherwise the buttons fade out under the user.

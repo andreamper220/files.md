@@ -342,10 +342,10 @@
     padding-left: 20px !important;
 }
 
-/* Images: sharp corners + black border. */
+/* Images: no border, slightly rounded corners (matching the chat modal). */
 .cm-s-hypermd-light img.hmd-image {
-    border-radius: 0 !important;
-    border: 2px solid var(--col-border) !important;
+    border-radius: 7px !important;
+    border: none !important;
 }
 
 /* Horizontal rule: hard solid bar - core brutalist motif. */
