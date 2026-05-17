@@ -8,7 +8,7 @@
    to `prefers-color-scheme: light` and don't apply on dark systems. */
 @media (prefers-color-scheme: dark) {
 :root {
-    --font: 'Space Mono', monospace !important;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     --font-mono-brutal: 'Space Mono', 'IBM Plex Mono', ui-monospace, 'Courier New', Courier, monospace;
     --color-neo-bg: #1F1D1A;
     --color-neo-text: #E8E3D8;
@@ -263,6 +263,11 @@
 /* Code chip: dark tile with muted-burnt-amber text and matching border -
    reuses the same `--color-neo-orange` hover hue (tree-item hover,
    search-result focus, action-btn hover, etc.) so accents stay coherent. */
+.cm-s-hypermd-light .cm-inline-code,
+.cm-s-hypermd-light code {
+    font-family: var(--font-mono-brutal) !important;
+}
+
 .cm-s-hypermd-light span.cm-inline-code:not(.cm-formatting):not(.cm-hmd-indented-code) {
     font-family: var(--font-mono-brutal) !important;
     background: #28251F !important;

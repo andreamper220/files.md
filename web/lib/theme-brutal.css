@@ -8,7 +8,7 @@
    theme-dark.css continues to handle OS-dark systems untouched. */
 @media (prefers-color-scheme: light) {
 :root {
-    --font: 'Space Mono', monospace !important;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     --font-mono-brutal: 'Space Mono', 'IBM Plex Mono', ui-monospace, 'Courier New', Courier, monospace;
     --color-neo-bg: #F4F4F0;
     --color-neo-text: #1A1A1A;
@@ -309,6 +309,11 @@
 /* Inline code: lime-green chip with bold mono text and a thin dark
    outline. Bigger padding now that the body has 1.9 line-height to
    accommodate the taller chip without breaking flow. */
+.cm-s-hypermd-light .cm-inline-code,
+.cm-s-hypermd-light code {
+    font-family: var(--font-mono-brutal) !important;
+}
+
 .cm-s-hypermd-light span.cm-inline-code:not(.cm-formatting):not(.cm-hmd-indented-code) {
     font-family: var(--font-mono-brutal) !important;
     background: var(--color-neo-lime) !important;
