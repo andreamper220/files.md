@@ -438,6 +438,10 @@
     border-radius: 6px !important;
 }
 
+.CodeMirror-hints,
+.CodeMirror-hint {
+    font-family: var(--font) !important;
+}
 .CodeMirror-hint-active {
     background-color: var(--color-neo-orange) !important;
     color: #1F1D1A !important;

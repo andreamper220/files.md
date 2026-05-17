@@ -514,6 +514,10 @@
 
 /* Selection inside the link-insert dropdown and sidebar context menu uses
    the same neo-orange as every other "thing under the pointer" surface. */
+.CodeMirror-hints,
+.CodeMirror-hint {
+    font-family: var(--font) !important;
+}
 .CodeMirror-hint-active {
     background-color: var(--color-neo-orange) !important;
     color: #1A1A1A !important;
