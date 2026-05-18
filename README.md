@@ -1,7 +1,7 @@
 <img src="https://github.com/zakirullin/files.md/raw/main/web/img/icon.png" alt="Files.md icon" title="Files.md" align="right" height="76" />
 
 # Files.md  
-A simple application for your `.md` files. **All data stays on your device**.
+A simple application for your `.md` files. **Private, no data is sent to server**.
 
 <img src="https://github.com/zakirullin/files.md/raw/main/web/img/appdark.png" alt="Files.md screenshot" title="Files.md"/>
 
