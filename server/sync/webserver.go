@@ -54,6 +54,8 @@ func Serve(apiHost, appHost, certDir, logFilename string) {
 	// For regular errors we still use slog.
 	serverLogger := newLogger(logFilename)
 
+	serverLogger.Printf("Resolved hosts: api_host=%q app_host=%q cert_dir=%q", apiHost, appHost, certDir)
+
 	// For local environment.
 	// TODO make it more explicit
 	if certDir == "" {
@@ -87,6 +89,7 @@ func Serve(apiHost, appHost, certDir, logFilename string) {
 	}
 	srv.Handler = router(serverLogger)
 
+	serverLogger.Printf("Starting HTTPS server on %s (api_host=%q app_host=%q cert_dir=%q)", srv.Addr, apiHost, appHost, certDir)
 	err := srv.ListenAndServeTLS("", "") // Key and cert provided automatically by autocert
 	if err != nil {
 		panic(err)
