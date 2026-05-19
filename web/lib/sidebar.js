@@ -237,7 +237,9 @@ function renderSidebar(focusDir = '', modifiedPaths) {
             return;
         }
 
-        if (isChecklist(toFilename(path))) {
+        // Root-level checklists are rendered in Step 0 (Lists group).
+        // Checklists inside folders must still appear under their parent node.
+        if (isChecklist(toFilename(path)) && toRootPath(path) === '/') {
             return;
         }
 
