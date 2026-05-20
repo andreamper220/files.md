@@ -13,9 +13,10 @@ You can store your whole life:
 
 All in plain `.md` files, local-first. LLM-friendly. **Private - no data is sent to server**.    
 
-> You should own your files, and **the software that opens them**.  
-> You grow your knowledge with your brain.  
-> You grow software around it with an LLM.  
+> Own your data as local files.
+> **Own the software that opens those files**.
+> Grow your knowledge with your brain.  
+> Grow the software around it with an LLM.  
 > Both can last through the ages.   
  
 Try it out: [app.files.md](https://app.files.md) (Beta). Main site: [files.md](https://files.md).
