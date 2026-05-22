@@ -154,6 +154,20 @@ function initEditor(el) {
 
     newEditor.on('inputRead', async function (cm, change) {
         if (change.text.length === 1 && change.text[0] === '[') {
+            const cursor = cm.getCursor();
+            // Skip the link autocomplete when the [ is preceded by a
+            // backslash - that's an escaped bracket, not the start of a link.
+            const charBefore = cursor.ch >= 2 ? cm.getRange({line: cursor.line, ch: cursor.ch - 2}, {line: cursor.line, ch: cursor.ch - 1}) : '';
+            if (charBefore === '\\') {
+                return;
+            }
+            // Skip when the [ sits inside an inline code span (`...[...`).
+            // The token at the cursor carries the `inline-code` style and we
+            // don't want to insert links into code.
+            const token = cm.getTokenAt(cursor);
+            if (token && token.type && /\binline-code\b/.test(token.type)) {
+                return;
+            }
             cm.showHint({
                 completeSingle: false, updateOnCursorActivity: true,
             })
