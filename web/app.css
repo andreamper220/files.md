@@ -622,7 +622,7 @@ body.dragging * {
 
 .cm-s-hypermd-light .CodeMirror-line.HyperMD-codeblock {
     padding-left: 6px;
-    color: var(--col-tx-alt) !important;
+    color: var(--col-tx) !important;
 }
 
 pre.HyperMD-codeblock-begin {

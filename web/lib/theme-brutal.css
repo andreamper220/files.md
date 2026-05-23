@@ -332,9 +332,6 @@
     padding-left: 20px !important;
     color: var(--col-tx) !important;
 }
-.cm-s-hypermd-light pre.HyperMD-codeblock span {
-    color: var(--col-tx) !important;
-}
 
 .cm-hmd-comment,
 .cm-hmd-comment-marker {
