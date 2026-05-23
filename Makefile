@@ -1,4 +1,4 @@
-.PHONY: server docker_build docker_run
+.PHONY: server docker_build docker_run compose_up compose_down
 
 server:
 	go run ./cmd/server
@@ -16,6 +16,12 @@ docker_run: # run container, host 80 -> container 8080
 		-e TOKENS_DIR=/app/tokens \
 		-e CERT_DIR= \
 		files-md
+
+compose_up: # build + start via compose.yaml, logs attached
+	$(DOCKER) compose up
+
+compose_down: # stop and remove the compose container (named volumes survive)
+	$(DOCKER) compose down
 
 DOCKER ?= docker
 

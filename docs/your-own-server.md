@@ -1,6 +1,17 @@
 # Run your own server
 
-## Deploy on your own server
+## Containerized deployment (Docker/Podman)
+
+Build and start:
+```bash
+$ docker compose up
+```
+
+### Enable HTTPS
+In `compose.yaml`: set `CERT_DIR` to a persistent path, uncomment the `"443:443"` port.
+
+
+## Deploy on your own server (manual)
 
 Install [Go](https://go.dev/doc/install) on your host machine.  
 
@@ -19,7 +30,6 @@ LOG_FILE=server.log
 API_URL=https://api.yourdomain.com
 APP_URL=https://app.youdomain.com
 ```
-
 
 Deploy a systemd service:
 ```bash
