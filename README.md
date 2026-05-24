@@ -36,7 +36,7 @@ Maybe. But this time:
 - **Local-first, files don't leave your device**
 - Extremely simple code. **One person or an LLM can fit the whole project in head**
 - The codebase is ready for your LLM to extend to your needs
-- Portable, no build systems, just open `web/index.html` 
+- Portable, no build systems, no Electron, just open `web/index.html` 
 - Optional out of the box synchronization 
 - The server is just one binary (or use iCloud/Dropbox/Google Drive for sync)
 - Telegram chatbot for on-the-go access to your files

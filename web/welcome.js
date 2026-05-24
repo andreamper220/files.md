@@ -257,8 +257,8 @@ const WELCOME_FILES = {
             "\n" +
             "## Checklist\n" +
             "- [x] Completed task\n" +
-            "- [ ] Incomplete task\n" +
-            "Format:\n`- [ ] Item`\n" +
+            "- [ ] Incomplete task\n\n" +
+            "Syntax:\n`- [ ] Item`\n" +
             "\n" +
             "## Image\n" +
             "![Why taking notes](https://app.files.md/img/tomas_sanchez.jpg)\n" +
@@ -266,7 +266,7 @@ const WELCOME_FILES = {
             "*You can paste your own images via `Cmd/Ctrl + V`*\n\n" +
             "## Blockquote\n" +
             ">This is a blockquote. It can span multiple lines and is great for highlighting important information or quotes from other sources.\n" +
-            "\nFormat:\n`> This is a blockquote`\n" +
+            "\nSyntax:\n`> This is a blockquote`\n" +
             "\n" +
             "## Code Block\n" +
             "```\n" +
