@@ -210,7 +210,7 @@ const WELCOME_FILES = {
         "Zettelkasten.md": {
             "content":
                 "Zettelkasten, slipbox, or card file - a collection of small items of information stored on paper slips, linked to each other through subject headings or links. It has often been used as a system of note-taking and personal knowledge management for research, study, and writing.\n\n" +
-                "Niklas Luhmann described his slip-box as a \"competent communication partner\", a \"second memory\" he could communicate with.\n\n" +
+                "Niklas Luhmann described his slipbox as a \"competent communication partner\", a \"second memory\" he could communicate with.\n\n" +
                 "![](img/slipbox.jpg)\n\n" +
                 "## Main Zettelkasten principles\n" +
                 "#### The principle of atomicity\n" +
