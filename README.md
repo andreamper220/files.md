@@ -55,12 +55,6 @@ Maybe. But this time:
 P.S. For now, Chrome-based browsers are best at [File System API support](https://caniuse.com/native-filesystem-api).  
 
 ## Dump your thoughts
-You can use chat to quickly dump your thoughts.  
-
-<div align="center">
-    <img src="https://github.com/zakirullin/files.md/raw/main/web/img/app.png" alt="Files.md screenshot" title="Files.md" width="700"/>
-</div>
-
 Open the chat and send a message:
 <div align="center">
     <img src="https://github.com/zakirullin/files.md/raw/main/web/img/note1.png"  width="350"/>
@@ -72,6 +66,10 @@ Choose where to save (can do later):
 </div>
 
 **With this flow you can quickly save notes, tasks, journal records and checklists**.  
+
+<div align="center">
+    <img src="https://github.com/zakirullin/files.md/raw/main/web/img/app.png" alt="Files.md screenshot" title="Files.md" width="700"/>
+</div>
 
 ## Chatbot
 Open the chat, write something and press `Enter`:
