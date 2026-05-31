@@ -467,8 +467,6 @@
 }
 .empty-title {
     font-weight: 800 !important;
-    padding-bottom: 14px;
-    border-bottom: 2px solid var(--col-border);
     margin-bottom: 20px !important;
 }
 .empty-desc {

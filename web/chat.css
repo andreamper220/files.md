@@ -36,7 +36,6 @@
 .message {
     background: var(--col-bg-alt);
     padding: 4px 8px 4px 36px;
-    border-bottom: 1px solid var(--col-border);
     position: relative;
     animation: slideIn 0.3s ease-out;
     cursor: pointer;
@@ -107,9 +106,6 @@
     z-index: 1;
 }
 
-.message:last-child {
-    border-bottom: none;
-}
 
 .message:hover:not(:has(.complete-btn:hover)) .message-content {
     background: var(--color-neo-orange) !important;
