@@ -690,6 +690,13 @@ pre.HyperMD-codeblock-end {
     margin-bottom: 0.6em;
 }
 
+/* <audio> defaults to a narrow fixed width that doesn't honour max-width
+   centering the same way img/video do. Force it to fill up to max-width
+   so the 25% left-margin centers it visually like the rest. */
+.cm-s-hypermd-light audio.hmd-image {
+    width: 100%;
+}
+
 @media (max-width: 768px) {
     .cm-s-hypermd-light .hmd-image {
         margin-left: 20%;
