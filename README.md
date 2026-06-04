@@ -18,7 +18,7 @@ All in plain `.md` files, local-first. LLM-friendly. **Private - your data stays
 
 Try it out: [app.files.md](https://app.files.md) (Beta). Main site: [files.md](https://files.md).  
 
-You can use this app for Zettelkasten, Second Brain, Notes, Journaling, To Do lists, Checklists, and more.
+You can use this app for Second Brain, Zettelkasten, Notes, Journaling, Tasks, Checklists, and more.
 
 > Own your data as plain local files.  
 > Own the software that opens those files.   
