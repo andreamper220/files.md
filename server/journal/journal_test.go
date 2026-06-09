@@ -78,7 +78,7 @@ func TestAddRecord(t *testing.T) {
 			err = userFS.Write(fs.DirJournal, "2023.05 May.md", test.md)
 			r.NoError(err)
 
-			err = AddRecord(userFS, test.record, time.UTC)
+			err = AddRecord(userFS, test.record, time.UTC, true)
 			r.NoError(err)
 
 			md, err := userFS.Read(fs.DirJournal, "2023.05 May.md")

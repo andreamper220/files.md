@@ -73,6 +73,11 @@ func main() {
 				if err != nil {
 					fmt.Printf("Worker's error: %s\n", err)
 				}
+
+				err = server.SendMorningSummaries(config.ServerCfg.StorageDir, config.ServerCfg.ConfigFilename, fsBackend, telegram)
+				if err != nil {
+					fmt.Printf("Worker's error: %s\n", err)
+				}
 			case <-quit:
 				ticker.Stop()
 				return

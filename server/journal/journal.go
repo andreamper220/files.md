@@ -20,8 +20,9 @@ var (
 )
 
 // AddRecord adds a record for the current day.
-// Creates a file if there's no one for the current month
-func AddRecord(userFS *fs.FS, record string, timezone *time.Location) error {
+// Creates a file if there's no one for the current month.
+// When timestampsEnabled is false, the record is stored without a time prefix.
+func AddRecord(userFS *fs.FS, record string, timezone *time.Location, timestampsEnabled bool) error {
 	key, err := userFS.SafePath(fs.DirUserRoot, "")
 	if err != nil {
 		return fmt.Errorf("failed to get safe path: %w", err)
@@ -55,15 +56,22 @@ func AddRecord(userFS *fs.FS, record string, timezone *time.Location) error {
 		md += todayHeader(timezone) + "\n"
 	}
 
-	timestamp := Now().In(timezone).Format("`15:04`")
 	if txt.HasImage(record) {
-		// If there's an image - place timestamp under the image
 		re := regexp.MustCompile(txt.ImgPattern)
 		imgLink := re.FindString(record)
 		record = strings.TrimSpace(strings.Replace(record, imgLink, "", 1))
-		record = fmt.Sprintf("%s\n%s %s\n", imgLink, timestamp, strings.TrimSpace(record))
-	} else {
+		if timestampsEnabled {
+			timestamp := Now().In(timezone).Format("`15:04`")
+			record = fmt.Sprintf("%s\n%s %s\n", imgLink, timestamp, strings.TrimSpace(record))
+		} else if strings.TrimSpace(record) == "" {
+			record = fmt.Sprintf("%s\n", imgLink)
+		} else {
+			record = fmt.Sprintf("%s\n%s\n", imgLink, strings.TrimSpace(record))
+		}
+	} else if timestampsEnabled {
 		record = fmt.Sprintf("%s %s\n", Now().In(timezone).Format("`15:04`"), record)
+	} else {
+		record = fmt.Sprintf("%s\n", strings.TrimSpace(record))
 	}
 
 	md += record

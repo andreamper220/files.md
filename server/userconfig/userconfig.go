@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/zakirullin/files.md/server/fs"
+	"github.com/zakirullin/files.md/server/priority"
 )
 
 const (
@@ -33,6 +34,11 @@ var DefaultConfig = config{
 	Mode:                      "full",
 	QuickHabitsEnabled:        false,
 	Channels:                  []int64{},
+	PriorityEmojis:            priority.DefaultEmojis,
+	TaskCategories:            []string{"Работа", "Дом", "Личное", "Здоровье", "Покупки"},
+	JournalTimestamps:         false,
+	MorningSummaryHour:        8,
+	MorningSummaryEnabled:     true,
 }
 
 var (
@@ -64,6 +70,11 @@ type config struct {
 	Mode                      string     `json:"mode"`
 	QuickHabitsEnabled        bool       `json:"quickHabitsEnabled"`
 	Channels                  []int64    `json:"channels"`
+	PriorityEmojis            []string   `json:"priorityEmojis"`
+	TaskCategories            []string   `json:"taskCategories"`
+	JournalTimestamps         bool       `json:"journalTimestamps"`
+	MorningSummaryHour        int        `json:"morningSummaryHour"`
+	MorningSummaryEnabled     bool       `json:"morningSummaryEnabled"`
 }
 
 func NewConfig(userFS *fs.FS, userID int64, filename string) *Config {
@@ -283,6 +294,56 @@ func (c *Config) Channels() []int64 {
 	cfg, _ := c.read(c.filename)
 
 	return cfg.Channels
+}
+
+func (c *Config) PriorityEmojis() []string {
+	cfg, _ := c.read(c.filename)
+	if len(cfg.PriorityEmojis) == 0 {
+		return priority.DefaultEmojis
+	}
+	return cfg.PriorityEmojis
+}
+
+func (c *Config) TaskCategories() []string {
+	cfg, _ := c.read(c.filename)
+	if len(cfg.TaskCategories) == 0 {
+		return DefaultConfig.TaskCategories
+	}
+	return cfg.TaskCategories
+}
+
+func (c *Config) JournalTimestampsEnabled() bool {
+	cfg, _ := c.read(c.filename)
+	return cfg.JournalTimestamps
+}
+
+func (c *Config) MorningSummaryHour() int {
+	cfg, _ := c.read(c.filename)
+	if cfg.MorningSummaryHour <= 0 || cfg.MorningSummaryHour > 23 {
+		return DefaultConfig.MorningSummaryHour
+	}
+	return cfg.MorningSummaryHour
+}
+
+func (c *Config) MorningSummaryEnabled() bool {
+	cfg, _ := c.read(c.filename)
+	return cfg.MorningSummaryEnabled
+}
+
+func (c *Config) EnsureTaskCategories() error {
+	for _, category := range c.TaskCategories() {
+		filename := fs.SanitizeFilename(category) + "_.md"
+		exists, err := c.userFS.Exists(fs.DirUserRoot, filename)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			if err := c.userFS.Write(fs.DirUserRoot, filename, ""); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (c *Config) read(path string) (config, error) {

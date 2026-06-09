@@ -24,6 +24,7 @@ type Config struct {
 	ServerLogFile     string `default:"/tmp/server.log" envconfig:"LOG_FILE"`
 	StorageQuotaKB    int64  `default:"1024" envconfig:"STORAGE_QUOTA_KB"` // 1MB
 	UnlimitedQuotaIDs string `envconfig:"UNLIMITED_QUOTA_IDS"`
+	KieAPIKey         string `envconfig:"KIE_API_KEY"`
 }
 
 func (c Config) APIHost() string { return hostOf(c.APIURL) }

@@ -221,7 +221,7 @@ func (fs FS) MakeDir(dir string) error {
 		return fmt.Errorf("fs make dir: unsafe filePath '%s': %w", filePath, ErrUnsafePath)
 	}
 
-	err = fs.backend.Mkdir(filePath, 0o755)
+	err = fs.backend.MkdirAll(filePath, 0o755)
 	if err != nil {
 		return fmt.Errorf("fs can't make dir: %w", err)
 	}

@@ -27,11 +27,14 @@ import (
 	"github.com/zakirullin/files.md/server/habits"
 	"github.com/zakirullin/files.md/server/i18n"
 	"github.com/zakirullin/files.md/server/journal"
+	"github.com/zakirullin/files.md/server/morningsummary"
 	"github.com/zakirullin/files.md/server/pkg/slice"
 	"github.com/zakirullin/files.md/server/pkg/tg"
 	"github.com/zakirullin/files.md/server/pkg/txt"
 	"github.com/zakirullin/files.md/server/plugins"
+	"github.com/zakirullin/files.md/server/priority"
 	"github.com/zakirullin/files.md/server/stats"
+	"github.com/zakirullin/files.md/server/stt"
 	"github.com/zakirullin/files.md/server/sync"
 	"github.com/zakirullin/files.md/server/userconfig"
 )
@@ -74,6 +77,7 @@ type Update interface {
 	IsSentViaBot() bool
 	ReplyToMsgID() (int, bool)
 	PhotoOrImageID() (string, bool)
+	AudioOnlyID() (string, bool)
 	Caption() string
 	MsgID() (int, bool)
 	Time() (int, bool)
@@ -196,6 +200,8 @@ const (
 	CmdAddToRecentFileShortcut         = "+"
 	CmdCompleteHabit                   = "ch"
 	CmdShare                           = "share"
+	CmdSetPriority                     = "prio"
+	CmdShowMorning                     = "morning"
 )
 
 var Shortcuts = map[string][]string{
@@ -298,8 +304,9 @@ func (b *Bot) Reply(u Update) error {
 		return nil
 	}
 
-	// Handle images.
-	if _, hasImage := u.PhotoOrImageID(); hasImage {
+	if _, hasAudio := u.AudioOnlyID(); hasAudio {
+		err = b.saveFromAudio(u)
+	} else if _, hasImage := u.PhotoOrImageID(); hasImage {
 		err = b.saveFromImage(u)
 	} else {
 		err = b.saveFromTextMsg(u)
@@ -328,6 +335,8 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdShowMoveTo:         b.showMoveTo,
 		CmdShowRename:         b.showRename,
 		CmdShowStats:          b.showStats,
+		CmdShowMorning:        b.showMorningSummary,
+		CmdSetPriority:        b.setPriority,
 		CmdShowReadChecklist:  b.showRead,
 		CmdRandomNote:         b.randomNote,
 		CmdShowWatchChecklist: b.showWatch,
@@ -566,6 +575,82 @@ func (b *Bot) saveFromImage(u Update) error {
 	}
 
 	return b.showMoveTo([]string{msgHash})
+}
+
+func (b *Bot) saveFromAudio(u Update) error {
+	content, err := b.saveAudio(u)
+	if err != nil {
+		return fmt.Errorf("save from audio: %w", err)
+	}
+
+	if replyMsgID, ok := u.ReplyToMsgID(); ok {
+		return b.addToReplied(replyMsgID, content)
+	}
+
+	msgHash, err := b.appendToChat(content, b.cfg.Timezone())
+	if err != nil {
+		return fmt.Errorf("save from audio: %w", err)
+	}
+
+	if b.cfg.ChatOnlyMode() {
+		msgID, _ := u.MsgID()
+		_ = b.tg.SendReaction(b.userID, msgID, "👌")
+		return nil
+	}
+
+	if b.cfg.JournalOnlyMode() {
+		return b.moveToJournal([]string{msgHash})
+	}
+
+	return b.showMoveTo([]string{msgHash})
+}
+
+func (b *Bot) saveAudio(u Update) (string, error) {
+	audioID, _ := u.AudioOnlyID()
+
+	var buf bytes.Buffer
+	extension, err := b.tg.DownloadFile(audioID, &buf)
+	if err != nil {
+		return "", fmt.Errorf("can't download audio: %w", err)
+	}
+
+	audioFilename := fmt.Sprintf("tg_%s%s", audioID, extension)
+	err = b.fs.Write(fs.DirMedia, audioFilename, buf.String())
+	if err != nil {
+		return "", fmt.Errorf("can't save audio: %w", err)
+	}
+
+	audioPath := fmt.Sprintf("%s/%s", fs.DirMedia, audioFilename)
+	mimeType := "audio/ogg"
+	switch strings.ToLower(extension) {
+	case ".mp3", ".mpeg":
+		mimeType = "audio/mpeg"
+	case ".wav":
+		mimeType = "audio/wav"
+	case ".m4a", ".mp4":
+		mimeType = "audio/mp4"
+	}
+
+	var content string
+	if config.ServerCfg.KieAPIKey != "" {
+		transcript, sttErr := stt.Transcribe(config.ServerCfg.KieAPIKey, buf.Bytes(), mimeType)
+		if sttErr != nil {
+			slog.Warn("voice transcription failed", "err", sttErr)
+		} else if strings.TrimSpace(transcript) != "" {
+			content = txt.Ucfirst(strings.TrimSpace(transcript))
+		}
+	}
+	if content == "" {
+		content = "🎙 Голосовое сообщение"
+	}
+	content = fmt.Sprintf("%s\n\n![](%s)", content, audioPath)
+
+	if u.Caption() != "" {
+		caption := txt.TelegramEntitiesToMarkdown(u.Caption(), u.CaptionEntities())
+		content = fmt.Sprintf("%s\n%s", content, strings.TrimSpace(caption))
+	}
+
+	return content, nil
 }
 
 // saveImage saves an image to the filesystem and returns a markdown link to it
@@ -964,6 +1049,18 @@ func (b *Bot) showMoveTo(params []string) error {
 		userMoveToBtns = append(userMoveToBtns, tg.NewBtn(showTodayLabel, showTodayCmd))
 	}
 
+	if !b.cfg.NotesOnlyMode() && !b.cfg.JournalOnlyMode() {
+		prioBtns := b.priorityBtns(msgHash)
+		if len(prioBtns) > 0 {
+			kb.AddRow(tg.NewRow(prioBtns...))
+		}
+		_ = b.cfg.EnsureTaskCategories()
+		catBtns := b.categoryBtns(msgHash)
+		for _, row := range slice.Chunk(catBtns, btnsPerRow) {
+			kb.AddRow(tg.NewRow(row...))
+		}
+	}
+
 	userBtnsByRows := slice.Chunk(userMoveToBtns, btnsPerRow)
 	for _, row := range userBtnsByRows {
 		kb.AddRow(row)
@@ -977,6 +1074,70 @@ func (b *Bot) showMoveTo(params []string) error {
 	}
 
 	return nil
+}
+
+func (b *Bot) priorityBtns(msgHash string) []tg.Btn {
+	var btns []tg.Btn
+	for i, emoji := range b.cfg.PriorityEmojis() {
+		btns = append(btns, tg.NewBtn(emoji, tg.NewCmd(CmdSetPriority, []string{msgHash, strconv.Itoa(i)})))
+	}
+	return btns
+}
+
+func (b *Bot) categoryBtns(msgHash string) []tg.Btn {
+	var btns []tg.Btn
+	for _, category := range b.cfg.TaskCategories() {
+		filename := fs.SanitizeFilename(category) + "_.md"
+		btns = append(btns, tg.NewBtn(category, tg.NewCmd(CmdMoveToChecklist, []string{fs.Hash(filename), msgHash})))
+	}
+	return btns
+}
+
+func (b *Bot) setPriority(params []string) error {
+	if len(params) < 2 {
+		return fmt.Errorf("set priority: missing params")
+	}
+	msgHash := params[0]
+	idx, err := strconv.Atoi(params[1])
+	if err != nil {
+		return fmt.Errorf("set priority: invalid index: %w", err)
+	}
+
+	emojis := b.cfg.PriorityEmojis()
+	if idx < 0 || idx >= len(emojis) {
+		return fmt.Errorf("set priority: index out of range")
+	}
+
+	chatMD, err := b.fs.Read(fs.DirUserRoot, fs.ChatFilename)
+	if err != nil {
+		return fmt.Errorf("set priority: can't read chat: %w", err)
+	}
+
+	_, block, ok := findChatMsgByHash(chatMD, msgHash)
+	if !ok {
+		return fmt.Errorf("set priority: message not found")
+	}
+
+	newBody := priority.Apply(stripInboxEntryPrefix(block), emojis[idx], emojis)
+	updated, err := renameChatMsg(chatMD, msgHash, newBody)
+	if err != nil {
+		return fmt.Errorf("set priority: %w", err)
+	}
+	if err := b.fs.Write(fs.DirUserRoot, fs.ChatFilename, updated); err != nil {
+		return fmt.Errorf("set priority: can't write chat: %w", err)
+	}
+
+	return b.showMoveTo([]string{msgHash})
+}
+
+func (b *Bot) showMorningSummary(_ []string) error {
+	report, err := morningsummary.Build(b.fs, b.cfg)
+	if err != nil {
+		return fmt.Errorf("show morning summary: %w", err)
+	}
+
+	kb := tg.NewKeyboard([]tg.Row{tg.NewBtn(i18n.StrHome, tg.NewCmd(CmdShowHome, nil))})
+	return b.showHTML(report, kb)
 }
 
 func (b *Bot) recentCmdBtn(msgHash string) *tg.Btn {
@@ -1251,24 +1412,59 @@ func (b *Bot) showFiles(_ []string) error {
 	return nil
 }
 
-func (b *Bot) showDirs(_ []string) error {
-	files, err := b.fs.FilesAndDirs(fs.DirUserRoot)
-	if err != nil {
-		return fmt.Errorf("show dirs: can't get dirs: %w", err)
+func (b *Bot) showDirs(params []string) error {
+	parentDir := fs.DirUserRoot
+	if len(params) > 0 && params[0] != "" {
+		resolved, err := b.fs.ResolveDirParam(params[0])
+		if err != nil {
+			return fmt.Errorf("show dirs: can't resolve dir: %w", err)
+		}
+		parentDir = resolved
 	}
 
-	dirs := fs.OnlyNoteDirs(fs.OnlyDirs(files))
+	entries, err := b.fs.FilesAndDirs(parentDir)
+	if err != nil {
+		return fmt.Errorf("show dirs: can't get entries: %w", err)
+	}
+
+	dirs := fs.OnlyNoteDirs(fs.OnlyDirs(entries))
+	mdFiles := fs.ExcludeConfig(fs.OnlyUserMDFiles(entries))
+
+	var kb tg.Keyboard
 	var dirBtns []tg.Btn
 	for _, dir := range dirs {
-		cmd := tg.NewCustomCmd("", []string{dir.Name}, tg.CmdTypeInlineQueryCurrentChat)
+		fullPath := fs.JoinDir(parentDir, dir.Name)
+		if parentDir == fs.DirUserRoot {
+			fullPath = dir.Name
+		}
+		cmd := tg.NewCmd(CmdShowDirs, []string{fs.ShortHash(fullPath)})
 		btn := tg.NewBtn(fmt.Sprintf("%s %s", i18n.Emoji("dir"), dir.DisplayName), cmd)
 		dirBtns = append(dirBtns, btn)
 	}
+	for _, row := range slice.Chunk(dirBtns, btnsPerRow) {
+		kb.AddRow(tg.NewRow(row...))
+	}
 
-	var kb tg.Keyboard
-	dirBtnsByRows := slice.Chunk(dirBtns, btnsPerRow)
-	for _, row := range dirBtnsByRows {
-		kb.AddRow(row)
+	var fileBtns []tg.Btn
+	dirHash := ""
+	if parentDir != fs.DirUserRoot {
+		dirHash = fs.ShortHash(parentDir)
+	}
+	for _, file := range mdFiles {
+		cmd := tg.NewCmd(CmdShowFile, []string{dirHash, fs.Hash(file.Name)})
+		fileBtns = append(fileBtns, tg.NewBtn(fs.UnsanitizeFilename(file.DisplayName), cmd))
+	}
+	for _, row := range slice.Chunk(fileBtns, btnsPerRow) {
+		kb.AddRow(tg.NewRow(row...))
+	}
+
+	if parentDir != fs.DirUserRoot {
+		parent := fs.ParentDirPath(parentDir)
+		backParam := ""
+		if parent != "" {
+			backParam = fs.ShortHash(parent)
+		}
+		kb.AddRow(tg.NewBtn("⬅️ Назад", tg.NewCmd(CmdShowDirs, []string{backParam})))
 	}
 
 	inlineCmd := tg.NewCustomCmd(CmdInlineQuerySearchEveryWhere, nil, tg.CmdTypeInlineQueryCurrentChat)
@@ -1278,7 +1474,11 @@ func (b *Bot) showDirs(_ []string) error {
 	}
 	kb.AddRow(footer)
 
-	err = b.showHTML(b.tr("🗂 Your dirs:")+wideSpacer, &kb)
+	title := b.tr("🗂 Your dirs:")
+	if parentDir != fs.DirUserRoot {
+		title = fmt.Sprintf("%s\n<code>%s</code>", title, fs.DisplayName(parentDir))
+	}
+	err = b.showHTML(title+wideSpacer, &kb)
 	if err != nil {
 		return fmt.Errorf("show dirs: %w", err)
 	}
@@ -1605,7 +1805,7 @@ func (b *Bot) showFile(params []string) error {
 	dirHash := params[0]
 	filenameHash := params[1]
 
-	dir, err := b.fs.Unhash(fs.DirUserRoot, dirHash)
+	dir, err := b.fs.ResolveDirParam(dirHash)
 	if err != nil {
 		return fmt.Errorf("show file: can't find dir: %w", err)
 	}
@@ -1732,14 +1932,13 @@ func (b *Bot) moveToDir(params []string) error {
 
 	msgHashes := strings.Split(params[1], ",")
 
-	toDir, err := b.fs.Unhash(fs.DirUserRoot, toDirHash)
+	toDir, err := b.fs.FindNoteDirByShortHash(toDirHash)
 	canCreateMissingDir := slices.Contains([]string{fs.DirArchive, fs.DirHabits}, toDirHash)
 	if err != nil {
 		if canCreateMissingDir {
-			// It will be created later in createOrAdd.
 			toDir = toDirHash
 		} else {
-			return fmt.Errorf("move: can't unhash new dir %s: %w", toDir, err)
+			return fmt.Errorf("move: can't resolve dir %s: %w", toDirHash, err)
 		}
 	}
 
@@ -1756,7 +1955,7 @@ func (b *Bot) moveToDir(params []string) error {
 		isNotesDir := len(notesDir) == 1
 		if isNotesDir {
 			// We can tolerate this, as this is informative logging
-			_ = journal.AddRecord(b.fs, fmt.Sprintf("📌 %s", fs.DisplayName(filename)), b.cfg.Timezone())
+			_ = journal.AddRecord(b.fs, fmt.Sprintf("📌 %s", fs.DisplayName(filename)), b.cfg.Timezone(), b.cfg.JournalTimestampsEnabled())
 		}
 
 		return b.createOrAdd(toDir, filename, content)
@@ -1856,7 +2055,7 @@ func (b *Bot) completeChecklistItem(params []string) error {
 	// We can tolerate failure of writing to journal, since that's not single source of truth.
 	// AddRecord prepends a fresh `HH:MM`; strip any leading timestamp on
 	// the item body so we don't end up with two of them.
-	_ = journal.AddRecord(b.fs, fmt.Sprintf("✅ %s", fs.DisplayName(txt.StripChatTimestamp(item))), b.cfg.Timezone())
+	_ = journal.AddRecord(b.fs, fmt.Sprintf("✅ %s", fs.DisplayName(txt.StripChatTimestamp(item))), b.cfg.Timezone(), b.cfg.JournalTimestampsEnabled())
 
 	if checklist == fs.LaterFilename {
 		return b.showLaterTasks(nil)
@@ -1885,9 +2084,9 @@ func (b *Bot) requestNewDirName(params []string) error {
 // inputExpectation, which only can add parameters in the end.
 func (b *Bot) moveToNewDir(params []string) error {
 	msgIndicesStr := params[0]
-	dir := strings.ToLower(fs.SanitizeFilename(params[1]))
+	dir := sanitizeDirPath(params[1])
 
-	exists, err := b.fs.Exists(fs.DirUserRoot, dir)
+	exists, err := b.fs.Exists(dir, "")
 	if err != nil {
 		return fmt.Errorf("move to new dir from caht: %w", err)
 	}
@@ -1899,6 +2098,15 @@ func (b *Bot) moveToNewDir(params []string) error {
 	}
 
 	return b.moveToDir([]string{dir, msgIndicesStr})
+}
+
+func sanitizeDirPath(dir string) string {
+	dir = strings.TrimSpace(strings.ReplaceAll(dir, "\\", "/"))
+	parts := strings.Split(dir, "/")
+	for i, part := range parts {
+		parts[i] = strings.ToLower(fs.SanitizeFilename(part))
+	}
+	return strings.Join(parts, "/")
 }
 
 // TODO reuse move to existing note as more general?
@@ -1942,7 +2150,7 @@ func (b *Bot) moveToExistingNote(params []string) error {
 		toDir = fs.DirUserRoot
 	} else {
 		var err error
-		toDir, err = b.fs.Unhash(fs.DirUserRoot, toDirHash)
+		toDir, err = b.fs.FindNoteDirByShortHash(toDirHash)
 		if err != nil {
 			return fmt.Errorf("move to existing note: %w", err)
 		}
@@ -2108,7 +2316,7 @@ func (b *Bot) moveToJournal(params []string) error {
 
 	err := b.moveFromChat(func(content string, t time.Time) error {
 		// TODO take into account time from chat
-		return journal.AddRecord(b.fs, content, b.cfg.Timezone())
+		return journal.AddRecord(b.fs, content, b.cfg.Timezone(), b.cfg.JournalTimestampsEnabled())
 	}, false, msgHashes...)
 	if err != nil {
 		return fmt.Errorf("failed to move to journal: can't add record: %w", err)
@@ -2128,7 +2336,7 @@ func (b *Bot) moveToJournal(params []string) error {
 func (b *Bot) addToJournalAndContinue(params []string) error {
 	content := params[0]
 
-	err := journal.AddRecord(b.fs, content, b.cfg.Timezone())
+	err := journal.AddRecord(b.fs, content, b.cfg.Timezone(), b.cfg.JournalTimestampsEnabled())
 	if err != nil {
 		return fmt.Errorf("failed to move to journal: can't add note: %w", err)
 	}
@@ -2146,7 +2354,7 @@ func (b *Bot) addToJournalFromShortcut(params []string) error {
 	content := params[0]
 
 	// TODO change to pass text
-	err := journal.AddRecord(b.fs, content, b.cfg.Timezone())
+	err := journal.AddRecord(b.fs, content, b.cfg.Timezone(), b.cfg.JournalTimestampsEnabled())
 	if err != nil {
 		return fmt.Errorf("failed to move to journal: can't add note: %w", err)
 	}
@@ -2535,16 +2743,14 @@ func (b *Bot) moveToDirBtns(msgHash string) ([]tg.Btn, error) {
 		return tg.NewBtn(emojifiedDir, tg.NewCmd(CmdMoveToExistingDir, []string{fs.ShortHash(dir), msgHash}))
 	}
 
-	dirs, err := b.fs.FilesAndDirs(fs.DirUserRoot)
+	dirPaths, err := b.fs.AllNoteDirPaths()
 	if err != nil {
 		return nil, fmt.Errorf("To File keyboard: %w", err)
 	}
-	dirs = fs.OnlyNoteDirs(fs.OnlyDirs(dirs))
-	dirs = fs.SortByCtimeDesc(dirs)
 
 	var buttons []tg.Btn
-	for _, dir := range dirs {
-		buttons = append(buttons, newBtn(dir.Name))
+	for _, dirPath := range dirPaths {
+		buttons = append(buttons, newBtn(dirPath))
 	}
 
 	return buttons, nil
@@ -2801,7 +3007,7 @@ func (b *Bot) completeHabit(params []string) error {
 	}
 
 	record := fmt.Sprintf("%s %s", emoji, habit)
-	err = journal.AddRecord(b.fs, record, userConf.Timezone())
+	err = journal.AddRecord(b.fs, record, userConf.Timezone(), userConf.JournalTimestampsEnabled())
 	if err != nil {
 		return fmt.Errorf("complete habit: can't write record to journal: %w", err)
 	}

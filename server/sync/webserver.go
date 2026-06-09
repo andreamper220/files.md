@@ -228,7 +228,7 @@ func router(serverLogger *log.Logger) *http.ServeMux {
 		}
 
 		record := fmt.Sprintf("%s %s", emoji, habitName)
-		err = journal.AddRecord(userFS, record, userConf.Timezone())
+		err = journal.AddRecord(userFS, record, userConf.Timezone(), userConf.JournalTimestampsEnabled())
 		if err != nil {
 			serverLogger.Printf("failed to write habit to journal: %v", err)
 			http.Error(w, "can't write habit to journal", http.StatusInternalServerError)

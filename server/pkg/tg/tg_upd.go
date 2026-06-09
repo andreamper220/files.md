@@ -234,12 +234,12 @@ func (u *TGUpd) PhotoOrImageID() (string, bool) {
 		return videoID, true
 	}
 
-	audioID, found := u.audioID()
-	if found {
-		return audioID, true
-	}
-
 	return "", false
+}
+
+// AudioOnlyID returns voice/audio attachment IDs without photos or videos.
+func (u *TGUpd) AudioOnlyID() (string, bool) {
+	return u.audioID()
 }
 
 // Caption returns the caption for the animation, audio,

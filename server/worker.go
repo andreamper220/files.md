@@ -17,6 +17,8 @@ import (
 	"github.com/zakirullin/files.md/server/db"
 	"github.com/zakirullin/files.md/server/fs"
 	"github.com/zakirullin/files.md/server/journal"
+	"github.com/zakirullin/files.md/server/morningsummary"
+	"github.com/zakirullin/files.md/server/pkg/tg"
 	"github.com/zakirullin/files.md/server/pkg/txt"
 	"github.com/zakirullin/files.md/server/userconfig"
 )
@@ -24,6 +26,9 @@ import (
 // alreadyRemoved tracks which users had their completed checklist items
 // cleaned up today. Key is userID#yyyy-mm-dd.
 var alreadyRemoved = make(map[string]bool)
+
+// morningSummarySent tracks morning reports already sent today.
+var morningSummarySent = make(map[string]bool)
 
 func BeginningOfTheDay(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
@@ -271,7 +276,7 @@ func RemoveCompletedChecklistItems(
 			for _, task := range tasks {
 				// Strip any leading `HH:MM` so AddRecord's own prepended
 				// timestamp isn't duplicated after the checkmark.
-				_ = journal.AddRecord(userFS, fmt.Sprintf("✅ %s", txt.StripChatTimestamp(task)), userconf.Timezone())
+				_ = journal.AddRecord(userFS, fmt.Sprintf("✅ %s", txt.StripChatTimestamp(task)), userconf.Timezone(), userconf.JournalTimestampsEnabled())
 			}
 		}
 
@@ -316,4 +321,68 @@ func removeCompletedInboxEntries(md string) (string, string) {
 
 	newMD := strings.TrimSpace(strings.Join(kept, "\n"))
 	return newMD, removed.String()
+}
+
+// SendMorningSummaries sends a daily task digest to each user at the configured hour.
+func SendMorningSummaries(
+	storagePath,
+	configFilename string,
+	fsBackend afero.Fs,
+	telegram Chat,
+) error {
+	rootFS, err := fs.NewFS(storagePath, fsBackend)
+	if err != nil {
+		return fmt.Errorf("morning summary: can't create FS: %w", err)
+	}
+
+	userDirs, err := rootFS.FilesAndDirs(fs.DirUserRoot)
+	if err != nil {
+		return fmt.Errorf("morning summary: %w", err)
+	}
+
+	for _, userDir := range userDirs {
+		userID, err := strconv.ParseInt(userDir.Name, 10, 64)
+		if err != nil {
+			continue
+		}
+
+		key := txt.I64(userID) + "#" + now().Format("2006-01-02")
+		if morningSummarySent[key] {
+			continue
+		}
+
+		userPath := path.Join(storagePath, txt.I64(userID))
+		userFS, err := fs.NewFS(userPath, fsBackend)
+		if err != nil {
+			continue
+		}
+
+		userconf := userconfig.NewConfig(userFS, userID, configFilename)
+		if !userconf.MorningSummaryEnabled() {
+			continue
+		}
+
+		tz := userconf.Timezone()
+		localNow := now().In(tz)
+		if localNow.Hour() != userconf.MorningSummaryHour() || localNow.Minute() >= 10 {
+			continue
+		}
+
+		report, err := morningsummary.Build(userFS, userconf)
+		if err != nil {
+			slog.Error("morning summary: can't build report", "user", userID, "err", err)
+			continue
+		}
+
+		kb := tg.NewKeyboard([]tg.Row{tg.NewRow(tg.NewBtn("🏠 Home", tg.NewCmd(CmdShowHome, nil)))})
+		bot := NewBot(userID, telegram, userFS, db.NewDB(userID), userconf)
+		if err := bot.showHTML(report, kb); err != nil {
+			slog.Error("morning summary: can't send report", "user", userID, "err", err)
+			continue
+		}
+
+		morningSummarySent[key] = true
+	}
+
+	return nil
 }
