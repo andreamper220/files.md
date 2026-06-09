@@ -1,0 +1,14 @@
+.git
+.github
+.env
+storage
+tokens
+fslog
+tests
+**/*_test.go
+**/.DS_Store
+.idea
+.vscode
+*.md
+!web/**/*.md
+agent-tools

@@ -6,15 +6,26 @@ server:
 docker_build: # build container image (override with `make docker_build DOCKER=podman`)
 	$(DOCKER) build -t files-md --build-arg VERSION=$$(git rev-parse --short HEAD) .
 
-docker_run: # run container, host 80 -> container 8080
+docker_run: # run container, host 80 -> container 8080 (requires .env)
 	$(DOCKER) run --rm -it -p 80:8080 \
+		--env-file .env \
 		-v files-md-storage:/app/storage \
 		-v files-md-tokens:/app/tokens \
 		-e APP_URL=http://localhost \
+		-e API_URL=http://localhost \
 		-e STORAGE_DIR=/app/storage \
 		-e TOKENS_DIR=/app/tokens \
 		-e CERT_DIR= \
+		-e STORAGE_QUOTA_KB=0 \
 		files-md
+
+docker_import: # import Obsidian vault into storage (set OBSIDIAN_SRC, USER_ID in env)
+	$(DOCKER) run --rm \
+		-v files-md-storage:/app/storage \
+		-v "$(OBSIDIAN_SRC):/obsidian:ro" \
+		--entrypoint /app/importobsidian \
+		files-md \
+		--src /obsidian --dst /app/storage/$(USER_ID)
 
 compose_up: # build + start via compose.yaml, logs attached
 	$(DOCKER) compose up --build

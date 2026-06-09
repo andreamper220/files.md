@@ -2,10 +2,49 @@
 
 ## Containerized deployment (Docker/Podman)
 
-Build and start:
+### Quick start
+
 ```bash
-$ docker compose up
+cp .env.example .env
+# Edit .env: BOT_API_TOKEN, KIE_API_KEY, TOKENS_SALT
+
+docker compose up --build
 ```
+
+Open [http://localhost](http://localhost) for the PWA. Message your Telegram bot to link your account.
+
+| Variable | Purpose |
+|----------|---------|
+| `BOT_API_TOKEN` | Telegram bot from [@BotFather](https://t.me/BotFather) |
+| `KIE_API_KEY` | Voice transcription via [kie.ai](https://kie.ai/api-key) |
+| `TOKENS_SALT` | Random string for PWA sync tokens (`openssl rand -base64 32`) |
+| `APP_URL` / `API_URL` | Public URL, `http://localhost` for local Docker |
+| `HTTP_PORT` | Host port (default `80`) |
+| `STORAGE_QUOTA_KB` | `0` = unlimited (recommended for self-hosted) |
+
+Data persists in Docker volumes `storage` and `tokens`.
+
+### Import Obsidian vault into Docker storage
+
+After the first message to the bot, note your Telegram user ID (folder name in `storage/`).
+
+**Windows (PowerShell):**
+```powershell
+docker compose build
+docker compose run --rm `
+  -v "${PWD}/storage:/app/storage" `
+  -v "C:\Users\ADMIN\Documents\obsidian:/obsidian:ro" `
+  --entrypoint /app/importobsidian `
+  files-md `
+  --src /obsidian --dst /app/storage/YOUR_TELEGRAM_ID
+```
+
+**Linux/macOS:**
+```bash
+make docker_import OBSIDIAN_SRC=/path/to/obsidian USER_ID=YOUR_TELEGRAM_ID
+```
+
+Add `--dry-run` before `--src` to preview without writing.
 
 ### Enable HTTPS
 In `compose.yaml`: set `CERT_DIR` to a persistent path, uncomment the `"443:443"` port.
