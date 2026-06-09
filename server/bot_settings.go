@@ -16,15 +16,15 @@ const (
 )
 
 var AvailableMoveToBtns = []tg.Btn{
-	tg.NewBtn(i18n.StrToTomorrow, tg.NewCmd(CmdScheduleForTmrw, nil)),
-	tg.NewBtn(i18n.StrToLater, tg.NewCmd(CmdMoveToLater, nil)),
-	tg.NewBtn(i18n.StrToADay, tg.NewCmd(CmdShowScheduleForDay, nil)),
-	tg.NewBtn(i18n.StrToFile, tg.NewCmd(CmdShowMoveToDirOrFile, nil)),
-	tg.NewBtn(i18n.StrToJournal, tg.NewCmd(CmdMoveToJournal, nil)),
-	tg.NewBtn(i18n.StrToRead, tg.NewCmd(CmdMoveToRead, nil)),
-	tg.NewBtn(i18n.StrToWatch, tg.NewCmd(CmdMoveToWatch, nil)),
-	tg.NewBtn(i18n.StrToShop, tg.NewCmd(CmdMoveToShop, nil)),
-	tg.NewBtn(i18n.StrToChecklist, tg.NewCmd(CmdShowMoveToChecklist, nil)),
+	tg.NewBtn(i18n.Tr(i18n.StrToTomorrow), tg.NewCmd(CmdScheduleForTmrw, nil)),
+	tg.NewBtn(i18n.Tr(i18n.StrToLater), tg.NewCmd(CmdMoveToLater, nil)),
+	tg.NewBtn(i18n.Tr(i18n.StrToADay), tg.NewCmd(CmdShowScheduleForDay, nil)),
+	tg.NewBtn(i18n.Tr(i18n.StrToFile), tg.NewCmd(CmdShowMoveToDirOrFile, nil)),
+	tg.NewBtn(i18n.Tr(i18n.StrToJournal), tg.NewCmd(CmdMoveToJournal, nil)),
+	tg.NewBtn(i18n.Tr(i18n.StrToRead), tg.NewCmd(CmdMoveToRead, nil)),
+	tg.NewBtn(i18n.Tr(i18n.StrToWatch), tg.NewCmd(CmdMoveToWatch, nil)),
+	tg.NewBtn(i18n.Tr(i18n.StrToShop), tg.NewCmd(CmdMoveToShop, nil)),
+	tg.NewBtn(i18n.Tr(i18n.StrToChecklist), tg.NewCmd(CmdShowMoveToChecklist, nil)),
 }
 
 var AvailableQuickBtns = []tg.Btn{
@@ -48,12 +48,12 @@ func (b *Bot) showSettings(_ []string) error {
 	kb.AddRow(tg.NewBtn(txt.Emoji(i18n.Emoji("tasks"), b.tr("Tasks mode")), tg.NewCmd(CmdTasksOnlyMode, nil)))
 	//kb.AddRow(tg.NewBtn(txt.Emoji(i18n.Emoji("journal"), b.tr("Journal mode")), tg.NewCmd(CmdJournalOnlyMode, nil)))
 	kb.AddRow(tg.NewBtn("-", tg.NewCmd(CmdDoNothing, nil)))
-	kb.AddRow(tg.NewBtn(i18n.StrQuickBtns, tg.NewCmd(CmdShowQuickBtnsSettings, nil)))
-	kb.AddRow(tg.NewBtn(i18n.StrMoveToBtns, tg.NewCmd(CmdShowMoveToBtnsSettings, nil)))
+	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrQuickBtns), tg.NewCmd(CmdShowQuickBtnsSettings, nil)))
+	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrMoveToBtns), tg.NewCmd(CmdShowMoveToBtnsSettings, nil)))
 	kb.AddRow(tg.NewBtn(txt.Emoji(i18n.Emoji("world"), b.tr("Timezone")), tg.NewCmd(CmdShowTimezone, nil)))
-	kb.AddRow(tg.NewBtn(i18n.StrHome, tg.NewCmd(CmdShowHome, nil)))
+	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
 
-	err := b.showHTML("Settings:", &kb)
+	err := b.showHTML(i18n.Tr("Settings:"), &kb)
 	if err != nil {
 		return fmt.Errorf("showSettings : %w", err)
 	}
@@ -101,9 +101,9 @@ func (b *Bot) showTimezone(_ []string) error {
 		}
 		kb.AddRow(tg.NewBtn(name, tg.NewCmd(CmdSetTimezone, []string{tz})))
 	}
-	kb.AddRow(tg.NewBtn(i18n.StrHome, tg.NewCmd(CmdShowHome, nil)))
+	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
 
-	err := b.showHTML("Timezone:", &kb)
+	err := b.showHTML(i18n.Tr("Timezone:"), &kb)
 	if err != nil {
 		return fmt.Errorf("showTimezone : %w", err)
 	}
@@ -140,7 +140,7 @@ func (b *Bot) showQuickBtnsSettings(params []string) error {
 				continue
 			}
 
-			name := fmt.Sprintf("%s %s %s", i18n.Emoji(btn.Name), btn.Name, delBtn)
+			name := fmt.Sprintf("%s %s %s", i18n.Emoji(btn.Name), i18n.Tr(btn.Name), delBtn)
 			enabledCmd := tg.NewCmd(CmdDelFromQuickBtns, []string{btn.Cmd.Name})
 			kb.AddRow(tg.NewBtn(name, enabledCmd))
 			usedCmds = append(usedCmds, cmd)
@@ -163,14 +163,14 @@ func (b *Bot) showQuickBtnsSettings(params []string) error {
 			continue
 		}
 		// Command is not enabled, so add it to disabled list
-		name := fmt.Sprintf("%s %s %s", i18n.Emoji(btn.Name), btn.Name, addBtn)
+		name := fmt.Sprintf("%s %s %s", i18n.Emoji(btn.Name), i18n.Tr(btn.Name), addBtn)
 		disabledCmd := tg.NewCmd(CmdAddToQuickBtns, []string{btn.Cmd.Name})
 		kb.AddRow(tg.NewBtn(name, disabledCmd))
 	}
 
-	kb.AddRow(tg.NewBtn(i18n.StrHome, tg.NewCmd(CmdShowHome, nil)))
+	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
 
-	text := fmt.Sprintf("Configure quick buttons (%s = add to quick buttons, %s = to remove from quick buttons):", addBtn, delBtn)
+	text := fmt.Sprintf(i18n.Tr("Configure quick buttons (%s = add to quick buttons, %s = to remove from quick buttons):"), addBtn, delBtn)
 	err = b.showHTML(text, &kb)
 	if err != nil {
 		return fmt.Errorf("configureQuickPanel : %w", err)
@@ -226,7 +226,7 @@ func (b *Bot) quickBtns() []tg.Btn {
 					habitsUrl := fmt.Sprintf("%s/habits_v2/%d", config.ServerCfg.APIURL, b.userID)
 					btn.Cmd.Params = []string{habitsUrl}
 				}
-				btn.Name = i18n.Emoji(btn.Name)
+				btn.Name = i18n.Emoji(i18n.Tr(btn.Name))
 
 				quickBtnsRow = append(quickBtnsRow, btn)
 				break
@@ -283,9 +283,9 @@ func (b *Bot) showMoveToBtnsSettings(params []string) error {
 		kb.AddRow(tg.NewBtn(name, disabledCmd))
 	}
 
-	kb.AddRow(tg.NewBtn(i18n.StrHome, tg.NewCmd(CmdShowHome, nil)))
+	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
 
-	text := fmt.Sprintf("Configure quick panel (%s = add to panel, %s = to remove):", addBtn, delBtn)
+	text := fmt.Sprintf(i18n.Tr("Configure quick panel (%s = add to panel, %s = to remove):"), addBtn, delBtn)
 	err = b.showHTML(text, &kb)
 	if err != nil {
 		return fmt.Errorf("configureQuickPanel : %w", err)

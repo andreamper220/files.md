@@ -9,6 +9,7 @@ import (
 
 	"github.com/zakirullin/files.md/server/db"
 	"github.com/zakirullin/files.md/server/fs"
+	"github.com/zakirullin/files.md/server/i18n"
 )
 
 var now = time.Now
@@ -34,7 +35,7 @@ func TodayReport(userFS *fs.FS, db any, userID int64) (string, error) {
 		return "", fmt.Errorf("stats.TodayReport: can't get trashed files: %w", err)
 	}
 	doneTotal := len(archivedFiles)
-	stats = append(stats, fmt.Sprintf("\n📊 %d tasks done in total", doneTotal))
+	stats = append(stats, fmt.Sprintf(i18n.Tr("📊 %d tasks done in total"), doneTotal))
 
 	return strings.Join(stats, "\n"), nil
 }

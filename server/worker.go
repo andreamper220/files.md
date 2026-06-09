@@ -16,6 +16,7 @@ import (
 
 	"github.com/zakirullin/files.md/server/db"
 	"github.com/zakirullin/files.md/server/fs"
+	"github.com/zakirullin/files.md/server/i18n"
 	"github.com/zakirullin/files.md/server/journal"
 	"github.com/zakirullin/files.md/server/morningsummary"
 	"github.com/zakirullin/files.md/server/pkg/tg"
@@ -78,6 +79,20 @@ func ScheduleReport(scheduledTasks []userconfig.Schedule) string {
 	return strings.TrimSpace(report)
 }
 
+var (
+	ruWeekdays     = []string{"Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"}
+	ruMonths       = []string{"", "января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"}
+	ruWeekdaysFull = []string{"воскресенье", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота"}
+)
+
+func formatWeekdayDate(t time.Time) string {
+	return fmt.Sprintf("%s %02d", ruWeekdays[t.Weekday()], t.Day())
+}
+
+func formatLongDate(t time.Time) string {
+	return fmt.Sprintf("%02d %s, %s", t.Day(), ruMonths[t.Month()], ruWeekdaysFull[t.Weekday()])
+}
+
 func formatTaskDate(scheduledAt int64) string {
 	today := now().Truncate(24 * time.Hour)
 	taskDate := time.Unix(scheduledAt, 0).In(now().Location()).Truncate(24 * time.Hour)
@@ -86,15 +101,15 @@ func formatTaskDate(scheduledAt int64) string {
 
 	switch {
 	case diffDays == 0:
-		return "Today"
+		return i18n.Tr("Today")
 	case diffDays == 1:
-		return "Tomorrow"
+		return i18n.Tr("Tomorrow")
 	case diffDays > 1 && diffDays <= 6:
-		return taskDate.Format("Monday 02")
+		return formatWeekdayDate(taskDate)
 	case diffDays >= 7 && diffDays <= 13:
-		return "Next " + taskDate.Format("Monday 02")
+		return fmt.Sprintf(i18n.Tr("Next %s"), formatWeekdayDate(taskDate))
 	default:
-		return taskDate.Format("02 January, Monday")
+		return formatLongDate(taskDate)
 	}
 }
 

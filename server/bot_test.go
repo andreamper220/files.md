@@ -14,6 +14,7 @@ import (
 
 	"github.com/zakirullin/files.md/server/db"
 	"github.com/zakirullin/files.md/server/fs"
+	"github.com/zakirullin/files.md/server/i18n"
 	"github.com/zakirullin/files.md/server/journal"
 	"github.com/zakirullin/files.md/server/pkg/tg"
 	"github.com/zakirullin/files.md/server/pkg/txt"
@@ -373,7 +374,7 @@ func TestShowEmptyTodayList(t *testing.T) {
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("home", nil)))
 	r.NoError(err)
-	r.Equal("🌴 Nothing here yet - send me something!", tgram.LastSentText)
+	r.Equal(emptyHomeText(), tgram.LastSentText)
 }
 
 func TestSaveFromTextMsgWithUnicodeCharacters(t *testing.T) {
@@ -650,11 +651,11 @@ func TestSaveFromPhotoWithoutCaption(t *testing.T) {
 
 	r.Len(files, 1)
 	// Be aware that it's not regular ꞉
-	r.Equal("Img 11.08.24 09꞉54.md", files[0].Name)
+	r.Equal(fmt.Sprintf(i18n.Tr("Img %s"), "11.08.24 09꞉54")+".md", files[0].Name)
 	r.True(files[0].IsMultiline)
 
 	// Be aware that it's not regular ꞉
-	content, err = bot.fs.Read("notes", "Img 11.08.24 09꞉54.md")
+	content, err = bot.fs.Read("notes", fmt.Sprintf(i18n.Tr("Img %s"), "11.08.24 09꞉54")+".md")
 	r.NoError(err)
 	r.Equal("![](media/tg_PHOTO_ID)", content)
 }
@@ -878,7 +879,7 @@ func TestToday(t *testing.T) {
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("home", nil)))
 	r.NoError(err)
 
-	r.Equal("<b>2</b> items"+wideSpacer, tgram.LastSentText)
+	r.Equal(homeCountText(2), tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("First task", tg.NewCmd("c", []string{"060f6b7c9c8"})),
 		tg.NewBtn("🥈 Second task", tg.NewCmd("c", []string{"083d6c37d07"})),
@@ -916,7 +917,7 @@ func TestTodayQuickMenuFilled(t *testing.T) {
 	bot, tgram, r := makeBot(t, cfg)
 	err := bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("home", nil)))
 	r.NoError(err)
-	r.Equal("<b>1</b> item"+wideSpacer, tgram.LastSentText)
+	r.Equal(homeCountText(1), tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("First task", tg.NewCmd("c", []string{"832a6c2a713"})),
 		tg.NewRow(
@@ -954,7 +955,7 @@ func TestTodayMultilineTaskShownAsLong(t *testing.T) {
 	r.NoError(err)
 
 	hash := inboxMsgHash(t, userFS, 0)
-	r.Equal("<b>1</b> item"+wideSpacer, tgram.LastSentText)
+	r.Equal(homeCountText(1), tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("👀 First task", tg.NewCmd(CmdShowLongItem, []string{hash})),
 	}), tgram.LastSentKeyboard)
@@ -989,7 +990,7 @@ func TestTodayMixedSingleAndMultilineTasks(t *testing.T) {
 
 	first := inboxMsgHash(t, userFS, 0)
 	second := inboxMsgHash(t, userFS, 1)
-	r.Equal("<b>2</b> items"+wideSpacer, tgram.LastSentText)
+	r.Equal(homeCountText(2), tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("First task", tg.NewCmd(CmdComplete, []string{first})),
 		tg.NewBtn("👀 Second task", tg.NewCmd(CmdShowLongItem, []string{second})),
@@ -1036,7 +1037,7 @@ func TestTodayMixedSingleAndMultilineTasks(t *testing.T) {
 //	err = bot.Reply(upd)
 //	r.NoError(err)
 //
-//	r.Equal("<b>2</b> items"+wideSpacer, tgram.LastSentText)
+//	r.Equal(homeCountText(2), tgram.LastSentText)
 //	r.Equal(tg.NewKeyboard([]tg.Row{
 //		tg.NewBtn("👀 First task", tg.NewCmd("task", []string{"home", "0824149b387"})),
 //		tg.NewBtn("🥈 Second task", tg.NewCmd("c", []string{"home", "4eb62f93b3e"})),
@@ -1060,15 +1061,15 @@ func TestFiles(t *testing.T) {
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("files", nil)))
 	r.NoError(err)
 
-	r.Equal("📄 Your files:"+wideSpacer, tgram.SentTexts[0])
+	r.Equal(i18n.Tr("📄 Your files:")+wideSpacer, tgram.SentTexts[0])
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		[]tg.Btn{
 			tg.NewBtn("Doc1", tg.NewCmd("file", []string{fs.DirUserRoot, "c1253521ac7"})),
 			tg.NewBtn("Doc2", tg.NewCmd("file", []string{fs.DirUserRoot, "64572c3093f"})),
 		},
 		[]tg.Btn{
-			tg.NewBtn("🔎 Search", tg.NewCustomCmd("search", nil, "iq")),
-			tg.NewBtn("🏠 Home", tg.NewCmd("home", nil)),
+			tg.NewBtn(i18n.Tr("🔎 Search"), tg.NewCustomCmd("search", nil, "iq")),
+			homeButton(),
 		},
 	}), tgram.LastSentKeyboard)
 }
@@ -1089,11 +1090,11 @@ func TestChecklists(t *testing.T) {
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("checklists", nil)))
 	r.NoError(err)
 
-	r.Equal("☑️ Checklists", tgram.LastSentText)
+	r.Equal(i18n.Tr("☑️ Checklists"), tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("Checklist1", tg.NewCmd("checklist", []string{"3755fd335a8"})),
 		tg.NewBtn("Checklist2", tg.NewCmd("checklist", []string{"c54b67d1d3d"})),
-		tg.NewBtn("🏠 Home", tg.NewCmd("home", nil)),
+		homeButton(),
 	},
 	), tgram.LastSentKeyboard)
 }
@@ -1176,7 +1177,7 @@ func TestShowChecklist(t *testing.T) {
 	r.Equal("Checklist1"+wideSpacer, tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("Item", tg.NewCmd("check_item", []string{"Checklist1_.txt", "7d74f3b92b1"})),
-		tg.NewBtn("🏠 Home", tg.NewCmd("home", nil)),
+		homeButton(),
 	},
 	), tgram.LastSentKeyboard)
 }
@@ -1198,7 +1199,7 @@ func TestCompleteItemInChecklist(t *testing.T) {
 
 	r.Equal("Checklist1"+wideSpacer, tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
-		tg.NewBtn("🏠 Home", tg.NewCmd("home", nil)),
+		homeButton(),
 	},
 	), tgram.LastSentKeyboard)
 
@@ -1269,18 +1270,18 @@ func TestSettingsMainPanel(t *testing.T) {
 	bot, tgram, r := makeBot(t, fakeConfig())
 	err := bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("settings", nil)))
 	r.NoError(err)
-	r.Equal("Settings:", tgram.LastSentText)
+	r.Equal(i18n.Tr("Settings:"), tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
-		tg.NewBtn("🧠 Full mode", tg.NewCmd("full", nil)),
+		tg.NewBtn("🧠 "+i18n.Tr("Full mode"), tg.NewCmd("full", nil)),
 		//tg.NewBtn("💬 Inbox mode", tg.NewCmd("chat", nil)),
-		tg.NewBtn("📌 Notes mode", tg.NewCmd("notes_only", nil)),
-		tg.NewBtn("✅ Tasks mode", tg.NewCmd("tasks_only", nil)),
+		tg.NewBtn("📌 "+i18n.Tr("Notes mode"), tg.NewCmd("notes_only", nil)),
+		tg.NewBtn("✅ "+i18n.Tr("Tasks mode"), tg.NewCmd("tasks_only", nil)),
 		//tg.NewBtn("💚 Journal mode", tg.NewCmd("journal_only", nil)),
 		tg.NewBtn("-", tg.NewCmd("nothing", nil)),
-		tg.NewBtn("⚡️ Quick buttons", tg.NewCmd("c_quick_btns", nil)),
-		tg.NewBtn("➡️ Move to buttons", tg.NewCmd("c_move_btns", nil)),
-		tg.NewBtn("🌎 Timezone", tg.NewCmd("timezone", nil)),
-		tg.NewBtn("🏠 Home", tg.NewCmd("home", nil)),
+		tg.NewBtn(i18n.Tr(i18n.StrQuickBtns), tg.NewCmd("c_quick_btns", nil)),
+		tg.NewBtn(i18n.Tr(i18n.StrMoveToBtns), tg.NewCmd("c_move_btns", nil)),
+		tg.NewBtn("🌎 "+i18n.Tr("Timezone"), tg.NewCmd("timezone", nil)),
+		homeButton(),
 	},
 	), tgram.LastSentKeyboard)
 }
@@ -1288,28 +1289,28 @@ func TestSettingsMainPanel(t *testing.T) {
 // Quick Panel Data-driven tests
 
 var (
-	btnFilesDel      = tg.NewBtn("📄 Files ➖", tg.NewCmd("del_quick", []string{"files"}))
-	btnChecklistsDel = tg.NewBtn("☑️ Checklists ➖", tg.NewCmd("del_quick", []string{"checklists"}))
-	btnPostponeDel   = tg.NewBtn("🦥 Postpone ➖", tg.NewCmd("del_quick", []string{"postpone"}))
+	btnFilesDel      = delQuickBtn("Files", CmdShowFiles)
+	btnChecklistsDel = delQuickBtn("Checklists", CmdShowChecklists)
+	btnPostponeDel   = delQuickBtn("Postpone", CmdShowPostpone)
 )
 
 var (
-	delimiter = tg.NewBtn("-", tg.NewCmd("nothing", nil))
-	homeBtn   = tg.NewBtn("🏠 Home", tg.NewCmd("home", nil))
+	delimiter = tg.NewBtn("-", tg.NewCmd(CmdDoNothing, nil))
+	homeBtn   = homeButton()
 )
 
 var (
-	btnLater          = tg.NewBtn("⏳ Later ➕", tg.NewCmd("add_quick", []string{"later"}))
-	btnSearch         = tg.NewBtn("🔎 Search ➕", tg.NewCmd("add_quick", []string{"search"}))
-	btnFilesAdd       = tg.NewBtn("📄 Files ➕", tg.NewCmd("add_quick", []string{"files"}))
-	btnChecklistsAdd  = tg.NewBtn("☑️ Checklists ➕", tg.NewCmd("add_quick", []string{"checklists"}))
-	btnPostponeAdd    = tg.NewBtn("🦥 Postpone ➕", tg.NewCmd("add_quick", []string{"postpone"}))
-	btnReadChecklist  = tg.NewBtn("📚 Read ➕", tg.NewCmd("add_quick", []string{"read"}))
-	btnWatchChecklist = tg.NewBtn("📺 Watch ➕", tg.NewCmd("add_quick", []string{"watch"}))
-	btnShopChecklist  = tg.NewBtn("🛒 Shop ➕", tg.NewCmd("add_quick", []string{"shop"}))
-	btnSchedule       = tg.NewBtn("🗓 Schedule ➕", tg.NewCmd("add_quick", []string{"schedule"}))
-	btnHabits         = tg.NewBtn("🌱 Habits ➕", tg.NewCmd("add_quick", []string{"habits"}))
-	btnRandom         = tg.NewBtn("🎲 Random ➕", tg.NewCmd("add_quick", []string{"random_note"}))
+	btnLater          = addQuickBtn("Later", CmdLater)
+	btnSearch         = addQuickBtn("Search", CmdInlineQuerySearchEveryWhere)
+	btnFilesAdd       = addQuickBtn("Files", CmdShowFiles)
+	btnChecklistsAdd  = addQuickBtn("Checklists", CmdShowChecklists)
+	btnPostponeAdd    = addQuickBtn("Postpone", CmdShowPostpone)
+	btnReadChecklist  = addQuickBtn("Read", CmdShowReadChecklist)
+	btnWatchChecklist = addQuickBtn("Watch", CmdShowWatchChecklist)
+	btnShopChecklist  = addQuickBtn("Shop", CmdShowShopChecklist)
+	btnSchedule       = addQuickBtn("Schedule", CmdShowSchedule)
+	btnHabits         = addQuickBtn("Habits", CmdWebAppHabits)
+	btnRandom         = addQuickBtn("Random", CmdRandomNote)
 )
 
 func TestConfigureQP_Empty_Default(t *testing.T) {
@@ -1506,7 +1507,7 @@ func RunQuickPanelTc(tc PrefTableTestCase, t *testing.T) {
 
 	err := bot.Reply(tc.updToAnswer)
 	r.NoError(err)
-	r.Equal("Configure quick buttons (➕ = add to quick buttons, ➖ = to remove from quick buttons):", tgram.LastSentText)
+	r.Equal(configureQuickButtonsText(), tgram.LastSentText)
 	r.Equal(tg.NewKeyboard(tc.buttons), tgram.LastSentKeyboard)
 }
 
@@ -1543,8 +1544,8 @@ func TestShowToFileNoDirs(t *testing.T) {
 
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewRow(tg.NewBtn("Note", tg.NewCmd("mf", []string{"345fb", h}))),
-		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
-		tg.NewRow(tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{h}))),
+		tg.NewBtn(i18n.Tr("Search"), tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewRow(tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd("new_dir", []string{h}))),
 	},
 	), tgram.LastSentKeyboard)
 }
@@ -1567,11 +1568,11 @@ func TestShowMoveToFile(t *testing.T) {
 	r.NoError(err)
 
 	r.Equal(tg.NewKeyboard([]tg.Row{
-		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewBtn(i18n.Tr("Search"), tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
 			tg.NewBtn("🗂️ Dir", tg.NewCmd("mv", []string{"73600", h})),
 			tg.NewBtn("🗂️ Notes", tg.NewCmd("mv", []string{"4358b", h})),
-			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{h})),
+			tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd("new_dir", []string{h})),
 		),
 	}), tgram.LastSentKeyboard)
 }
@@ -1768,22 +1769,10 @@ func TestShowMoveTo(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "New task\nContent"))
 	r.NoError(err)
 
-	r.Equal("Saved!", tgram.SentTexts[0])
+	r.Equal(i18n.Tr("Saved!"), tgram.SentTexts[0])
 
 	h := inboxMsgHash(t, userFS, 0)
-	kb := tg.NewKeyboard([]tg.Row{
-		[]tg.Btn{
-			{Name: "🌚 To tmrw", Cmd: tg.Cmd{Name: "sc_tmrw", Params: []string{h}, Type: "cmd"}},
-			{Name: "⏳ To later", Cmd: tg.Cmd{Name: "mv_later", Params: []string{h}, Type: "cmd"}},
-			{Name: "📆 To a day", Cmd: tg.Cmd{Name: "sc_day", Params: []string{h}, Type: "cmd"}},
-		},
-		[]tg.Btn{
-			{Name: "📄 To File", Cmd: tg.Cmd{Name: "to_file", Params: []string{h}, Type: "cmd"}},
-			{Name: "💚 To Journal", Cmd: tg.Cmd{Name: "mv_to_journal", Params: []string{h}, Type: "cmd"}},
-		},
-	},
-	)
-	r.Equal(kb, tgram.LastSentKeyboard)
+	r.Equal(fullSaveKeyboard(h), tgram.LastSentKeyboard)
 }
 
 func TestShowMoveFromTodayAndInbox(t *testing.T) {
@@ -1811,8 +1800,8 @@ func TestShowMoveFromTodayAndInbox(t *testing.T) {
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("💬 Inbox body", tg.NewCmd("s_move", []string{inboxHash})),
 		tg.NewRow(
-			tg.NewBtn("Rename", tg.NewCmd("rename", []string{})),
-			tg.NewBtn("OK", tg.NewCmd("home", []string{})),
+			tg.NewBtn(i18n.Tr("Rename"), tg.NewCmd("rename", []string{})),
+			tg.NewBtn(i18n.Tr("OK"), tg.NewCmd("home", []string{})),
 		),
 	}), tgram.LastSentKeyboard)
 }
@@ -1873,8 +1862,8 @@ func TestShowPostpone_WithInbox(t *testing.T) {
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("💬 Inbox body", tg.NewCmd("post", []string{inboxHash})),
 		tg.NewRow(
-			tg.NewBtn("Rename", tg.NewCmd("rename", []string{})),
-			tg.NewBtn("OK", tg.NewCmd("home", []string{})),
+			tg.NewBtn(i18n.Tr("Rename"), tg.NewCmd("rename", []string{})),
+			tg.NewBtn(i18n.Tr("OK"), tg.NewCmd("home", []string{})),
 		),
 	}), tgram.LastSentKeyboard)
 }
@@ -1951,7 +1940,7 @@ func TestShowRename_WithInbox(t *testing.T) {
 	inboxHash := inboxMsgHash(t, userFS, 0)
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("💬 Inbox body", tg.NewCmd("rename_file", []string{fs.ChatFilename, inboxHash})),
-		tg.NewBtn("🏠 Home", tg.NewCmd("home", nil)),
+		homeButton(),
 	}), tgram.LastSentKeyboard)
 }
 
@@ -2061,7 +2050,7 @@ func TestShowScheduleEmpty(t *testing.T) {
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("schedule", nil)))
 	r.NoError(err)
 
-	r.Equal("You don't have any scheduled tasks! 🌴", tgram.SentTexts[0])
+	r.Equal(i18n.Tr("You don't have any scheduled tasks! 🌴"), tgram.SentTexts[0])
 }
 
 func TestShowSchedule(t *testing.T) {
@@ -2095,7 +2084,7 @@ func TestShowSchedule(t *testing.T) {
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("schedule", nil)))
 	r.NoError(err)
 
-	r.Equal("<b>01 January, Thursday</b>\n- Filename", tgram.SentTexts[0])
+	r.Equal("<b>01 января, четверг</b>\n- Filename", tgram.SentTexts[0])
 }
 
 func TestMoveToChecklistSplittable(t *testing.T) {
@@ -2372,17 +2361,17 @@ func TestShowForADay(t *testing.T) {
 	r.NoError(err)
 
 	r.Equal(tg.NewKeyboard([]tg.Row{
-		[]tg.Btn{{Name: "🔄️ Repeat the task", Cmd: tg.Cmd{Name: "sc_day_r", Params: []string{"1c8f819d075"}, Type: "cmd"}}},
+		[]tg.Btn{{Name: i18n.Tr(i18n.StrRepeat), Cmd: tg.Cmd{Name: "sc_day_r", Params: []string{"1c8f819d075"}, Type: "cmd"}}},
 		[]tg.Btn{
-			{Name: "Mon", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "345600", ""}, Type: "cmd"}},
-			{Name: "Tue", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "432000", ""}, Type: "cmd"}},
-			{Name: "Wed", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "518400", ""}, Type: "cmd"}},
-			{Name: "Thu", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "604800", ""}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrMonday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "345600", ""}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrTuesday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "432000", ""}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrWednesday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "518400", ""}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrThursday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "604800", ""}, Type: "cmd"}},
 		},
 		[]tg.Btn{
-			{Name: "Fri", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "86400", ""}, Type: "cmd"}},
-			{Name: "Sat", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "172800", ""}, Type: "cmd"}},
-			{Name: "Sun", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "259200", ""}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrFriday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "86400", ""}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrSaturday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "172800", ""}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrSunday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "259200", ""}, Type: "cmd"}},
 		},
 		[]tg.Btn{
 			{Name: "1", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "2678400", ""}, Type: "cmd"}},
@@ -2423,7 +2412,7 @@ func TestShowForADay(t *testing.T) {
 			{Name: "30", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "2505600", ""}, Type: "cmd"}},
 			{Name: "31", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f819d075", "2592000", ""}, Type: "cmd"}},
 		},
-		tg.Btn{Name: "➡️ Move to today", Cmd: tg.Cmd{Name: "home", Params: []string(nil), Type: "cmd"}},
+		tg.Btn{Name: i18n.Tr(i18n.StrToToday), Cmd: tg.Cmd{Name: "home", Params: []string(nil), Type: "cmd"}},
 	}), tgram.LastSentKeyboard)
 }
 
@@ -2451,17 +2440,17 @@ func TestShowForADayRecurring(t *testing.T) {
 
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		[]tg.Btn{
-			{Name: "Weekdays", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "86400", "0 0 * * 1-5"}, Type: "cmd"}},
-			{Name: "Every day", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "86400", "0 0 * * *"}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrWeekdays), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "86400", "0 0 * * 1-5"}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrEveryday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "86400", "0 0 * * *"}, Type: "cmd"}},
 		}, []tg.Btn{
-			{Name: "Mon", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "345600", "0 0 * * 1"}, Type: "cmd"}},
-			{Name: "Tue", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "432000", "0 0 * * 2"}, Type: "cmd"}},
-			{Name: "Wed", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "518400", "0 0 * * 3"}, Type: "cmd"}},
-			{Name: "Thu", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "604800", "0 0 * * 4"}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrMonday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "345600", "0 0 * * 1"}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrTuesday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "432000", "0 0 * * 2"}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrWednesday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "518400", "0 0 * * 3"}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrThursday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "604800", "0 0 * * 4"}, Type: "cmd"}},
 		}, []tg.Btn{
-			{Name: "Fri", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "86400", "0 0 * * 5"}, Type: "cmd"}},
-			{Name: "Sat", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "172800", "0 0 * * 6"}, Type: "cmd"}},
-			{Name: "Sun", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "259200", "0 0 * * 0"}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrFriday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "86400", "0 0 * * 5"}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrSaturday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "172800", "0 0 * * 6"}, Type: "cmd"}},
+			{Name: i18n.Tr(i18n.StrSunday), Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "259200", "0 0 * * 0"}, Type: "cmd"}},
 		}, []tg.Btn{
 			{Name: "1", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "2678400", "0 0 1 * *"}, Type: "cmd"}},
 			{Name: "2", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "86400", "0 0 2 * *"}, Type: "cmd"}},
@@ -2494,7 +2483,7 @@ func TestShowForADayRecurring(t *testing.T) {
 			{Name: "26", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "2160000", "0 0 26 * *"}, Type: "cmd"}},
 			{Name: "27", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "2246400", "0 0 27 * *"}, Type: "cmd"}},
 			{Name: "28", Cmd: tg.Cmd{Name: "sc", Params: []string{"1c8f", "2332800", "0 0 28 * *"}, Type: "cmd"}},
-		}, tg.Btn{Name: "➡️ Move to today", Cmd: tg.Cmd{Name: "home", Params: []string(nil), Type: "cmd"}},
+		}, tg.Btn{Name: i18n.Tr(i18n.StrToToday), Cmd: tg.Cmd{Name: "home", Params: []string(nil), Type: "cmd"}},
 	}), tgram.LastSentKeyboard)
 }
 
@@ -2946,19 +2935,7 @@ func TestSaveToNewTask(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "New task"))
 	r.NoError(err)
 
-	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{inboxMsgHash(t, userFS, 0)})),
-		),
-		tg.NewRow(
-			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("👌", tg.NewCmd("home", []string{})),
-		),
-	})
-	r.Equal(kb, tgram.LastSentKeyboard)
+	r.Equal(fullSaveKeyboard(inboxMsgHash(t, userFS, 0)), tgram.LastSentKeyboard)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mv", []string{"4358b5009c6", inboxMsgHash(t, userFS, 0)})))
 	r.NoError(err)
@@ -3017,19 +2994,7 @@ func TestSaveToExistingFile(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "New content"))
 	r.NoError(err)
 
-	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{inboxMsgHash(t, userFS, 1)})),
-			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{inboxMsgHash(t, userFS, 1)})),
-			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{inboxMsgHash(t, userFS, 1)})),
-		),
-		tg.NewRow(
-			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 1)})),
-			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{inboxMsgHash(t, userFS, 1)})),
-			tg.NewBtn("👌", tg.NewCmd("home", []string{})),
-		),
-	})
-	r.Equal(kb, tgram.LastSentKeyboard)
+	r.Equal(fullSaveKeyboard(inboxMsgHash(t, userFS, 1)), tgram.LastSentKeyboard)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 1)})))
 	r.NoError(err)
@@ -3038,9 +3003,9 @@ func TestSaveToExistingFile(t *testing.T) {
 		tg.NewRow(
 			tg.NewBtn("File", tg.NewCmd("mf", []string{"7595e", inboxMsgHash(t, userFS, 1)})),
 		),
-		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewBtn(i18n.Tr("Search"), tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
-			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 1)})),
+			tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 1)})),
 		),
 	})
 	r.Equal(selectFileKB, tgram.LastEditedKeyboard)
@@ -3104,19 +3069,7 @@ func TestSaveToExistingFileModeTasks(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "Text"))
 	r.NoError(err)
 
-	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{inboxMsgHash(t, userFS, 1)})),
-			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{inboxMsgHash(t, userFS, 1)})),
-			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{inboxMsgHash(t, userFS, 1)})),
-		),
-		tg.NewRow(
-			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 1)})),
-			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{inboxMsgHash(t, userFS, 1)})),
-			tg.NewBtn("👌", tg.NewCmd("home", []string{})),
-		),
-	})
-	r.Equal(kb, tgram.LastSentKeyboard)
+	r.Equal(fullSaveKeyboard(inboxMsgHash(t, userFS, 1)), tgram.LastSentKeyboard)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 1)})))
 	r.NoError(err)
@@ -3125,9 +3078,9 @@ func TestSaveToExistingFileModeTasks(t *testing.T) {
 		tg.NewRow(
 			tg.NewBtn("File", tg.NewCmd("mf", []string{"7595e", inboxMsgHash(t, userFS, 1)})),
 		),
-		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewBtn(i18n.Tr("Search"), tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
-			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 1)})),
+			tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 1)})),
 		),
 	})
 	r.Equal(selectFileKB, tgram.LastEditedKeyboard)
@@ -3192,27 +3145,15 @@ func TestSaveToNewFile(t *testing.T) {
 	r.NoError(err)
 	r.Equal("#### 1 January, Thursday\n`01:01` New\ncontent\n- [ ] `00:00` Text\n", content)
 
-	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{inboxMsgHash(t, userFS, 1)})),
-			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{inboxMsgHash(t, userFS, 1)})),
-			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{inboxMsgHash(t, userFS, 1)})),
-		),
-		tg.NewRow(
-			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 1)})),
-			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{inboxMsgHash(t, userFS, 1)})),
-			tg.NewBtn("👌", tg.NewCmd("home", []string{})),
-		),
-	})
-	r.Equal(kb, tgram.LastSentKeyboard)
+	r.Equal(fullSaveKeyboard(inboxMsgHash(t, userFS, 1)), tgram.LastSentKeyboard)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 1)})))
 	r.NoError(err)
 
 	selectFileKB := tg.NewKeyboard([]tg.Row{
-		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewBtn(i18n.Tr("Search"), tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
-			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 1)})),
+			tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 1)})),
 		),
 	})
 	r.Equal(selectFileKB, tgram.LastEditedKeyboard)
@@ -3273,27 +3214,15 @@ func TestSaveToNewDirFull(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "Text"))
 	r.NoError(err)
 
-	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{inboxMsgHash(t, userFS, 0)})),
-		),
-		tg.NewRow(
-			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("👌", tg.NewCmd("home", []string{})),
-		),
-	})
-	r.Equal(kb, tgram.LastSentKeyboard)
+	r.Equal(fullSaveKeyboard(inboxMsgHash(t, userFS, 0)), tgram.LastSentKeyboard)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})))
 	r.NoError(err)
 
 	selectFileKB := tg.NewKeyboard([]tg.Row{
-		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewBtn(i18n.Tr("Search"), tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
-			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 0)})),
+			tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 0)})),
 		),
 	})
 	r.Equal(selectFileKB, tgram.LastEditedKeyboard)
@@ -3308,7 +3237,7 @@ func TestSaveToNewDirFull(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "My dir"))
 	r.NoError(err)
 
-	r.Equal("🌴 Nothing here yet - send me something!", tgram.LastSentText)
+	r.Equal(emptyHomeText(), tgram.LastSentText)
 
 	content, err := userFS.Read("my dir", "Text.md")
 	r.NoError(err)
@@ -3359,27 +3288,15 @@ func TestSaveToNewDir(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "Text"))
 	r.NoError(err)
 
-	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{inboxMsgHash(t, userFS, 0)})),
-		),
-		tg.NewRow(
-			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("👌", tg.NewCmd("home", []string{})),
-		),
-	})
-	r.Equal(kb, tgram.LastSentKeyboard)
+	r.Equal(fullSaveKeyboard(inboxMsgHash(t, userFS, 0)), tgram.LastSentKeyboard)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})))
 	r.NoError(err)
 
 	selectFileKB := tg.NewKeyboard([]tg.Row{
-		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewBtn(i18n.Tr("Search"), tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
-			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 0)})),
+			tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 0)})),
 		),
 	})
 	r.Equal(selectFileKB, tgram.LastEditedKeyboard)
@@ -3394,7 +3311,7 @@ func TestSaveToNewDir(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "My dir"))
 	r.NoError(err)
 
-	r.Equal("🌴 Nothing here yet - send me something!", tgram.LastSentText)
+	r.Equal(emptyHomeText(), tgram.LastSentText)
 
 	content, err := userFS.Read("my dir", "Text.md")
 	r.NoError(err)
@@ -3447,19 +3364,7 @@ func TestSaveToNewMultilineFile(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "Multiline\ncontent"))
 	r.NoError(err)
 
-	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{inboxMsgHash(t, userFS, 0)})),
-		),
-		tg.NewRow(
-			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("👌", tg.NewCmd("home", []string{})),
-		),
-	})
-	r.Equal(kb, tgram.LastSentKeyboard)
+	r.Equal(fullSaveKeyboard(inboxMsgHash(t, userFS, 0)), tgram.LastSentKeyboard)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})))
 	r.NoError(err)
@@ -3468,9 +3373,9 @@ func TestSaveToNewMultilineFile(t *testing.T) {
 		tg.NewRow(
 			tg.NewBtn("Text", tg.NewCmd("mf", []string{"23200", inboxMsgHash(t, userFS, 0)})),
 		),
-		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewBtn(i18n.Tr("Search"), tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
-			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 0)})),
+			tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 0)})),
 		),
 	})
 	r.Equal(selectFileKB, tgram.LastEditedKeyboard)
@@ -3529,27 +3434,15 @@ func TestSaveToNewCustomFile(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "Text"))
 	r.NoError(err)
 
-	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{inboxMsgHash(t, userFS, 0)})),
-		),
-		tg.NewRow(
-			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("👌", tg.NewCmd("home", []string{})),
-		),
-	})
-	r.Equal(kb, tgram.LastSentKeyboard)
+	r.Equal(fullSaveKeyboard(inboxMsgHash(t, userFS, 0)), tgram.LastSentKeyboard)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})))
 	r.NoError(err)
 
 	selectFileKB := tg.NewKeyboard([]tg.Row{
-		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewBtn(i18n.Tr("Search"), tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
-			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 0)})),
+			tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 0)})),
 		),
 	})
 	r.Equal(selectFileKB, tgram.LastEditedKeyboard)
@@ -3610,19 +3503,7 @@ func TestSaveToRecentFile(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "New text"))
 	r.NoError(err)
 
-	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{inboxMsgHash(t, userFS, 0)})),
-		),
-		tg.NewRow(
-			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("👌", tg.NewCmd("home", []string{})),
-		),
-	})
-	r.Equal(kb, tgram.LastSentKeyboard)
+	r.Equal(fullSaveKeyboard(inboxMsgHash(t, userFS, 0)), tgram.LastSentKeyboard)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})))
 	r.NoError(err)
@@ -3631,10 +3512,10 @@ func TestSaveToRecentFile(t *testing.T) {
 		tg.NewRow(
 			tg.NewBtn("Text", tg.NewCmd("mf", []string{"23200", inboxMsgHash(t, userFS, 0)})),
 		),
-		tg.NewBtn("Search", tg.NewCustomCmd("search", nil, "iq")),
+		tg.NewBtn(i18n.Tr("Search"), tg.NewCustomCmd("search", nil, "iq")),
 		tg.NewRow(
 			tg.NewBtn("🗂️ Dir", tg.NewCmd("mv", []string{"73600", inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("🗂 New Dir", tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 0)})),
+			tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd("new_dir", []string{inboxMsgHash(t, userFS, 0)})),
 		),
 	})
 	r.Equal(selectFileKeyboard, tgram.LastEditedKeyboard)
@@ -3656,21 +3537,14 @@ func TestSaveToRecentFile(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "Text2"))
 	r.NoError(err)
 
-	kb = tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn("🌚 To tmrw", tg.NewCmd("sc_tmrw", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("⏳ To later", tg.NewCmd("mv_later", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("📆 To a day", tg.NewCmd("sc_day", []string{inboxMsgHash(t, userFS, 0)})),
-		),
-		tg.NewRow(
-			tg.NewBtn("📄 To File", tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("💚 To Journal", tg.NewCmd("mv_to_journal", []string{inboxMsgHash(t, userFS, 0)})),
-			tg.NewBtn("⭐️ Text", tg.NewCmd("mf", []string{"23200", inboxMsgHash(t, userFS, 0)})),
-		),
-		tg.NewRow(
-			tg.NewBtn("👌", tg.NewCmd("home", []string{})),
-		),
-	})
+	h := inboxMsgHash(t, userFS, 0)
+	kb := fullSaveKeyboard(h)
+	kb.Btns[len(kb.Btns)-1] = tg.NewRow(
+		tg.NewBtn(i18n.Tr(i18n.StrToFile), tg.NewCmd(CmdShowMoveToDirOrFile, []string{h})),
+		tg.NewBtn(i18n.Tr(i18n.StrToJournal), tg.NewCmd(CmdMoveToJournal, []string{h})),
+		tg.NewBtn("⭐️ Text", tg.NewCmd("mf", []string{"23200", h})),
+	)
+	kb.AddRow(tg.NewRow(tg.NewBtn("👌", tg.NewCmd(CmdShowHome, nil))))
 	r.Equal(kb, tgram.LastSentKeyboard)
 
 	r.Nil(database.InputExpectation())
@@ -4164,9 +4038,9 @@ func TestSaveFromImage_EmptyCaption(t *testing.T) {
 	files, err := bot.fs.FilesAndDirs("notes")
 	r.NoError(err)
 	r.Len(files, 1)
-	r.Equal("Img 01.01.70 00꞉00.md", files[0].Name)
+	r.Equal(fmt.Sprintf(i18n.Tr("Img %s"), "01.01.70 00꞉00")+".md", files[0].Name)
 
-	content, err := bot.fs.Read("notes", "Img 01.01.70 00꞉00.md")
+	content, err := bot.fs.Read("notes", fmt.Sprintf(i18n.Tr("Img %s"), "01.01.70 00꞉00")+".md")
 	r.NoError(err)
 	r.Equal("![](media/tg_PHOTO_ID)", content)
 }
@@ -4639,8 +4513,8 @@ func TestShowToday_JournalOnlyMode(t *testing.T) {
 	err = bot.ShowHome(nil)
 	r.NoError(err)
 
-	// Should send "What's on your mind?" message
-	r.Contains(tgram.LastSentText, "What's on your mind?")
+	// Should send i18n.Tr("What's on your mind?") message
+	r.Contains(tgram.LastSentText, i18n.Tr("What's on your mind?"))
 	r.Nil(tgram.LastSentKeyboard) // No keyboard should be sent
 }
 
@@ -4664,7 +4538,7 @@ func TestShowToday_NormalMode(t *testing.T) {
 	r.NoError(err)
 
 	// Should show empty today list
-	r.Equal("🌴 Nothing here yet - send me something!", tgram.LastSentText)
+	r.Equal(emptyHomeText(), tgram.LastSentText)
 }
 
 func TestShowToday_NormalModeWithTasks(t *testing.T) {
@@ -4705,7 +4579,7 @@ func TestShowToday_NormalModeWithTasks(t *testing.T) {
 	r.NoError(err)
 
 	r.Contains(tgram.LastSentText, "1")
-	r.Contains(tgram.LastSentText, "item")
+	r.Contains(tgram.LastSentText, i18n.Tr("item"))
 
 	r.Len(tgram.LastSentKeyboard.Btns, 1)
 }
@@ -4754,7 +4628,7 @@ func TestShowToday_InboxMixedFormat(t *testing.T) {
 	r.NoError(err)
 
 	// Label: 2 tasks left (plain + timestamped unchecked); completed one excluded.
-	r.Equal("<b>2</b> items"+wideSpacer, tgram.LastSentText)
+	r.Equal(homeCountText(2), tgram.LastSentText)
 
 	// Two rows, each with one button. The completed entry (disk position 2) is
 	// not rendered but its slot is preserved — the next fresh entry added to
@@ -4795,7 +4669,7 @@ func TestShowToday_TodayCommandModeJournal(t *testing.T) {
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("home", nil)))
 	r.NoError(err)
 
-	r.Contains(tgram.LastSentText, "What's on your mind?")
+	r.Contains(tgram.LastSentText, i18n.Tr("What's on your mind?"))
 }
 
 func TestScheduleForTmrw(t *testing.T) {

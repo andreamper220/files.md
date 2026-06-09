@@ -24,7 +24,7 @@ const (
 )
 
 var DefaultConfig = config{
-	Language:                  "en",
+	Language:                  "ru",
 	Timezone:                  "UTC",
 	MoveToCmds:                []string{},
 	PomodoroDurationInMinutes: 50,

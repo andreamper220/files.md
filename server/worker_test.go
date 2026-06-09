@@ -45,15 +45,15 @@ func TestFormatTaskDate(t *testing.T) {
 		return time.Date(1970, 1, 1, 10, 45, 10, 0, time.UTC)
 	}
 
-	r.Equal("Today", formatTaskDate(0))
-	r.Equal("Today", formatTaskDate(10))         // seconds are ignored
-	r.Equal("Today", formatTaskDate(60*60*2))    // hours are ignored
-	r.Equal("Today", formatTaskDate(60*60*24-1)) // hours are ignored
-	r.Equal("Tomorrow", formatTaskDate(60*60*24))
-	r.Equal("Tomorrow", formatTaskDate(60*60*24))
-	r.Equal("Saturday 03", formatTaskDate(60*60*24*2))
-	r.Equal("Wednesday 07", formatTaskDate(60*60*24*6))
-	r.Equal("Next Thursday 08", formatTaskDate(60*60*24*7))
+	r.Equal("Сегодня", formatTaskDate(0))
+	r.Equal("Сегодня", formatTaskDate(10))         // seconds are ignored
+	r.Equal("Сегодня", formatTaskDate(60*60*2))    // hours are ignored
+	r.Equal("Сегодня", formatTaskDate(60*60*24-1)) // hours are ignored
+	r.Equal("Завтра", formatTaskDate(60*60*24))
+	r.Equal("Завтра", formatTaskDate(60*60*24))
+	r.Equal("Сб 03", formatTaskDate(60*60*24*2))
+	r.Equal("Ср 07", formatTaskDate(60*60*24*6))
+	r.Equal("След. Чт 08", formatTaskDate(60*60*24*7))
 }
 
 func TestNextExcludeTodayClosestMonday(t *testing.T) {
