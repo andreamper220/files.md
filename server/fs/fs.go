@@ -253,6 +253,56 @@ func (fs FS) Del(dir, filename string) error {
 	return nil
 }
 
+// DelDir removes a directory and everything inside it.
+func (fs FS) DelDir(dir string) error {
+	dir = strings.Trim(dir, "/")
+	if dir == "" || dir == DirUserRoot {
+		return fmt.Errorf("fs del dir: can't delete root: %w", ErrUnsafePath)
+	}
+
+	dirPath, err := fs.SafePath(dir, "")
+	if err != nil {
+		return fmt.Errorf("fs del dir: unsafe path '%s': %w", dir, ErrUnsafePath)
+	}
+
+	info, err := fs.backend.Stat(dirPath)
+	if err != nil {
+		return fmt.Errorf("fs del dir: can't stat '%s': %w", dirPath, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("fs del dir: '%s' is not a directory", dir)
+	}
+
+	var totalSize int64
+	var pathsToLog []string
+	err = afero.Walk(fs.backend, dirPath, func(walkPath string, walkInfo os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		pathsToLog = append(pathsToLog, walkPath)
+		if !walkInfo.IsDir() {
+			totalSize += walkInfo.Size()
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("fs del dir: can't walk '%s': %w", dirPath, err)
+	}
+
+	if err = fs.backend.RemoveAll(dirPath); err != nil {
+		return fmt.Errorf("fs del dir: can't remove '%s': %w", dirPath, err)
+	}
+
+	recordQuotaUsage(fs.rootPath, -totalSize)
+
+	now := time.Now().Unix()
+	for _, path := range pathsToLog {
+		LogDelete(now, path)
+	}
+
+	return nil
+}
+
 func (fs FS) Rename(oldDir, oldFilename, newDir, newFilename string) error {
 	oldPath, err := fs.SafePath(oldDir, oldFilename)
 	if err != nil {

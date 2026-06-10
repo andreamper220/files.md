@@ -398,6 +398,10 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdChatMode:                        b.setChatOnlyMode,
 		CmdCompleteHabit:                   b.completeHabit,
 		CmdShare:                           b.shareNote,
+		CmdShowDeleteFile:                  b.showDeleteFileConfirm,
+		CmdDeleteFile:                      b.deleteFile,
+		CmdShowDeleteDir:                   b.showDeleteDirConfirm,
+		CmdDeleteDir:                       b.deleteDir,
 		// Used for button-like separators
 		CmdDoNothing: func(s []string) error { return nil },
 	}
@@ -1480,7 +1484,11 @@ func (b *Bot) showDirs(params []string) error {
 		if parent != "" {
 			backParam = fs.ShortHash(parent)
 		}
-		kb.AddRow(tg.NewBtn("⬅️ Назад", tg.NewCmd(CmdShowDirs, []string{backParam})))
+		backRow := tg.NewRow(tg.NewBtn("⬅️ Назад", tg.NewCmd(CmdShowDirs, []string{backParam})))
+		if canDeleteDir(parentDir) {
+			backRow = append(backRow, tg.NewBtn(i18n.Tr("🗑 Delete"), tg.NewCmd(CmdShowDeleteDir, []string{dirHash})))
+		}
+		kb.AddRow(backRow)
 	}
 
 	inlineCmd := tg.NewCustomCmd(CmdInlineQuerySearchEveryWhere, nil, tg.CmdTypeInlineQueryCurrentChat)
@@ -1856,6 +1864,9 @@ func (b *Bot) showFile(params []string) error {
 			cmd := tg.NewCmd(CmdShare, []string{fs.Hash(dir), fs.Hash(filename)})
 			row = append(row, tg.NewBtn(i18n.Tr("🖨 Share"), cmd))
 		}
+	}
+	if canDeleteNote(dir, filename) {
+		row = append(row, tg.NewBtn(i18n.Tr("🗑 Delete"), tg.NewCmd(CmdShowDeleteFile, []string{dirHash, fs.Hash(filename)})))
 	}
 	row = append(row, tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
 	kb := tg.NewKeyboard([]tg.Row{row})

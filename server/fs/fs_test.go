@@ -547,6 +547,31 @@ func TestDelNonExistentFile(t *testing.T) {
 	r.Contains(err.Error(), "can't remove")
 }
 
+func TestDelDir(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	err := fs.MakeDir("notes")
+	r.NoError(err)
+	err = fs.Write("notes", "file.md", "content")
+	r.NoError(err)
+
+	err = fs.DelDir("notes")
+	r.NoError(err)
+
+	exists, err := fs.Exists("notes", "")
+	r.NoError(err)
+	r.False(exists)
+}
+
+func TestDelDirRejectsRoot(t *testing.T) {
+	r := require.New(t)
+
+	fs, _ := NewFS("/", afero.NewMemMapFs())
+	err := fs.DelDir("/")
+	r.Error(err)
+}
+
 func TestRenameFile(t *testing.T) {
 	r := require.New(t)
 
