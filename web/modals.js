@@ -476,6 +476,7 @@ class SearchModal {
 class MoveModal {
     constructor() {
         this.focusedIndex = 0;
+        this.currentDir = '/';
         this.init();
     }
 
@@ -530,6 +531,7 @@ class MoveModal {
         modal.style.display = 'flex';
 
         const inputField = document.getElementById('move-input');
+        inputField.value = '';
         inputField.focus();
 
         modal.style.position = 'fixed';
@@ -540,10 +542,9 @@ class MoveModal {
         modal.style.width = '';
         modal.classList.remove('modal-reversed');
 
+        this.currentDir = '/';
         this.focusedIndex = 0;
-        const moveResults = document.getElementById('move-results');
-        moveResults.innerHTML = '';
-        this.showResults(this.getMoveDestinations());
+        this.renderBrowse();
     }
 
     close() {
@@ -551,54 +552,136 @@ class MoveModal {
         document.getElementById('move').classList.remove('modal-reversed');
     }
 
-    getMoveDestinations() {
-        let dirs = ['/'];
-        for (const dir of Object.keys(files)) {
-            if (!dir.endsWith('/')) {
-                continue;
+    getDirEntries(dirPath) {
+        let current = files;
+        if (dirPath !== '/') {
+            const parts = dirPath.split('/').filter(Boolean);
+            for (const part of parts) {
+                const key = part + '/';
+                if (!current[key]) {
+                    return null;
+                }
+                current = current[key];
             }
+        }
+        return current;
+    }
 
-            if (dir === 'media/') {
-                continue;
-            }
-            dirs.push(trimPostfix(dir, '/'));
+    getChildDirs(dirPath) {
+        const dirObj = this.getDirEntries(dirPath);
+        if (!dirObj) {
+            return [];
         }
 
-        // Place _read_ etc in the end
+        const dirs = [];
+        for (const key of Object.keys(dirObj)) {
+            if (!key.endsWith('/') || key === 'media/') {
+                continue;
+            }
+            const name = trimPostfix(key, '/');
+            const childPath = dirPath === '/' ? '/' + name : joinPath(dirPath, name);
+            dirs.push(childPath);
+        }
+
         dirs.sort((a, b) => {
-            return a.includes('_') - b.includes('_') || a.localeCompare(b);
+            const aName = toFilename(a);
+            const bName = toFilename(b);
+            return aName.includes('_') - bName.includes('_') || aName.localeCompare(bName);
         });
 
         return dirs;
     }
 
+    getAllDirPaths() {
+        const paths = new Set(['/']);
+        walk(files, (path, isFile) => {
+            if (isFile) {
+                return;
+            }
+            if (path === '/media/' || path.startsWith('/media/')) {
+                return;
+            }
+            paths.add(removeTrailingSlash(path));
+        });
+
+        return Array.from(paths).sort((a, b) => {
+            const aName = a === '/' ? '' : toFilename(a);
+            const bName = b === '/' ? '' : toFilename(b);
+            return aName.includes('_') - bName.includes('_') || a.localeCompare(b);
+        });
+    }
+
+    getBrowseItems(dirPath) {
+        const items = [];
+        const parentPath = dirPath === '/' ? null : toDirPath(dirPath + '/');
+
+        if (parentPath !== null) {
+            items.push({
+                action: 'navigate',
+                path: parentPath,
+                label: parentPath === '/' ? '⬅️ ..' : '⬅️ ' + parentPath,
+            });
+        }
+
+        items.push({
+            action: 'move',
+            path: dirPath,
+            label: dirPath === '/' ? '/' : dirPath + ' (move here)',
+        });
+
+        for (const childPath of this.getChildDirs(dirPath)) {
+            items.push({
+                action: 'navigate',
+                path: childPath,
+                label: toFilename(childPath),
+            });
+        }
+
+        return items;
+    }
+
+    renderBrowse() {
+        this.showResults(this.getBrowseItems(this.currentDir));
+    }
+
     suggestMove() {
-        const search = document.getElementById('move-input').value.toLowerCase();
-        if (search.trim() === '') {
-            this.showResults(this.getMoveDestinations());
+        const search = document.getElementById('move-input').value.toLowerCase().trim();
+        if (search === '') {
+            this.renderBrowse();
             return;
         }
 
-        let dirs = this.getMoveDestinations();
-        dirs = dirs.filter(dir => dir.toLowerCase().startsWith(search));
+        const matches = this.getAllDirPaths().filter(path => {
+            const display = path === '/' ? '/' : path;
+            return display.toLowerCase().includes(search);
+        });
 
-        this.showResults(dirs);
+        const items = matches.map(path => ({
+            action: 'move',
+            path: path,
+            label: path === '/' ? '/' : path,
+        }));
+
+        this.showResults(items);
     }
 
-    showResults(dirs) {
+    showResults(items) {
         const list = document.getElementById('move-results');
         list.innerHTML = '';
 
-        dirs.forEach((dir, index) => {
-            let dataDir = dir;
-            if (dataDir === '/') {
-                dataDir = '';
+        items.forEach((item, index) => {
+            const listItem = document.createElement('li');
+            listItem.textContent = item.label;
+            listItem.setAttribute('data-action', item.action);
+            if (item.action === 'navigate') {
+                listItem.setAttribute('data-nav-path', item.path);
+                listItem.classList.add('move-navigate');
+            } else {
+                listItem.setAttribute('data-move-path', this.toMovePath(item.path));
+                listItem.classList.add('move-destination');
             }
 
-            const listItem = document.createElement('li');
-            listItem.textContent = dir;
-            listItem.setAttribute('data-path', dataDir);
-            listItem.onclick = () => this.moveToDir(dir);
+            listItem.onclick = () => this.activateItem(item);
 
             listItem.onmousemove = () => {
                 document.querySelectorAll('#move-results li').forEach(li => li.classList.remove('focused'));
@@ -613,12 +696,38 @@ class MoveModal {
         this.updateFocusedItem();
     }
 
+    toMovePath(dirPath) {
+        if (!dirPath || dirPath === '/') {
+            return '';
+        }
+        return dirPath.startsWith('/') ? dirPath.slice(1) : dirPath;
+    }
+
+    activateItem(item) {
+        if (item.action === 'navigate') {
+            this.currentDir = item.path;
+            document.getElementById('move-input').value = '';
+            this.renderBrowse();
+            return;
+        }
+        this.moveToDir(this.toMovePath(item.path));
+    }
+
     handleEnterKey() {
         const resultsList = document.getElementById('move-results').querySelectorAll('li');
-        if (resultsList[this.focusedIndex]) {
-            const toDir = resultsList[this.focusedIndex].getAttribute('data-path');
-            this.moveToDir(toDir);
+        const focused = resultsList[this.focusedIndex];
+        if (!focused) {
+            return;
         }
+
+        const action = focused.getAttribute('data-action');
+        if (action === 'navigate') {
+            this.currentDir = focused.getAttribute('data-nav-path');
+            document.getElementById('move-input').value = '';
+            this.renderBrowse();
+            return;
+        }
+        this.moveToDir(focused.getAttribute('data-move-path'));
     }
 
     updateFocusedItem() {

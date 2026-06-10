@@ -1,36 +1,53 @@
 let tree;
+let sidebarExpandedPaths = new Set();
+
+function getAncestorDirPaths(dirPath) {
+    const parts = (dirPath || '').split('/').filter(Boolean);
+    const paths = [];
+    for (let i = 0; i < parts.length; i++) {
+        paths.push('/' + parts.slice(0, i + 1).join('/'));
+    }
+    return paths;
+}
+
+// Root-level folders are always listed; nested folders appear only when
+// their parent directory is expanded.
+function isSidebarDirVisible(dirPath, expandedPaths) {
+    const parentPath = toDirPath(dirPath.endsWith('/') ? dirPath : dirPath + '/');
+    if (parentPath === '/') {
+        return true;
+    }
+    return expandedPaths.has(parentPath);
+}
+
+// Files under a folder are listed only when that folder is expanded.
+// Root-level files are always listed.
+function isSidebarDirContentVisible(parentDirPath, expandedPaths) {
+    if (parentDirPath === '/') {
+        return true;
+    }
+    return expandedPaths.has(parentDirPath);
+}
 
 function selectSidebarItem(path) {
-    if (!tree) return;
-    function clear(node) {
-        if (node.setSelected) node.setSelected(false);
-        if (node.getChildren) node.getChildren().forEach(clear);
+    if (!path || path === CHAT_PATH) {
+        return;
     }
-    function find(node) {
-        if (node.path === path) return node;
-        if (!node.getChildren) return null;
-        for (const child of node.getChildren()) {
-            const hit = find(child);
-            if (hit) return hit;
-        }
-        return null;
-    }
-    clear(tree.getRoot());
-    const node = find(tree.getRoot());
-    if (node) node.setSelected(true);
-    tree.reload();
+    const dirPath = toDirPath(path);
+    getAncestorDirPaths(dirPath).forEach(p => sidebarExpandedPaths.add(p));
+    renderSidebar();
 }
 
 function renderSidebar(focusDir = '', modifiedPaths) {
-    let expandedDirs = new Set();
+    let expandedDirs = new Set(sidebarExpandedPaths);
     let selectedNodes = new Set();
 
     // TODO save state
     if (tree) {
         // Save state for all nodes (both directories and files)
         function saveNodeState(node) {
-            if (node.isExpanded()) {
-                expandedDirs.add(node.toString());
+            if (node.isExpanded() && node.path) {
+                expandedDirs.add(node.path);
             }
             if (node.isSelected()) {
                 selectedNodes.add(node.toString());
@@ -47,6 +64,18 @@ function renderSidebar(focusDir = '', modifiedPaths) {
         tree.getRoot().getChildren().forEach(child => {
             saveNodeState(child);
         });
+    }
+
+    if (currentEditor.path && currentEditor.path !== CHAT_PATH) {
+        getAncestorDirPaths(toDirPath(currentEditor.path)).forEach(p => expandedDirs.add(p));
+    }
+    if (modifiedPaths !== undefined) {
+        for (const modPath of modifiedPaths) {
+            getAncestorDirPaths(toDirPath(modPath)).forEach(p => expandedDirs.add(p));
+        }
+    }
+    if (focusDir) {
+        expandedDirs.add('/' + focusDir);
     }
 
     root = new TreeNode('');
@@ -91,12 +120,17 @@ function renderSidebar(focusDir = '', modifiedPaths) {
             return;
         }
 
+        const dirPath = removeTrailingSlash(path);
+        if (!isSidebarDirVisible(dirPath, expandedDirs)) {
+            return;
+        }
+
         let dirNode = new TreeNode(toFilename(path), {expanded: false, dir: true});
-        dirNode.path = removeTrailingSlash(path);
+        dirNode.path = dirPath;
         if (path === '/archive/') {
             dirNode.isGroupEnd = true;
         }
-        dirNodes[removeTrailingSlash(path)] = dirNode;
+        dirNodes[dirPath] = dirNode;
 
         // Add to parent
         const parentDirPath = toDirPath(path);
@@ -105,11 +139,11 @@ function renderSidebar(focusDir = '', modifiedPaths) {
 
         // Handle focus directory or restore previous state
         let dir = toFilename(path);
-        if (dir === focusDir) {
+        if (dir === focusDir && parentDirPath === '/') {
             dirNode.setExpanded(true);
             dirNode.setSelected(true);
         } else {
-            if (expandedDirs.has(dir)) dirNode.setExpanded(true);
+            if (expandedDirs.has(dirPath)) dirNode.setExpanded(true);
             if (selectedNodes.has(dir)) dirNode.setSelected(true);
         }
 
@@ -293,6 +327,9 @@ function renderSidebar(focusDir = '', modifiedPaths) {
 
     for (const path of fileEntries) {
         const {dirPath, filename} = toDirPathAndFilename(path);
+        if (!isSidebarDirContentVisible(dirPath, expandedDirs)) {
+            continue;
+        }
 
         let fileNode = new TreeNode(filename.replace(/\.md$/, '').replace(/\.txt$/, ''), {expanded: false});
         fileNode.path = path;
@@ -311,6 +348,8 @@ function renderSidebar(focusDir = '', modifiedPaths) {
             fileNode.shouldBlink = true;
         }
     }
+
+    sidebarExpandedPaths = expandedDirs;
 
     tree = new TreeView(root, '#tree', {
         show_root: false,
@@ -1030,7 +1069,11 @@ function TreeView(root, container, options) {
                 if (e.ctrlKey == false) {
                     if (!node_cur.isLeaf()) {
                         node_cur.toggleExpanded();
-                        self.reload();
+                        if (typeof renderSidebar === 'function') {
+                            renderSidebar();
+                        } else {
+                            self.reload();
+                        }
                         node_cur.on("click")(e, node_cur);
                         return;
                     } else {

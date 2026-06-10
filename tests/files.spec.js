@@ -549,6 +549,8 @@ test('create new file, move to new dir, create new file is subdir, move to root'
     await page.waitForTimeout(100);
     await page.click('#move-results >> text=dir1');
     await page.waitForTimeout(100);
+    await page.click('#move-results >> text=dir1 (move here)');
+    await page.waitForTimeout(100);
 
     // Create second file in same subdir
     await page.click('#new-file');
@@ -790,8 +792,10 @@ test('move file between directories', async ({ page }) => {
     expect(destinations).toContain('archive');
     expect(destinations).toContain('projects');
 
-    // Move to archive directory by clicking
+    // Move to archive directory by drilling down, then confirming
     await page.click('#move-results >> text=archive');
+    await page.waitForTimeout(100);
+    await page.click('#move-results >> text=/archive (move here)');
     await page.waitForTimeout(200);
 
     // Verify modal is closed
@@ -877,6 +881,16 @@ test('move file using keyboard navigation', async ({ page }) => {
         await page.keyboard.press('ArrowDown');
     }
     await expect(page.locator('#move-results li.focused')).toHaveText('work');
+    await page.keyboard.press('Enter');
+
+    const moveHereIndex = await page.locator('#move-results li').evaluateAll(
+        (items) => items.findIndex(li => li.textContent === '/work (move here)')
+    );
+    expect(moveHereIndex).toBeGreaterThan(-1);
+    for (let i = 0; i < moveHereIndex; i++) {
+        await page.keyboard.press('ArrowDown');
+    }
+    await expect(page.locator('#move-results li.focused')).toHaveText('/work (move here)');
     await page.keyboard.press('Enter');
 
     // Verify file moved to work directory. Use auto-retrying assertion -
