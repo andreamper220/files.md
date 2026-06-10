@@ -18,8 +18,9 @@ type bucket struct {
 	total int
 }
 
-// Build returns an HTML morning report for today's tasks.
+// Build returns an HTML home digest for tasks and notes.
 func Build(userFS *fs.FS, cfg *userconfig.Config) (string, error) {
+	tz := cfg.Timezone()
 	emojis := cfg.PriorityEmojis()
 	categories := cfg.TaskCategories()
 
@@ -77,25 +78,25 @@ func Build(userFS *fs.FS, cfg *userconfig.Config) (string, error) {
 		byCategory[src.name] = cb
 	}
 
-	var lines []string
-	lines = append(lines, "<b>🌅 Утренняя сводка</b>")
-	lines = append(lines, fmt.Sprintf("Всего: <b>%d/%d</b> выполнено", totalDone, totalAll))
-	lines = append(lines, "")
+	var sections []string
+
+	var taskLines []string
+	taskLines = append(taskLines, "<b>📋 Задачи</b>")
+	taskLines = append(taskLines, fmt.Sprintf("Всего: <b>%d/%d</b> выполнено", totalDone, totalAll))
 
 	if len(byCategory) > 0 {
-		lines = append(lines, "<b>По категориям</b>")
+		taskLines = append(taskLines, "<b>По категориям</b>")
 		for _, src := range sources {
 			cb := byCategory[src.name]
 			if cb.total == 0 {
 				continue
 			}
-			lines = append(lines, fmt.Sprintf("• %s: %d/%d", src.name, cb.done, cb.total))
+			taskLines = append(taskLines, fmt.Sprintf("• %s: %d/%d", src.name, cb.done, cb.total))
 		}
-		lines = append(lines, "")
 	}
 
 	if len(byPriority) > 0 {
-		lines = append(lines, "<b>По срочности</b>")
+		taskLines = append(taskLines, "<b>По срочности</b>")
 		order := append([]string{}, emojis...)
 		order = append(order, "—")
 		seen := map[string]bool{}
@@ -109,17 +110,22 @@ func Build(userFS *fs.FS, cfg *userconfig.Config) (string, error) {
 			if emoji == "—" {
 				label = "без метки"
 			}
-			lines = append(lines, fmt.Sprintf("• %s: %d/%d", label, cb.done, cb.total))
+			taskLines = append(taskLines, fmt.Sprintf("• %s: %d/%d", label, cb.done, cb.total))
 		}
 		for emoji, cb := range byPriority {
 			if seen[emoji] || cb.total == 0 {
 				continue
 			}
-			lines = append(lines, fmt.Sprintf("• %s: %d/%d", emoji, cb.done, cb.total))
+			taskLines = append(taskLines, fmt.Sprintf("• %s: %d/%d", emoji, cb.done, cb.total))
 		}
 	}
+	sections = append(sections, strings.Join(taskLines, "\n"))
 
-	return strings.TrimSpace(strings.Join(lines, "\n")), nil
+	if noteLines := buildNotesSection(userFS, tz); len(noteLines) > 0 {
+		sections = append(sections, strings.Join(noteLines, "\n"))
+	}
+
+	return strings.TrimSpace(strings.Join(sections, "\n\n")), nil
 }
 
 func categoryFilename(category string) string {

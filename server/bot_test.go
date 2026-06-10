@@ -4562,8 +4562,9 @@ func TestShowHome_IncludesSummaryForLaterTasks(t *testing.T) {
 	err = bot.ShowHome(nil)
 	r.NoError(err)
 
-	r.Contains(tgram.LastSentText, "Утренняя сводка")
+	r.Contains(tgram.LastSentText, "📋 Задачи")
 	r.Contains(tgram.LastSentText, "Позже: 1/2")
+	r.Contains(tgram.LastSentText, "📝 Заметки")
 	r.Contains(tgram.LastSentText, emptyHomeText())
 }
 
