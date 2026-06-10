@@ -3,9 +3,11 @@ package server
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/zakirullin/files.md/server/fs"
 	"github.com/zakirullin/files.md/server/i18n"
+	"github.com/zakirullin/files.md/server/morningsummary"
 	"github.com/zakirullin/files.md/server/pkg/tg"
 	"github.com/zakirullin/files.md/server/priority"
 	"github.com/zakirullin/files.md/server/userconfig"
@@ -13,6 +15,23 @@ import (
 
 func emptyHomeText() string {
 	return "🌴 " + i18n.Tr("Nothing here yet - send me something!")
+}
+
+func homeMessageText(userFS *fs.FS, cfg *userconfig.Config, shownCount int) string {
+	label := emptyHomeText()
+	if shownCount > 0 {
+		label = homeCountText(shownCount)
+	}
+
+	report, err := morningsummary.Build(userFS, cfg)
+	if err != nil {
+		return label
+	}
+	report = strings.TrimSpace(report)
+	if report == "" {
+		return label
+	}
+	return report + "\n\n" + label
 }
 
 func homeCountText(n int) string {

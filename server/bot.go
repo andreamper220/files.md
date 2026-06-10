@@ -1276,13 +1276,29 @@ func (b *Bot) ShowHome(_ []string) error {
 		}
 	}
 
-	msg := b.homeLabel(shownCount)
+	msg := b.homeMessage(shownCount)
 	err = b.showHTML(msg, &kb)
 	if err != nil {
 		return fmt.Errorf("show list: %w", err)
 	}
 
 	return nil
+}
+
+func (b *Bot) homeMessage(shownCount int) string {
+	label := b.homeLabel(shownCount)
+
+	report, err := morningsummary.Build(b.fs, b.cfg)
+	if err != nil {
+		return label
+	}
+
+	report = strings.TrimSpace(report)
+	if report == "" {
+		return label
+	}
+
+	return report + "\n\n" + label
 }
 
 func (b *Bot) showLaterTasks(_ []string) error {

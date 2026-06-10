@@ -370,11 +370,12 @@ func TestShowEmptyTodayList(t *testing.T) {
 
 	tgram := tg.NewFakeTG()
 
-	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), fakeConfig())
+	cfg := fakeConfig()
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), cfg)
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("home", nil)))
 	r.NoError(err)
-	r.Equal(emptyHomeText(), tgram.LastSentText)
+	r.Equal(homeMessageText(userFS, cfg, 0), tgram.LastSentText)
 }
 
 func TestSaveFromTextMsgWithUnicodeCharacters(t *testing.T) {
@@ -875,11 +876,12 @@ func TestToday(t *testing.T) {
 
 	tgram := tg.NewFakeTG()
 
-	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), fakeConfig())
+	cfg := fakeConfig()
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), cfg)
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("home", nil)))
 	r.NoError(err)
 
-	r.Equal(homeCountText(2), tgram.LastSentText)
+	r.Equal(homeMessageText(userFS, cfg, 2), tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("First task", tg.NewCmd("c", []string{"060f6b7c9c8"})),
 		tg.NewBtn("🥈 Second task", tg.NewCmd("c", []string{"083d6c37d07"})),
@@ -917,7 +919,7 @@ func TestTodayQuickMenuFilled(t *testing.T) {
 	bot, tgram, r := makeBot(t, cfg)
 	err := bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("home", nil)))
 	r.NoError(err)
-	r.Equal(homeCountText(1), tgram.LastSentText)
+	r.Equal(homeMessageText(bot.fs, cfg, 1), tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("First task", tg.NewCmd("c", []string{"832a6c2a713"})),
 		tg.NewRow(
@@ -950,12 +952,13 @@ func TestTodayMultilineTaskShownAsLong(t *testing.T) {
 	r.NoError(err)
 
 	tgram := tg.NewFakeTG()
-	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), fakeConfig())
+	cfg := fakeConfig()
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), cfg)
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("home", nil)))
 	r.NoError(err)
 
 	hash := inboxMsgHash(t, userFS, 0)
-	r.Equal(homeCountText(1), tgram.LastSentText)
+	r.Equal(homeMessageText(userFS, cfg, 1), tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("👀 First task", tg.NewCmd(CmdShowLongItem, []string{hash})),
 	}), tgram.LastSentKeyboard)
@@ -984,13 +987,14 @@ func TestTodayMixedSingleAndMultilineTasks(t *testing.T) {
 	r.NoError(err)
 
 	tgram := tg.NewFakeTG()
-	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), fakeConfig())
+	cfg := fakeConfig()
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), cfg)
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("home", nil)))
 	r.NoError(err)
 
 	first := inboxMsgHash(t, userFS, 0)
 	second := inboxMsgHash(t, userFS, 1)
-	r.Equal(homeCountText(2), tgram.LastSentText)
+	r.Equal(homeMessageText(userFS, cfg, 2), tgram.LastSentText)
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn("First task", tg.NewCmd(CmdComplete, []string{first})),
 		tg.NewBtn("👀 Second task", tg.NewCmd(CmdShowLongItem, []string{second})),
@@ -3237,7 +3241,7 @@ func TestSaveToNewDirFull(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "My dir"))
 	r.NoError(err)
 
-	r.Equal(emptyHomeText(), tgram.LastSentText)
+	r.Equal(homeMessageText(userFS, cfg, 0), tgram.LastSentText)
 
 	content, err := userFS.Read("my dir", "Text.md")
 	r.NoError(err)
@@ -3311,7 +3315,7 @@ func TestSaveToNewDir(t *testing.T) {
 	err = bot.Reply(tg.NewUpd(-1, "My dir"))
 	r.NoError(err)
 
-	r.Equal(emptyHomeText(), tgram.LastSentText)
+	r.Equal(homeMessageText(userFS, cfg, 0), tgram.LastSentText)
 
 	content, err := userFS.Read("my dir", "Text.md")
 	r.NoError(err)
@@ -4537,8 +4541,30 @@ func TestShowToday_NormalMode(t *testing.T) {
 	err = bot.ShowHome(nil)
 	r.NoError(err)
 
-	// Should show empty today list
-	r.Equal(emptyHomeText(), tgram.LastSentText)
+	// Should show summary + empty today list
+	r.Equal(homeMessageText(userFS, cfg, 0), tgram.LastSentText)
+}
+
+func TestShowHome_IncludesSummaryForLaterTasks(t *testing.T) {
+	r := require.New(t)
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	err = userFS.CreateSystemDirs()
+	r.NoError(err)
+	err = userFS.Write(fs.DirUserRoot, fs.LaterFilename, "- [ ] Buy milk\n- [x] Done task")
+	r.NoError(err)
+
+	tgram := tg.NewFakeTG()
+	cfg := fakeConfig()
+	bot := NewBot(-1, tgram, userFS, db.NewFakeDB(), cfg)
+
+	err = bot.ShowHome(nil)
+	r.NoError(err)
+
+	r.Contains(tgram.LastSentText, "Утренняя сводка")
+	r.Contains(tgram.LastSentText, "Позже: 1/2")
+	r.Contains(tgram.LastSentText, emptyHomeText())
 }
 
 func TestShowToday_NormalModeWithTasks(t *testing.T) {
@@ -4628,7 +4654,7 @@ func TestShowToday_InboxMixedFormat(t *testing.T) {
 	r.NoError(err)
 
 	// Label: 2 tasks left (plain + timestamped unchecked); completed one excluded.
-	r.Equal(homeCountText(2), tgram.LastSentText)
+	r.Equal(homeMessageText(userFS, cfg, 2), tgram.LastSentText)
 
 	// Two rows, each with one button. The completed entry (disk position 2) is
 	// not rendered but its slot is preserved — the next fresh entry added to
