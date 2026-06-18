@@ -28,6 +28,17 @@ All files are plain Markdown (.md) stored locally.
 ├── media/                # Images (png, jpg, webp, gif)
 ├── archive/              # Completed/archived items
 │   └── Done.md           # Log of completed tasks
+│
+├── Life.md               # Life map — entry point
+├── spheres/              # Life spheres (each sphere is a folder)
+│   └── <Sphere>/         # e.g. Work/
+│       ├── Sphere.md
+│       └── <Project>/    # first-level project folder
+│           ├── Project.md
+│           ├── drafts/
+│           ├── final/
+│           └── discussions/
+│
 └── config.json           # User settings
 ```
 
@@ -72,6 +83,19 @@ Auto-generated yearly habit tracking summaries.
 
 ### Media (media/*)
 Images referenced in notes via standard Markdown: `![](media/photo.jpg)`
+
+### Life structure (Life.md, spheres/<sphere>/<project>/)
+A map of life areas, projects, and documents. See docs/life-structure.md.
+
+- **Life.md** — index with links to spheres, projects, and documents
+- **spheres/<Sphere>/** — life area (folder with Sphere.md hub)
+- **spheres/<Sphere>/<Project>/** — project (first-level subfolder in sphere)
+  - **drafts/** — rough captures
+  - **final/** — finalized documents
+  - **discussions/** — meetings, calls
+  - **Project.md** — project hub
+
+Hub files use sections: Статус, Черновики, Финальные, Обсуждения, Заметки.
 
 ## Conventions
 - One level of directory nesting only

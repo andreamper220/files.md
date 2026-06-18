@@ -27,6 +27,7 @@ import (
 	"github.com/zakirullin/files.md/server/habits"
 	"github.com/zakirullin/files.md/server/i18n"
 	"github.com/zakirullin/files.md/server/journal"
+	"github.com/zakirullin/files.md/server/life"
 	"github.com/zakirullin/files.md/server/morningsummary"
 	"github.com/zakirullin/files.md/server/pkg/slice"
 	"github.com/zakirullin/files.md/server/pkg/tg"
@@ -202,12 +203,35 @@ const (
 	CmdShare                           = "share"
 	CmdSetPriority                     = "prio"
 	CmdShowMorning                     = "morning"
+	CmdShowLife                        = "life"
+	CmdInitLife                        = "life_init"
+	CmdShowLifeSpheres                 = "life_sph"
+	CmdShowLifeSphere                  = "life_s1"
+	CmdShowLifeProject                 = "life_p1"
+	CmdShowLifeDocs                    = "life_doc"
+	CmdMoveToDraft                     = "mv_draft"
+	CmdMoveToFinalize                  = "mv_fin"
+	CmdMoveToDiscussion                = "mv_disc"
+	CmdFinalizeDoc                     = "finalize"
+	CmdLifePickProject                 = "lp_p"
+	CmdLifeSaveToProject               = "lp_sv"
+	CmdLifeCreateProject               = "lp_cr"
+	CmdLifeNewProject                  = "lp_new"
+	CmdLifeCreateProjectOnly           = "lp_cro"
+	CmdShowMoveToSphere                = "mv_sph"
+	CmdMoveToSphere                    = "mv_sp"
+	CmdAddToDraftShortcut              = "draft_sc"
+	CmdAddToFinalizeShortcut           = "fin_sc"
+	CmdAddToDiscussionShortcut         = "disc_sc"
 )
 
 var Shortcuts = map[string][]string{
 	CmdAddToJournalShortcut:            {"/ж", "jj", "жж"},
 	CmdAddToJournalAndContinueShortcut: {"жд", "jd", "ja"},
 	CmdAddToRecentFileShortcut:         {"++"},
+	CmdAddToDraftShortcut:              {"/д", "draft", "черновик", "д"},
+	CmdAddToFinalizeShortcut:           {"/ф", "fin", "фин", "финализировать", "ф"},
+	CmdAddToDiscussionShortcut:         {"/об", "disc", "обсуждение", "об"},
 }
 
 // Bot has all the things that we need to handle a message or command from a user.
@@ -336,6 +360,26 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdShowRename:         b.showRename,
 		CmdShowStats:          b.showStats,
 		CmdShowMorning:        b.showMorningSummary,
+		CmdShowLife:            b.showLife,
+		CmdInitLife:            b.initLife,
+		CmdShowLifeSpheres:     b.showLifeSpheres,
+		CmdShowLifeSphere:      b.showLifeSphere,
+		CmdShowLifeProject:     b.showLifeProject,
+		CmdShowLifeDocs:        b.showLifeDocs,
+		CmdMoveToDraft:         b.moveToDraft,
+		CmdMoveToFinalize:      b.moveToFinalize,
+		CmdMoveToDiscussion:    b.moveToDiscussion,
+		CmdFinalizeDoc:         b.finalizeDoc,
+		CmdLifePickProject:     b.showLifeProjectPicker,
+		CmdLifeSaveToProject:   b.saveToLifeProject,
+		CmdLifeCreateProject:   b.createLifeProject,
+		CmdLifeNewProject:      b.lifeNewProject,
+		CmdLifeCreateProjectOnly: b.createLifeProjectOnly,
+		CmdShowMoveToSphere:    b.showMoveToSphere,
+		CmdMoveToSphere:        b.moveToSphere,
+		CmdAddToDraftShortcut:      b.addToDraftFromShortcut,
+		CmdAddToFinalizeShortcut:   b.addToFinalizeFromShortcut,
+		CmdAddToDiscussionShortcut: b.addToDiscussionFromShortcut,
 		CmdSetPriority:        b.setPriority,
 		CmdShowReadChecklist:  b.showRead,
 		CmdRandomNote:         b.randomNote,
@@ -1485,6 +1529,9 @@ func (b *Bot) showDirs(params []string) error {
 			backParam = fs.ShortHash(parent)
 		}
 		backRow := tg.NewRow(tg.NewBtn("⬅️ Назад", tg.NewCmd(CmdShowDirs, []string{backParam})))
+		if life.IsProjectPath(parentDir) {
+			backRow = append(backRow, tg.NewBtn(i18n.Tr("↔️ В другую сферу"), tg.NewCmd(CmdShowMoveToSphere, []string{dirHash})))
+		}
 		if canDeleteDir(parentDir) {
 			backRow = append(backRow, tg.NewBtn(i18n.Tr("🗑 Delete"), tg.NewCmd(CmdShowDeleteDir, []string{dirHash})))
 		}
@@ -1865,6 +1912,12 @@ func (b *Bot) showFile(params []string) error {
 			row = append(row, tg.NewBtn(i18n.Tr("🖨 Share"), cmd))
 		}
 	}
+	if finalizeBtn := lifeFinalizeBtn(dir, filename); finalizeBtn != nil {
+		row = append(row, *finalizeBtn)
+	}
+	if moveBtn := lifeMoveSphereBtn(dir, filename); moveBtn != nil {
+		row = append(row, *moveBtn)
+	}
 	if canDeleteNote(dir, filename) {
 		row = append(row, tg.NewBtn(i18n.Tr("🗑 Delete"), tg.NewCmd(CmdShowDeleteFile, []string{dirHash, fs.Hash(filename)})))
 	}
@@ -1960,7 +2013,9 @@ func (b *Bot) moveToDir(params []string) error {
 	msgHashes := strings.Split(params[1], ",")
 
 	toDir, err := b.fs.FindNoteDirByShortHash(toDirHash)
-	canCreateMissingDir := slices.Contains([]string{fs.DirArchive, fs.DirHabits}, toDirHash)
+	canCreateMissingDir := slices.Contains([]string{
+		fs.DirArchive, fs.DirHabits, life.DirSpheres,
+	}, toDirHash)
 	if err != nil {
 		if canCreateMissingDir {
 			toDir = toDirHash
@@ -2986,6 +3041,9 @@ func (b *Bot) setFullMode(_ []string) error {
 		CmdMoveToShop,
 		CmdMoveToWatch,
 		CmdMoveToJournal,
+		CmdMoveToDraft,
+		CmdMoveToFinalize,
+		CmdMoveToDiscussion,
 	}
 	for _, cmd := range moveToCmds {
 		err = b.cfg.AddMoveToCmd(cmd)

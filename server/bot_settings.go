@@ -21,6 +21,9 @@ var AvailableMoveToBtns = []tg.Btn{
 	tg.NewBtn(i18n.Tr(i18n.StrToADay), tg.NewCmd(CmdShowScheduleForDay, nil)),
 	tg.NewBtn(i18n.Tr(i18n.StrToFile), tg.NewCmd(CmdShowMoveToDirOrFile, nil)),
 	tg.NewBtn(i18n.Tr(i18n.StrToJournal), tg.NewCmd(CmdMoveToJournal, nil)),
+	tg.NewBtn(i18n.Tr(i18n.StrToDraft), tg.NewCmd(CmdMoveToDraft, nil)),
+	tg.NewBtn(i18n.Tr(i18n.StrToFinalize), tg.NewCmd(CmdMoveToFinalize, nil)),
+	tg.NewBtn(i18n.Tr(i18n.StrToDiscussion), tg.NewCmd(CmdMoveToDiscussion, nil)),
 	tg.NewBtn(i18n.Tr(i18n.StrToRead), tg.NewCmd(CmdMoveToRead, nil)),
 	tg.NewBtn(i18n.Tr(i18n.StrToWatch), tg.NewCmd(CmdMoveToWatch, nil)),
 	tg.NewBtn(i18n.Tr(i18n.StrToShop), tg.NewCmd(CmdMoveToShop, nil)),
@@ -39,6 +42,7 @@ var AvailableQuickBtns = []tg.Btn{
 	tg.NewBtn("Schedule", tg.NewCmd(CmdShowSchedule, nil)),
 	tg.NewBtn("Habits", tg.NewCustomCmd(CmdWebAppHabits, nil, tg.CmdTypeWebApp)),
 	tg.NewBtn("Random", tg.NewCmd(CmdRandomNote, nil)),
+	tg.NewBtn("Life", tg.NewCmd(CmdShowLife, nil)),
 }
 
 func (b *Bot) showSettings(_ []string) error {
