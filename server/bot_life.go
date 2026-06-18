@@ -18,14 +18,16 @@ func (b *Bot) showLife(params []string) error {
 		return b.initLife(nil)
 	}
 
-	preview, err := life.IndexPreview(b.fs)
+	preview, err := life.ShortIndexText(b.fs)
 	if err != nil {
 		return fmt.Errorf("show life: %w", err)
 	}
 
 	var kb tg.Keyboard
 	kb.AddRow(tg.NewBtn(i18n.Tr("🌐 Сферы"), tg.NewCmd(CmdShowLifeSpheres, nil)))
-	kb.AddRow(tg.NewBtn(i18n.Tr("🏗 Создать структуру"), tg.NewCmd(CmdInitLife, nil)))
+	if !life.IsInitialized(b.fs) {
+		kb.AddRow(tg.NewBtn(i18n.Tr("🏗 Создать структуру"), tg.NewCmd(CmdInitLife, nil)))
+	}
 	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
 
 	return b.showMD(preview, &kb)
@@ -37,7 +39,7 @@ func (b *Bot) initLife(_ []string) error {
 	}
 
 	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewBtn(i18n.Tr("🗺 Life"), tg.NewCmd(CmdShowLife, nil)),
+		tg.NewBtn(i18n.Tr("🗺 Жизнь"), tg.NewCmd(CmdShowLife, nil)),
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	})
 	return b.showHTML(i18n.Tr("Структура жизни создана 👌\n\nОткрой <b>Life.md</b> в приложении или /life в боте."), kb)
@@ -53,7 +55,7 @@ func (b *Bot) showLifeSpheres(_ []string) error {
 	var kb tg.Keyboard
 	for _, spherePath := range spheres {
 		btn := tg.NewBtn(
-			fs.DisplayName(baseName(spherePath)),
+			life.SphereTitle(spherePath),
 			tg.NewCmd(CmdShowLifeSphere, []string{fs.ShortHash(spherePath)}),
 		)
 		kb.AddRow(btn)
@@ -62,7 +64,7 @@ func (b *Bot) showLifeSpheres(_ []string) error {
 		kb.AddRow(tg.NewBtn(i18n.Tr("🏗 Создать структуру"), tg.NewCmd(CmdInitLife, nil)))
 	}
 	kb.AddRow(tg.NewRow(
-		tg.NewBtn(i18n.Tr("🗺 Life"), tg.NewCmd(CmdShowLife, nil)),
+		tg.NewBtn(i18n.Tr("🗺 Жизнь"), tg.NewCmd(CmdShowLife, nil)),
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	))
 
@@ -83,7 +85,7 @@ func (b *Bot) showLifeSphere(params []string) error {
 	var kb tg.Keyboard
 	for _, projectPath := range projects {
 		btn := tg.NewBtn(
-			fs.DisplayName(projectPath),
+			fs.DisplayName(baseName(projectPath)),
 			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)}),
 		)
 		kb.AddRow(btn)
@@ -95,7 +97,7 @@ func (b *Bot) showLifeSphere(params []string) error {
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	))
 
-	title := fmt.Sprintf("%s\n<code>%s</code>", i18n.Tr("🏗 Проекты сферы:"), fs.DisplayName(spherePath))
+	title := fmt.Sprintf("%s\n<code>%s</code>", i18n.Tr("🏗 Проекты сферы:"), life.SphereTitle(spherePath))
 	return b.showHTML(title, &kb)
 }
 
@@ -111,7 +113,7 @@ func (b *Bot) showLifeProject(params []string) error {
 		tg.NewBtn(i18n.Tr("✨ Финальные"), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindFinal)})),
 	))
 	kb.AddRow(tg.NewBtn(i18n.Tr("💬 Обсуждения"), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindDiscussion)})))
-	kb.AddRow(tg.NewBtn(i18n.Tr("📄 Project.md"), tg.NewCmd(CmdShowFile, []string{fs.ShortHash(projectPath), fs.ShortHash(life.ProjectHubFile)})))
+	kb.AddRow(tg.NewBtn(i18n.Tr("📄 Проект"), tg.NewCmd(CmdShowFile, []string{fs.ShortHash(projectPath), fs.ShortHash(life.ProjectHubFile)})))
 
 	if life.IsProjectPath(projectPath) {
 		kb.AddRow(tg.NewBtn(i18n.Tr("↔️ В другую сферу"), tg.NewCmd(CmdShowMoveToSphere, []string{fs.ShortHash(projectPath)})))
@@ -122,7 +124,7 @@ func (b *Bot) showLifeProject(params []string) error {
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	))
 
-	title := fmt.Sprintf("%s\n<code>%s</code>", i18n.Tr("🏗 Проект:"), fs.DisplayName(projectPath))
+	title := fmt.Sprintf("%s\n<code>%s</code>", i18n.Tr("🏗 Проект:"), fs.DisplayName(baseName(projectPath)))
 	return b.showHTML(title, &kb)
 }
 
@@ -187,7 +189,7 @@ func (b *Bot) showLifeSpherePicker(kind life.Kind, msgHash string) error {
 	kindCode := life.KindCode(kind)
 	for _, spherePath := range spheres {
 		kb.AddRow(tg.NewBtn(
-			fs.DisplayName(spherePath),
+			life.SphereTitle(spherePath),
 			tg.NewCmd(CmdLifePickProject, []string{fs.ShortHash(spherePath), kindCode, msgHash}),
 		))
 	}
@@ -217,7 +219,7 @@ func (b *Bot) showLifeProjectPicker(params []string) error {
 	var kb tg.Keyboard
 	for _, projectPath := range projects {
 		kb.AddRow(tg.NewBtn(
-			fs.DisplayName(projectPath),
+			fs.DisplayName(baseName(projectPath)),
 			tg.NewCmd(CmdLifeSaveToProject, []string{fs.ShortHash(projectPath), life.KindCode(kind), msgHash}),
 		))
 	}
@@ -424,7 +426,7 @@ func (b *Bot) showMoveToSphere(params []string) error {
 	for _, spherePath := range spheres {
 		moveParams := append(append([]string{}, params...), fs.ShortHash(spherePath))
 		kb.AddRow(tg.NewBtn(
-			fs.DisplayName(baseName(spherePath)),
+			life.SphereTitle(spherePath),
 			tg.NewCmd(CmdMoveToSphere, moveParams),
 		))
 	}

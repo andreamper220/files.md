@@ -32,11 +32,20 @@ var defaultSpheres = []struct {
 	title   string
 	about   string
 }{
-	{dirName: "Work", title: "Работа", about: "карьера, проекты, профессиональное развитие"},
-	{dirName: "Relationships", title: "Отношения", about: "семья, друзья, близкие люди"},
-	{dirName: "Health", title: "Здоровье", about: "тело, сон, спорт, питание"},
-	{dirName: "Personal", title: "Личное", about: "внутренний мир, хобби, отдых"},
-	{dirName: "Learning", title: "Обучение", about: "книги, курсы, навыки"},
+	{dirName: "Работа", title: "Работа", about: "карьера, проекты, профессиональное развитие"},
+	{dirName: "Отношения", title: "Отношения", about: "семья, друзья, близкие люди"},
+	{dirName: "Здоровье", title: "Здоровье", about: "тело, сон, спорт, питание"},
+	{dirName: "Личное", title: "Личное", about: "внутренний мир, хобби, отдых"},
+	{dirName: "Обучение", title: "Обучение", about: "книги, курсы, навыки"},
+}
+
+// legacySphereTitles maps old English folder names to Russian display titles.
+var legacySphereTitles = map[string]string{
+	"Work":          "Работа",
+	"Relationships": "Отношения",
+	"Health":        "Здоровье",
+	"Personal":      "Личное",
+	"Learning":      "Обучение",
 }
 
 // Kind marks a document category inside a project.
@@ -227,8 +236,32 @@ func createSphere(fsys *fs.FS, spherePath, title, about string) error {
 	if err := fsys.Write(spherePath, SphereHubFile, body); err != nil {
 		return err
 	}
-	link := linkPath(spherePath, SphereHubFile)
+	link := linkWithLabel(title, spherePath, SphereHubFile)
 	return appendLink(fsys, sectionSpheres, link)
+}
+
+// SphereTitle returns a Russian display title for a sphere path.
+func SphereTitle(spherePath string) string {
+	name := baseName(spherePath)
+	for _, sphere := range defaultSpheres {
+		if sphere.dirName == name || sphere.title == name {
+			return sphere.title
+		}
+	}
+	if title, ok := legacySphereTitles[name]; ok {
+		return title
+	}
+	return fs.DisplayName(name)
+}
+
+// IsInitialized reports whether the life structure has been set up.
+func IsInitialized(fsys *fs.FS) bool {
+	exists, err := fsys.Exists(fs.DirUserRoot, IndexFilename)
+	if err != nil || !exists {
+		return false
+	}
+	spheres, err := ListSpheres(fsys)
+	return err == nil && len(spheres) > 0
 }
 
 // CreateProject creates a project folder inside a sphere with document subdirs.
@@ -256,7 +289,7 @@ func CreateProject(fsys *fs.FS, spherePath, projectName string) (string, error) 
 		return "", fmt.Errorf("create project: can't write hub: %w", err)
 	}
 
-	projectLink := linkPath(projectPath, ProjectHubFile)
+	projectLink := linkWithLabel(fs.DisplayName(baseName(projectPath)), projectPath, ProjectHubFile)
 	if err := appendLink(fsys, sectionProjects, projectLink); err != nil {
 		return "", err
 	}
@@ -446,37 +479,38 @@ func ensureProjectInSphere(fsys *fs.FS, spherePath, projectName string) (string,
 	return CreateProject(fsys, spherePath, projectName)
 }
 
-// IndexPreview returns Life.md content for the bot.
-func IndexPreview(fsys *fs.FS) (string, error) {
-	exists, err := fsys.Exists(fs.DirUserRoot, IndexFilename)
-	if err != nil {
-		return "", fmt.Errorf("life preview: %w", err)
-	}
-	if !exists {
-		return "Структура жизни ещё не создана. Нажми «Создать».", nil
+// ShortIndexText returns the life index without the header and sphere list (for the bot).
+func ShortIndexText(fsys *fs.FS) (string, error) {
+	if !IsInitialized(fsys) {
+		return "Структура жизни ещё не создана.", nil
 	}
 
 	content, err := fsys.Read(fs.DirUserRoot, IndexFilename)
 	if err != nil {
-		return "", fmt.Errorf("life preview: can't read index: %w", err)
+		return "", fmt.Errorf("life index: can't read: %w", err)
+	}
+
+	if idx := strings.Index(content, sectionProjects); idx != -1 {
+		content = strings.TrimSpace(content[idx:])
+	} else {
+		content = sectionProjects + "\n\n" + sectionDrafts + "\n\n" + sectionFinal + "\n\n" + sectionDiscussions
 	}
 
 	const maxRunes = 3500
-	runes := []rune(strings.TrimSpace(content))
+	runes := []rune(content)
 	if len(runes) > maxRunes {
 		content = string(runes[:maxRunes]) + "\n\n…"
 	}
 	return content, nil
 }
 
+// IndexPreview returns Life.md content for the bot.
+func IndexPreview(fsys *fs.FS) (string, error) {
+	return ShortIndexText(fsys)
+}
+
 func indexTemplate() string {
-	return `# Life
-
-> Карта жизни — сфера → проект → черновики / финальные / обсуждения.
-
-## Сферы
-
-## Проекты
+	return `## Проекты
 
 ## Черновики
 
@@ -522,7 +556,18 @@ func linkPath(dir, filename string) string {
 	if filename == "" {
 		return fmt.Sprintf("- [%s](%s)", fs.DisplayName(baseName(dir)), dir)
 	}
-	return fmt.Sprintf("- [%s](%s/%s)", fs.DisplayName(filename), dir, filename)
+	label := fs.DisplayName(filename)
+	if filename == SphereHubFile {
+		label = SphereTitle(dir)
+	}
+	if filename == ProjectHubFile {
+		label = fs.DisplayName(baseName(dir))
+	}
+	return fmt.Sprintf("- [%s](%s/%s)", label, dir, filename)
+}
+
+func linkWithLabel(label, dir, filename string) string {
+	return fmt.Sprintf("- [%s](%s/%s)", label, dir, filename)
 }
 
 func appendLink(fsys *fs.FS, section, link string) error {

@@ -29,11 +29,11 @@ func TestInitCreatesSpheres(t *testing.T) {
 	err := Init(fsys)
 	r.NoError(err)
 
-	exists, err := fsys.Exists(SpherePath("Work"), "")
+	exists, err := fsys.Exists(SpherePath("Работа"), "")
 	r.NoError(err)
 	r.True(exists)
 
-	exists, err = fsys.Exists(SpherePath("Work"), SphereHubFile)
+	exists, err = fsys.Exists(SpherePath("Работа"), SphereHubFile)
 	r.NoError(err)
 	r.True(exists)
 }
@@ -43,7 +43,7 @@ func TestCreateProjectStructure(t *testing.T) {
 	fsys := newTestFS(t)
 	r.NoError(Init(fsys))
 
-	projectPath, err := CreateProject(fsys, SpherePath("Work"), "Files MD")
+	projectPath, err := CreateProject(fsys, SpherePath("Работа"), "Files MD")
 	r.NoError(err)
 
 	for _, sub := range []string{SubDirDrafts, SubDirFinal, SubDirDiscussions} {
@@ -57,7 +57,7 @@ func TestRegisterDocInProject(t *testing.T) {
 	r := require.New(t)
 	fsys := newTestFS(t)
 	r.NoError(Init(fsys))
-	projectPath, err := CreateProject(fsys, SpherePath("Work"), "Test")
+	projectPath, err := CreateProject(fsys, SpherePath("Работа"), "Test")
 	r.NoError(err)
 
 	docDir := DocDir(projectPath, KindDraft)
@@ -65,14 +65,14 @@ func TestRegisterDocInProject(t *testing.T) {
 
 	content, err := fsys.Read(fs.DirUserRoot, IndexFilename)
 	r.NoError(err)
-	r.Contains(content, "spheres/Work/Test/drafts/Idea.md")
+	r.Contains(content, "spheres/Работа/Test/drafts/Idea.md")
 }
 
 func TestFinalizeDraft(t *testing.T) {
 	r := require.New(t)
 	fsys := newTestFS(t)
 	r.NoError(Init(fsys))
-	projectPath, err := CreateProject(fsys, SpherePath("Work"), "Plan")
+	projectPath, err := CreateProject(fsys, SpherePath("Работа"), "Plan")
 	r.NoError(err)
 
 	draftsDir := DocDir(projectPath, KindDraft)
@@ -95,17 +95,17 @@ func TestMoveProjectToAnotherSphere(t *testing.T) {
 	r := require.New(t)
 	fsys := newTestFS(t)
 	r.NoError(Init(fsys))
-	projectPath, err := CreateProject(fsys, SpherePath("Work"), "Move me")
+	projectPath, err := CreateProject(fsys, SpherePath("Работа"), "Move me")
 	r.NoError(err)
 
-	err = MoveEntry(fsys, projectPath, SpherePath("Health"))
+	err = MoveEntry(fsys, projectPath, SpherePath("Здоровье"))
 	r.NoError(err)
 
 	exists, err := fsys.Exists(projectPath, "")
 	r.NoError(err)
 	r.False(exists)
 
-	exists, err = fsys.Exists(ProjectPath(SpherePath("Health"), "Move me"), "")
+	exists, err = fsys.Exists(ProjectPath(SpherePath("Здоровье"), "Move me"), "")
 	r.NoError(err)
 	r.True(exists)
 }
