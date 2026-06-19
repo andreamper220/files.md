@@ -6,6 +6,7 @@ package habits
 import (
 	_ "embed"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +24,10 @@ var lastMonthMD string
 
 //go:embed testdata/two_months_habits.md
 var twoMonthsMD string
+
+func normalizeMDLines(s string) string {
+	return strings.ReplaceAll(s, "\r\n", "\n")
+}
 
 func init() {
 	fs.Ctime = func(fi os.FileInfo) int64 {
@@ -163,7 +168,7 @@ func TestWrite(t *testing.T) {
 	updatedMonthMD, err := userFS.Read("insights", "2024 Habits.md")
 	r.NoError(err)
 
-	r.Equal(monthMD, updatedMonthMD)
+	r.Equal(normalizeMDLines(monthMD), normalizeMDLines(updatedMonthMD))
 }
 
 func TestWritePreserveMoodsForPreviousMonth(t *testing.T) {
@@ -184,5 +189,5 @@ func TestWritePreserveMoodsForPreviousMonth(t *testing.T) {
 	updatedMD, err := userFS.Read("insights", "1970 Habits.md")
 	r.NoError(err)
 
-	r.Equal(twoMonthsMD, updatedMD)
+	r.Equal(normalizeMDLines(twoMonthsMD), normalizeMDLines(updatedMD))
 }
