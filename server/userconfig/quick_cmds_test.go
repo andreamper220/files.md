@@ -9,21 +9,6 @@ import (
 	"github.com/zakirullin/files.md/server/fs"
 )
 
-const defaultTestCfgWithNewQuickCmd = `{
-    "language": "en",
-    "timezone": "UTC",
-    "moveToCommands": [],
-    "pomodoroDurationInMinutes": 50,
-    "schedules": [],
-    "quickCommands": [
-        "new_quick_cmd"
-    ],
-    "twoEmojisEnabled": false,
-    "mode": "full",
-    "quickHabitsEnabled": false,
-    "channels": []
-}`
-
 func TestAddAndDelQuickCmd(t *testing.T) {
 	r := require.New(t)
 
@@ -43,7 +28,9 @@ func TestAddAndDelQuickCmd(t *testing.T) {
 
 	c, err := userFS.Read("", "config.json")
 	r.NoError(err)
-	r.Equal(defaultTestCfgWithNewQuickCmd, c)
+	r.Equal(defaultConfigJSON(t, func(c *config) {
+		c.QuickCmds = []string{"new_quick_cmd"}
+	}), c)
 
 	err = cfg.DelQuickCmd("new_quick_cmd")
 	r.NoError(err)
@@ -54,5 +41,5 @@ func TestAddAndDelQuickCmd(t *testing.T) {
 
 	c, err = userFS.Read("", "config.json")
 	r.NoError(err)
-	r.Equal(defaultTestCfg, c)
+	r.Equal(defaultConfigJSON(t, nil), c)
 }

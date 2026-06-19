@@ -9,21 +9,6 @@ import (
 	"github.com/zakirullin/files.md/server/fs"
 )
 
-const defaultTestCfgWithNewMoveCmd = `{
-    "language": "en",
-    "timezone": "UTC",
-    "moveToCommands": [
-        "new_move_cmd"
-    ],
-    "pomodoroDurationInMinutes": 50,
-    "schedules": [],
-    "quickCommands": [],
-    "twoEmojisEnabled": false,
-    "mode": "full",
-    "quickHabitsEnabled": false,
-    "channels": []
-}`
-
 func TestAddAndDelMoveCmd(t *testing.T) {
 	r := require.New(t)
 
@@ -43,7 +28,9 @@ func TestAddAndDelMoveCmd(t *testing.T) {
 
 	c, err := userFS.Read("", "config.json")
 	r.NoError(err)
-	r.Equal(defaultTestCfgWithNewMoveCmd, c)
+	r.Equal(defaultConfigJSON(t, func(c *config) {
+		c.MoveToCmds = []string{"new_move_cmd"}
+	}), c)
 
 	err = cfg.DelMoveToCmd("new_move_cmd")
 	r.NoError(err)
@@ -54,5 +41,5 @@ func TestAddAndDelMoveCmd(t *testing.T) {
 
 	c, err = userFS.Read("", "config.json")
 	r.NoError(err)
-	r.Equal(defaultTestCfg, c)
+	r.Equal(defaultConfigJSON(t, nil), c)
 }

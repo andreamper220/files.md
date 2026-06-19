@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zakirullin/files.md/server/fs"
+	"github.com/zakirullin/files.md/server/life"
 	"github.com/zakirullin/files.md/server/userconfig"
 )
 
@@ -30,18 +31,12 @@ func TestBuild_IncludesNotesSection(t *testing.T) {
 	r.NoError(err)
 	err = userFS.CreateSystemDirs()
 	r.NoError(err)
-	err = userFS.Write("brain", "Memory.md", "note")
-	r.NoError(err)
+	r.NoError(life.Init(userFS))
 
 	cfg := userconfig.NewConfig(userFS, 1, "config.json")
 	r.NoError(cfg.CreateDefaultIfNotExists())
 
 	report, err := Build(userFS, cfg)
 	r.NoError(err)
-	r.Contains(report, "📋 Задачи")
-	r.Contains(report, "📝 Заметки")
-	r.Contains(report, "Всего: <b>1</b>")
-	r.Contains(report, "Добавлено сегодня: <b>1</b>")
-	r.Contains(report, "brain/Memory")
-	r.NotContains(report, "Утренняя сводка")
+	r.Contains(report, "💼")
 }

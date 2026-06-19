@@ -85,19 +85,19 @@ func (b *Bot) showLifeSphere(params []string) error {
 	var kb tg.Keyboard
 	for _, projectPath := range projects {
 		btn := tg.NewBtn(
-			fs.DisplayName(baseName(projectPath)),
+			life.AreaLabel(projectPath),
 			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)}),
 		)
 		kb.AddRow(btn)
 	}
 
-	kb.AddRow(tg.NewBtn(i18n.Tr("➕ Новый проект"), tg.NewCmd(CmdLifeNewProject, []string{fs.ShortHash(spherePath)})))
+	kb.AddRow(tg.NewBtn(i18n.Tr("➕ Новая область"), tg.NewCmd(CmdLifeNewProject, []string{fs.ShortHash(spherePath)})))
 	kb.AddRow(tg.NewRow(
 		tg.NewBtn(i18n.Tr("🌐 Сферы"), tg.NewCmd(CmdShowLifeSpheres, nil)),
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	))
 
-	title := fmt.Sprintf("%s\n<code>%s</code>", i18n.Tr("🏗 Проекты сферы:"), life.SphereTitle(spherePath))
+	title := fmt.Sprintf("%s", i18n.Tr("🏗 Области сферы:"))
 	return b.showHTML(title, &kb)
 }
 
@@ -124,7 +124,7 @@ func (b *Bot) showLifeProject(params []string) error {
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	))
 
-	title := fmt.Sprintf("%s\n<code>%s</code>", i18n.Tr("🏗 Проект:"), fs.DisplayName(baseName(projectPath)))
+	title := fmt.Sprintf("%s", i18n.Tr("🏗 Область:"))
 	return b.showHTML(title, &kb)
 }
 
@@ -297,7 +297,7 @@ func (b *Bot) saveChatToLifeProject(projectPath string, kind life.Kind, msgHash 
 	err := b.moveFromChat(func(content string, timestamp time.Time) error {
 		var extractErr error
 		var sanitizedTitle string
-		sanitizedTitle, content, extractErr = b.extractHeaderAndBody(content, maxHeaderLength)
+		sanitizedTitle, content, extractErr = b.extractHeaderAndBodyPreserveMedia(content, maxHeaderLength)
 		if extractErr != nil {
 			return fmt.Errorf("save to project: can't extract title: %w", extractErr)
 		}

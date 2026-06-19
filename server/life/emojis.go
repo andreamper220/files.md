@@ -1,0 +1,88 @@
+package life
+
+import (
+	"hash/fnv"
+)
+
+// Sphere emoji markers for home summary (names are not shown).
+var sphereEmojis = map[string]string{
+	"Работа":      "💼",
+	"Work":        "💼",
+	"Отношения":   "❤️",
+	"Relationships": "❤️",
+	"Здоровье":    "💚",
+	"Health":      "💚",
+	"Личное":      "🌿",
+	"Personal":    "🌿",
+	"Обучение":    "📚",
+	"Learning":    "📚",
+}
+
+var areaEmojiPool = []string{"🏗", "📦", "🎯", "🔧", "📌", "🧩", "🛠", "📎", "🗂", "🧪"}
+
+// TasksFilename stores per-area task checklists.
+const TasksFilename = "tasks.md"
+
+// SphereEmoji returns an emoji for a sphere path (no text label).
+func SphereEmoji(spherePath string) string {
+	title := SphereTitle(spherePath)
+	if e, ok := sphereEmojis[title]; ok {
+		return e
+	}
+	name := baseName(spherePath)
+	if e, ok := sphereEmojis[name]; ok {
+		return e
+	}
+	return pickEmoji(name, sphereEmojiPool())
+}
+
+// AreaEmoji returns an emoji for an area (project) path.
+func AreaEmoji(projectPath string) string {
+	name := baseName(projectPath)
+	return pickEmoji(name, areaEmojiPool)
+}
+
+// KindEmoji returns an emoji for a document kind.
+func KindEmoji(k Kind) string {
+	switch k {
+	case KindDraft:
+		return "📝"
+	case KindFinal:
+		return "✨"
+	case KindDiscussion:
+		return "💬"
+	default:
+		return "📝"
+	}
+}
+
+func sphereEmojiPool() []string {
+	out := make([]string, 0, len(sphereEmojis))
+	seen := map[string]bool{}
+	for _, e := range sphereEmojis {
+		if !seen[e] {
+			seen[e] = true
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+func pickEmoji(seed string, pool []string) string {
+	if len(pool) == 0 {
+		return "⚪️"
+	}
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(seed))
+	return pool[int(h.Sum32())%len(pool)]
+}
+
+// AreaLabel returns emoji-only label for UI buttons.
+func AreaLabel(projectPath string) string {
+	return AreaEmoji(projectPath)
+}
+
+// SphereLabel returns emoji-only label for UI buttons.
+func SphereLabel(spherePath string) string {
+	return SphereEmoji(spherePath)
+}

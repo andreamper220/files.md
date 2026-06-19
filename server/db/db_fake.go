@@ -12,6 +12,7 @@ type FakeDB struct {
 	LastKeyboardMID     int
 	RecentCMD           string
 	RecentCMDParams     []string
+	PendingDrafts       map[string]string
 }
 
 func NewFakeDB() *FakeDB {
@@ -78,4 +79,25 @@ func (db *FakeDB) ImgMsgID() ([]int, bool) {
 }
 
 func (db *FakeDB) DelImgMsgID() {
+}
+
+func (db *FakeDB) SetPendingDraft(hash, content string) {
+	if db.PendingDrafts == nil {
+		db.PendingDrafts = make(map[string]string)
+	}
+	db.PendingDrafts[hash] = content
+}
+
+func (db *FakeDB) PendingDraft(hash string) (string, bool) {
+	if db.PendingDrafts == nil {
+		return "", false
+	}
+	c, ok := db.PendingDrafts[hash]
+	return c, ok
+}
+
+func (db *FakeDB) DelPendingDraft(hash string) {
+	if db.PendingDrafts != nil {
+		delete(db.PendingDrafts, hash)
+	}
 }

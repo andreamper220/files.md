@@ -17,6 +17,7 @@ var (
 	recentCommands        sync.Map
 	recentCommandsTargets sync.Map
 	sentPhotoMsgIDs       sync.Map
+	pendingDrafts         sync.Map
 )
 
 // DB Do we need a type at all?
@@ -150,4 +151,24 @@ func hashOrPathByMsgIDKey(userID int64, msgID int) string {
 
 func tmpFilePath(userID int64, name string) string {
 	return fmt.Sprintf("%s/%d.%s", os.TempDir(), userID, name)
+}
+
+func (db *DB) SetPendingDraft(hash, content string) {
+	pendingDrafts.Store(pendingDraftKey(db.UserID, hash), content)
+}
+
+func (db *DB) PendingDraft(hash string) (string, bool) {
+	v, ok := pendingDrafts.Load(pendingDraftKey(db.UserID, hash))
+	if !ok {
+		return "", false
+	}
+	return v.(string), true
+}
+
+func (db *DB) DelPendingDraft(hash string) {
+	pendingDrafts.Delete(pendingDraftKey(db.UserID, hash))
+}
+
+func pendingDraftKey(userID int64, hash string) string {
+	return fmt.Sprintf("%d:pending:%s", userID, hash)
 }

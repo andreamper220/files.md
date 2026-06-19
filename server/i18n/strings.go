@@ -6,6 +6,7 @@ const (
 	StrHome            = "🏠 Home"
 	StrBack            = "⬅️ Back"
 	StrComplete        = "✅ Complete"
+	StrDelete          = "🗑 Delete"
 	StrMoveToLaterLong = "⏳ Move to later"
 	StrToToday         = "➡️ Move to today"
 	StrToTomorrow      = "🌚 To tmrw"

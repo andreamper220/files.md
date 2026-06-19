@@ -115,6 +115,9 @@ type Database interface {
 	AddImgMsgID(msgID int)
 	ImgMsgID() ([]int, bool)
 	DelImgMsgID()
+	SetPendingDraft(hash, content string)
+	PendingDraft(hash string) (content string, ok bool)
+	DelPendingDraft(hash string)
 }
 
 type BotPlugin interface {
@@ -223,6 +226,15 @@ const (
 	CmdAddToDraftShortcut              = "draft_sc"
 	CmdAddToFinalizeShortcut           = "fin_sc"
 	CmdAddToDiscussionShortcut         = "disc_sc"
+	CmdShowSaveType                    = "save_type"
+	CmdSaveAsTask                      = "as_task"
+	CmdSaveAsNote                      = "as_note"
+	CmdShowTasksView                   = "tasks_v"
+	CmdShowNotesHub                    = "notes_h"
+	CmdSaveNoteToArea                  = "note_area"
+	CmdMoveToAreaTask                  = "mv_area"
+	CmdCompleteAreaTask                = "area_c"
+	CmdShowTaskActions               = "task_act"
 )
 
 var Shortcuts = map[string][]string{
@@ -380,17 +392,21 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdAddToDraftShortcut:      b.addToDraftFromShortcut,
 		CmdAddToFinalizeShortcut:   b.addToFinalizeFromShortcut,
 		CmdAddToDiscussionShortcut: b.addToDiscussionFromShortcut,
-		CmdSetPriority:        b.setPriority,
-		CmdShowReadChecklist:  b.showRead,
-		CmdRandomNote:         b.randomNote,
-		CmdShowWatchChecklist: b.showWatch,
-		CmdShowShopChecklist:  b.showShop,
-		CmdShowSchedule:       b.showSchedule,
+		CmdSetPriority:               b.setPriority,
+		CmdShowSaveType:              b.showSaveType,
+		CmdSaveAsTask:                b.saveAsTask,
+		CmdSaveAsNote:                b.saveAsNote,
+		CmdShowTasksView:             b.showTasksView,
+		CmdShowNotesHub:              b.showNotesHub,
+		CmdSaveNoteToArea:            b.saveNoteToArea,
+		CmdMoveToAreaTask:            b.moveToAreaTask,
+		CmdCompleteAreaTask:          b.completeAreaTask,
+		CmdShowTaskActions:           b.showTaskActions,
+		CmdRandomNote:                b.randomNote,
 		CmdShowMoveExisting:   b.showMoveExisting,
 		CmdShowSettings:       b.showSettings,
 		CmdShowTimezone:       b.showTimezone,
 		CmdSetTimezone:        b.setTimezone,
-		CmdOpenInApp:          b.openInApp,
 		CmdShowHelp:           b.showHelp,
 		CmdDownload:           b.download,
 		// Button's commands (callbacks)
@@ -552,27 +568,11 @@ func (b *Bot) saveFromTextMsg(u Update) error {
 		return b.addToReplied(replyMsgID, msg)
 	}
 
-	msgHash, err := b.appendToChat(msg, b.cfg.Timezone())
-	if err != nil {
-		return fmt.Errorf("save to chat: %w", err)
-	}
-
-	if b.cfg.ChatOnlyMode() {
-		msgID, _ := u.MsgID()
-		_ = b.tg.SendReaction(b.userID, msgID, "👌")
-		return nil
-	}
-
 	if updateHasTime {
-		setFirstMsgHash(b.userID, msgHash, msgTime)
 		setFirstMsgTime(b.userID, msgTime)
 	}
 
-	if b.cfg.JournalOnlyMode() {
-		return b.moveToJournal([]string{msgHash})
-	}
-
-	return b.showMoveTo([]string{msgHash})
+	return b.queueIncomingContent(msg)
 }
 
 // TODO test collapsing from both regular messages and images
@@ -600,29 +600,22 @@ func (b *Bot) saveFromImage(u Update) error {
 		return b.addToReplied(replyMsgID, content)
 	}
 
-	msgHash, err := b.appendToChat(content, b.cfg.Timezone())
-	if err != nil {
-		return fmt.Errorf("save from image: %w", err)
-	}
-
 	if b.cfg.ChatOnlyMode() {
+		msgHash, err := b.appendToChat(content, b.cfg.Timezone())
+		if err != nil {
+			return fmt.Errorf("save from image: %w", err)
+		}
 		msgID, _ := u.MsgID()
-		// We can tolerate missing reaction.
 		_ = b.tg.SendReaction(b.userID, msgID, "👌")
+		_ = msgHash
 		return nil
 	}
 
-	// Track forwards.
 	if updateHasTime {
-		setFirstMsgHash(b.userID, msgHash, msgTime)
 		setFirstMsgTime(b.userID, msgTime)
 	}
 
-	if b.cfg.JournalOnlyMode() {
-		return b.moveToJournal([]string{msgHash})
-	}
-
-	return b.showMoveTo([]string{msgHash})
+	return b.queueIncomingContent(content)
 }
 
 func (b *Bot) saveFromAudio(u Update) error {
@@ -635,22 +628,17 @@ func (b *Bot) saveFromAudio(u Update) error {
 		return b.addToReplied(replyMsgID, content)
 	}
 
-	msgHash, err := b.appendToChat(content, b.cfg.Timezone())
-	if err != nil {
-		return fmt.Errorf("save from audio: %w", err)
-	}
-
 	if b.cfg.ChatOnlyMode() {
+		_, err := b.appendToChat(content, b.cfg.Timezone())
+		if err != nil {
+			return fmt.Errorf("save from audio: %w", err)
+		}
 		msgID, _ := u.MsgID()
 		_ = b.tg.SendReaction(b.userID, msgID, "👌")
 		return nil
 	}
 
-	if b.cfg.JournalOnlyMode() {
-		return b.moveToJournal([]string{msgHash})
-	}
-
-	return b.showMoveTo([]string{msgHash})
+	return b.queueIncomingContent(content)
 }
 
 func (b *Bot) saveAudio(u Update) (string, error) {
@@ -756,22 +744,22 @@ func (b *Bot) addToReplied(replyToMsgID int, newContent string) error {
 		return b.ShowHome(nil)
 	}
 
-	// File case: value is a relative path under user root. fs.SafePath
-	// accepts the whole thing as `filename` when dir is the user root.
-	existingContent, err := b.fs.Read(fs.DirUserRoot, value)
+	// File case: value is a relative path under user root.
+	dir, filename := splitUserRelativePath(value)
+	existingContent, err := b.fs.Read(dir, filename)
 	if err != nil {
 		return fmt.Errorf("add: can't read: %w", err)
 	}
 
 	content := strings.TrimRight(existingContent, "\n") + "\n\n" + strings.TrimSpace(newContent) + "\n"
-	if err := b.fs.Write(fs.DirUserRoot, value, content); err != nil {
+	if err := b.fs.Write(dir, filename, content); err != nil {
 		return fmt.Errorf("add: can't write: %w", err)
 	}
 
 	b.delAllKeyboards()
 
 	b.db.SetRecentCommand(CmdMoveToExistingFile)
-	b.db.SetRecentCommandParams([]string{fs.ShortHash(value)})
+	b.db.SetRecentCommandParams([]string{fs.ShortHash(filepath.ToSlash(filepath.Join(dir, filename)))})
 
 	return b.ShowHome(nil)
 }
@@ -948,6 +936,21 @@ func (b *Bot) extractHeaderAndBody(msg string, maxHeaderLen int) (string, string
 	}
 
 	return sanitizedTitle, content, nil
+}
+
+// extractHeaderAndBodyPreserveMedia keeps image/audio attachments in the body.
+func (b *Bot) extractHeaderAndBodyPreserveMedia(msg string, maxHeaderLen int) (string, string, error) {
+	title, body, err := b.extractHeaderAndBody(msg, maxHeaderLen)
+	if err != nil {
+		return "", "", err
+	}
+	if txt.HasImage(msg) && !strings.Contains(body, "!(") {
+		body = msg
+	}
+	if strings.TrimSpace(body) == "" {
+		body = msg
+	}
+	return title, body, nil
 }
 
 // If content is empty, use its filename as content.
@@ -1226,111 +1229,24 @@ func (b *Bot) recentCmdBtn(msgHash string) *tg.Btn {
 }
 
 func (b *Bot) ShowHome(_ []string) error {
-	if b.cfg.NotesOnlyMode() {
-		return b.showDirs(nil)
-	}
-
-	if b.cfg.JournalOnlyMode() || b.cfg.ChatOnlyMode() {
-		_, err := b.tg.Send(b.userID, i18n.Tr("What's on your mind?"), nil, tg.MarkupHTML)
-		if err != nil {
-			return fmt.Errorf("show today: can't send journal message: %w", err)
-		}
-		return nil
-	}
-
-	var kb tg.Keyboard
-
-	// Adding records from today
-	content, err := b.fs.Read(fs.DirUserRoot, fs.ChatFilename)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("show today: can't read chat file: %w", err)
-	}
-	blocks := readChatMsgs(content)
-	// Today entry: `- [ ] body` or `- [ ] `HH:MM` body` (timestamp optional).
-	chatEntryRegex := regexp.MustCompile(`^- \[([ xX])\] (?:` + "`" + `\d{2}:\d{2}` + "` )?")
-	shownCount := 0
-	for _, block := range blocks {
-		m := chatEntryRegex.FindStringSubmatch(block)
-		if m == nil {
-			continue
-		}
-		// Skip already-completed entries from the visible list. The hash is
-		// the same for `[ ]` / `[x]` variants, so tapping the button after a
-		// completion toggle still resolves to the right line.
-		if m[1] == "x" || m[1] == "X" {
-			continue
-		}
-		shownCount++
-
-		msgHash := chatBlockHash(block)
-
-		// Strip the matched prefix (optional checkbox + optional timestamp).
-		block = strings.TrimSpace(block[len(m[0]):])
-
-		// Skip image link if any.
-		parts := strings.Split(block, "\n")
-		title := txt.Ucfirst(strings.TrimSpace(parts[0]))
-		if txt.HasImage(title) {
-			if len(parts) > 1 {
-				title = txt.Ucfirst(strings.TrimSpace(parts[1]))
-			}
-
-			if title == "" || len(parts) == 1 {
-				title = fmt.Sprintf(i18n.Tr("Img %s"), now().Format("02.01.06 15:04"))
-			}
-		}
-
-		isMultiline := len(parts) > 1
-		if len([]rune(title)) >= maxHeaderLengthForMobile || txt.HasImage(block) || isMultiline {
-			cmd := tg.NewCmd(CmdShowLongItem, []string{msgHash})
-			btn := tg.NewBtn(txt.Emoji(i18n.Emoji("eyes"), title), cmd)
-			kb.AddRow(btn)
-		} else {
-			cmd := tg.NewCmd(CmdComplete, []string{msgHash})
-			btn := tg.NewBtn(txt.Emoji(i18n.Emoji(title), title), cmd)
-			kb.AddRow(btn)
-		}
-	}
-
-	// Adding habits
-	habitsRow := tg.NewRow()
-	userHabits := make(map[string]habits.Year)
-	if b.cfg.QuickHabitsEnabled() {
-		// We can tolerate missing habits
-		userHabits, _ = habits.LastWeekHabits(b.fs, b.cfg.Timezone())
-		_, ok := userHabits[habits.MoodHabit]
-		if ok {
-			delete(userHabits, habits.MoodHabit)
-		}
-	}
-	for habit, year := range userHabits {
-		if completed, _ := year[time.Now().YearDay()]; completed == 1 {
-			continue
-		}
-
-		cmd := tg.NewCmd(CmdCompleteHabit, []string{habit})
-		habitsRow = append(habitsRow, tg.NewBtn(habits.Emoji(b.fs, habit), cmd))
-	}
-	if len(habitsRow) > 0 {
-		kb.AddRow(habitsRow)
-	}
-
-	// Adding quick buttons
-	quickBtns := b.quickBtns()
-	if len(quickBtns) > 0 {
-		quickBtnsByRows := slice.Chunk(quickBtns, quickBtnsPerRow)
-		for _, row := range quickBtnsByRows {
-			kb.AddRow(row)
-		}
-	}
-
-	msg := b.homeMessage(shownCount)
-	err = b.showHTML(msg, &kb)
+	report, err := morningsummary.Build(b.fs, b.cfg)
 	if err != nil {
-		return fmt.Errorf("show list: %w", err)
+		report = ""
+	}
+	report = strings.TrimSpace(report)
+	if report == "" {
+		report = "🌴"
 	}
 
-	return nil
+	kb := tg.NewKeyboard([]tg.Row{
+		tg.NewRow(
+			tg.NewBtn("📋", tg.NewCmd(CmdShowTasksView, nil)),
+			tg.NewBtn("🗒", tg.NewCmd(CmdShowNotesHub, nil)),
+			tg.NewBtn("🌐", tg.NewCmd(CmdShowLifeSpheres, nil)),
+		),
+	})
+
+	return b.showHTML(report, kb)
 }
 
 func (b *Bot) homeMessage(shownCount int) string {
@@ -1819,7 +1735,7 @@ func (b *Bot) showLongItemFromChecklist(params []string) error {
 	kb := tg.NewKeyboard([]tg.Row{
 		tg.NewRow(
 			tg.NewBtn(i18n.Tr(i18n.StrBack), tg.NewCmd(cmd, []string{})),
-			tg.NewBtn(i18n.Tr(i18n.StrComplete), tg.NewCmd(CmdCompleteChecklistItem, []string{checklistHash, itemHash})),
+			tg.NewBtn(i18n.Tr(i18n.StrDelete), tg.NewCmd(CmdCompleteChecklistItem, []string{checklistHash, itemHash})),
 		),
 	})
 
@@ -1852,9 +1768,9 @@ func (b *Bot) showLongItem(params []string) error {
 
 	kb := tg.NewKeyboard([]tg.Row{
 		tg.NewRow(
-			tg.NewBtn(i18n.Tr(i18n.StrBack), tg.NewCmd(CmdShowHome, []string{})),
-			tg.NewBtn(i18n.AddEmoji(i18n.Tr("Move")), tg.NewCmd(CmdShowMoveTo, []string{msgHash})),
-			tg.NewBtn(txt.Emoji(i18n.Emoji("Archive"), i18n.Tr("Complete")), tg.NewCmd(CmdComplete, []string{msgHash})),
+			tg.NewBtn(i18n.Tr(i18n.StrBack), tg.NewCmd(CmdShowTasksView, []string{})),
+			tg.NewBtn("📋", tg.NewCmd(CmdShowTaskActions, []string{msgHash})),
+			tg.NewBtn(i18n.Tr(i18n.StrDelete), tg.NewCmd(CmdComplete, []string{msgHash})),
 		),
 	})
 
@@ -2001,7 +1917,7 @@ func (b *Bot) showStart(params []string) error {
 	// We can tolerate an error.
 	_ = b.setFullMode(nil)
 
-	_, err := b.tg.Send(b.userID, i18n.Tr("Welcome! 👋\n\n<b>Send me anything, and I’ll save it to files!</b>\n\nClick /app to connect the web app.\n\nBy default <b>Full Mode</b> is enabled, which can feel a bit overwhelming. You can switch to <b>Notes Only</b> or <b>Tasks Only</b> mode in /settings menu."), nil, tg.MarkupHTML)
+	_, err := b.tg.Send(b.userID, i18n.Tr("Welcome! 👋\n\n<b>Присылай что угодно — выбери задачу или заметку.</b>"), nil, tg.MarkupHTML)
 
 	return err
 }
@@ -2026,7 +1942,7 @@ func (b *Bot) moveToDir(params []string) error {
 
 	err = b.moveFromChat(func(content string, timestamp time.Time) error {
 		var sanitizedTitle string
-		sanitizedTitle, content, err = b.extractHeaderAndBody(content, maxHeaderLength)
+		sanitizedTitle, content, err = b.extractHeaderAndBodyPreserveMedia(content, maxHeaderLength)
 		if err != nil {
 			return fmt.Errorf("move to dir from chat: can't extract title and content: %w", err)
 		}
@@ -2496,7 +2412,7 @@ func (b *Bot) moveToLater(params []string) error {
 	return b.moveToChecklist([]string{fs.LaterFilename, msgHash})
 }
 
-// complete marks a single Chat.md entry as done ("- [ ]" => "- [x]").
+// complete removes a single Chat.md entry (delete, not mark done).
 func (b *Bot) complete(params []string) error {
 	msgHash := params[0]
 
@@ -2513,7 +2429,7 @@ func (b *Bot) complete(params []string) error {
 		return fmt.Errorf("complete: can't read inbox: %w", err)
 	}
 
-	newContent, item := txt.CompleteChecklistItem(content, msgHash)
+	newContent, item := txt.RemoveChecklistItem(content, msgHash)
 	if item == "" {
 		return b.ShowHome(nil)
 	}
@@ -2522,14 +2438,7 @@ func (b *Bot) complete(params []string) error {
 		return fmt.Errorf("complete: can't write inbox: %w", err)
 	}
 
-	if item == fs.PomodoroTask {
-		err = b.cfg.AddToSchedule(fs.PomodoroTask, time.Now().Unix()+int64(b.cfg.PomodoroDuration().Seconds()), "")
-		if err != nil {
-			return fmt.Errorf("complete: can't add pomodoro to schedule: %w", err)
-		}
-	}
-
-	return b.ShowHome(nil)
+	return b.showTasksView(nil)
 }
 
 func (b *Bot) completeListItem(params []string) error {
@@ -3196,4 +3105,13 @@ func completedMsg() string {
 	}
 
 	return msgs[rand.Intn(len(msgs))]
+}
+
+func splitUserRelativePath(value string) (dir, filename string) {
+	value = strings.TrimPrefix(filepath.ToSlash(value), "/")
+	if !strings.Contains(value, "/") {
+		return fs.DirUserRoot, value
+	}
+	i := strings.LastIndex(value, "/")
+	return value[:i], value[i+1:]
 }

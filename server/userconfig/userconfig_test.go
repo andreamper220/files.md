@@ -1,6 +1,7 @@
 package userconfig
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -9,18 +10,16 @@ import (
 	"github.com/zakirullin/files.md/server/fs"
 )
 
-const defaultTestCfg = `{
-    "language": "en",
-    "timezone": "UTC",
-    "moveToCommands": [],
-    "pomodoroDurationInMinutes": 50,
-    "schedules": [],
-    "quickCommands": [],
-    "twoEmojisEnabled": false,
-    "mode": "full",
-    "quickHabitsEnabled": false,
-    "channels": []
-}`
+func defaultConfigJSON(t *testing.T, mutate func(*config)) string {
+	t.Helper()
+	cfg := DefaultConfig
+	if mutate != nil {
+		mutate(&cfg)
+	}
+	b, err := json.MarshalIndent(cfg, "", "    ")
+	require.NoError(t, err)
+	return string(b)
+}
 
 const timezoneTestCfg = `{
     "language": "en",
@@ -69,7 +68,7 @@ func TestCreateDefaultIfNotExists(t *testing.T) {
 	c, err := userFS.Read("", "config.json")
 	r.NoError(err)
 
-	r.Equal(defaultTestCfg, c)
+	r.Equal(defaultConfigJSON(t, nil), c)
 }
 
 func TestCreateDefaultIfNotExistsExistingConfig(t *testing.T) {
