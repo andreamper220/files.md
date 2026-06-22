@@ -15,7 +15,21 @@ import (
 
 var chatTaskRE = regexp.MustCompile("^- \\[([ xX])\\] (?:`\\d{2}:\\d{2}` )?(.*)$")
 
-// Build returns emoji-only home summary: spheres → areas with done-task and new-note counts.
+const noPriorityEmoji = "⚪️"
+
+// displayPriorityEmojis returns urgency emojis shown on home (no "unlabeled" bucket).
+func displayPriorityEmojis(emojis []string) []string {
+	out := make([]string, 0, len(emojis))
+	for _, e := range emojis {
+		if e == noPriorityEmoji {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
+// Build returns home summary: spheres → areas with names, urgency counts (emoji only), and new-note totals.
 func Build(userFS *fs.FS, cfg *userconfig.Config) (string, error) {
 	return buildHomeSummary(userFS, cfg)
 }
@@ -33,46 +47,123 @@ func buildHomeSummary(userFS *fs.FS, cfg *userconfig.Config) (string, error) {
 
 	var lines []string
 	for _, spherePath := range spheres {
-		lines = append(lines, life.SphereEmoji(spherePath))
 		projects, err := life.ListProjects(userFS, spherePath)
 		if err != nil {
 			continue
 		}
-		for _, projectPath := range projects {
-			line := " " + life.AreaEmoji(projectPath)
-			for _, emoji := range emojis {
-				n := countDoneTasksByPriority(userFS, projectPath, emoji, emojis)
-				if n > 0 {
-					line += fmt.Sprintf(" %s%d", emoji, n)
-				}
-			}
-			for _, kind := range []life.Kind{life.KindDraft, life.KindFinal, life.KindDiscussion} {
-				n := countNewNotes(userFS, projectPath, kind, startOfDay)
-				if n > 0 {
-					line += fmt.Sprintf(" %s%d", life.KindEmoji(kind), n)
-				}
-			}
-			lines = append(lines, line)
-		}
-	}
 
-	// Inbox tasks without area
-	inboxDone := countInboxDoneByPriority(userFS, emojis, startOfDay)
-	if len(inboxDone) > 0 {
-		lines = append(lines, "📥")
-		line := " ⚪️"
-		for _, emoji := range emojis {
-			if n := inboxDone[emoji]; n > 0 {
-				line += fmt.Sprintf(" %s%d", emoji, n)
-			}
+		if len(projects) == 0 {
+			lines = append(lines, formatSphereOnlyLine(spherePath, emojis, userFS, startOfDay))
+			continue
 		}
-		lines = append(lines, strings.TrimSpace(line))
+
+		lines = append(lines, formatSphereHeader(spherePath))
+		for _, projectPath := range projects {
+			lines = append(lines, formatAreaLine(projectPath, emojis, userFS, startOfDay))
+		}
 	}
 
 	if len(lines) == 0 {
 		return "", nil
 	}
 	return strings.Join(lines, "\n"), nil
+}
+
+// formatSphereHeader builds "💼 Работа".
+func formatSphereHeader(spherePath string) string {
+	return life.SphereEmoji(spherePath) + " " + life.SphereTitle(spherePath)
+}
+
+// formatAreaLine builds " 🏗 Стройка 🔴0 🟠1 ... 📝 3".
+func formatAreaLine(projectPath string, emojis []string, userFS *fs.FS, startOfDay time.Time) string {
+	parts := []string{" " + formatAreaHeader(projectPath)}
+	parts = append(parts, formatPriorityCounts(emojis, countDoneByPriorityInMD(readAreaTasksMD(userFS, projectPath), emojis))...)
+	parts = append(parts, formatNoteTotal(userFS, projectPath, startOfDay))
+	return strings.Join(parts, " ")
+}
+
+func formatAreaHeader(projectPath string) string {
+	return life.AreaEmoji(projectPath) + " " + life.AreaTitle(projectPath)
+}
+
+func formatSphereOnlyLine(spherePath string, emojis []string, userFS *fs.FS, startOfDay time.Time) string {
+	parts := []string{formatSphereHeader(spherePath)}
+	parts = append(parts, formatPriorityCounts(emojis, emptyPriorityCounts(emojis))...)
+	parts = append(parts, formatNoteTotalForSphere(spherePath, userFS, startOfDay))
+	return strings.Join(parts, " ")
+}
+
+func formatPriorityCounts(emojis []string, counts map[string]int) []string {
+	var parts []string
+	for _, emoji := range displayPriorityEmojis(emojis) {
+		parts = append(parts, fmt.Sprintf("%s%d", emoji, counts[emoji]))
+	}
+	return parts
+}
+
+func formatNoteTotal(userFS *fs.FS, projectPath string, startOfDay time.Time) string {
+	return fmt.Sprintf("📝 %d", totalNewNotes(userFS, projectPath, startOfDay))
+}
+
+func formatNoteTotalForSphere(spherePath string, userFS *fs.FS, startOfDay time.Time) string {
+	return fmt.Sprintf("📝 %d", totalNewNotesForSphere(spherePath, userFS, startOfDay))
+}
+
+func totalNewNotes(userFS *fs.FS, projectPath string, startOfDay time.Time) int {
+	if projectPath == "" {
+		return 0
+	}
+	n := 0
+	for _, kind := range []life.Kind{life.KindDraft, life.KindFinal, life.KindDiscussion} {
+		n += countNewNotes(userFS, projectPath, kind, startOfDay)
+	}
+	return n
+}
+
+func totalNewNotesForSphere(spherePath string, userFS *fs.FS, startOfDay time.Time) int {
+	projects, _ := life.ListProjects(userFS, spherePath)
+	n := 0
+	for _, projectPath := range projects {
+		n += totalNewNotes(userFS, projectPath, startOfDay)
+	}
+	return n
+}
+
+func emptyPriorityCounts(emojis []string) map[string]int {
+	counts := map[string]int{}
+	for _, emoji := range displayPriorityEmojis(emojis) {
+		counts[emoji] = 0
+	}
+	return counts
+}
+
+func mergePriorityCounts(dst, src map[string]int) {
+	for k, v := range src {
+		dst[k] += v
+	}
+}
+
+func readAreaTasksMD(userFS *fs.FS, projectPath string) string {
+	md, err := userFS.Read(projectPath, life.TasksFilename)
+	if err != nil {
+		return ""
+	}
+	return md
+}
+
+func countDoneByPriorityInMD(md string, emojis []string) map[string]int {
+	counts := emptyPriorityCounts(emojis)
+	for _, task := range parseTasks(md) {
+		if !task.done {
+			continue
+		}
+		emoji := priority.Detect(task.text, emojis)
+		if emoji == "" || emoji == noPriorityEmoji {
+			continue
+		}
+		counts[emoji]++
+	}
+	return counts
 }
 
 // BuildNotesHub returns detailed notes statistics for the notes screen.
@@ -86,79 +177,25 @@ func BuildNotesHub(userFS *fs.FS, cfg *userconfig.Config) (string, error) {
 
 	spheres, _ := life.ListSpheres(userFS)
 	for _, spherePath := range spheres {
-		lines = append(lines, life.SphereEmoji(spherePath))
+		lines = append(lines, formatSphereHeader(spherePath))
 		projects, _ := life.ListProjects(userFS, spherePath)
 		for _, projectPath := range projects {
-			parts := []string{" " + life.AreaEmoji(projectPath)}
-			for _, kind := range []life.Kind{life.KindDraft, life.KindFinal, life.KindDiscussion} {
-				total := countNotesInDir(userFS, life.DocDir(projectPath, kind))
-				today := countNewNotes(userFS, projectPath, kind, startOfDay)
-				if total > 0 || today > 0 {
-					parts = append(parts, fmt.Sprintf("%s %d", life.KindEmoji(kind), today))
-				}
-			}
-			if len(parts) > 1 {
-				lines = append(lines, strings.Join(parts, " "))
-			}
+			parts := []string{" " + formatAreaHeader(projectPath)}
+			parts = append(parts, fmt.Sprintf("📝 %d", totalNewNotes(userFS, projectPath, startOfDay)))
+			lines = append(lines, strings.Join(parts, " "))
 		}
 	}
 
 	if len(lines) == 1 {
-		lines = append(lines, i18nNothingToday())
+		lines = append(lines, "—")
 	}
 	return strings.Join(lines, "\n"), nil
 }
 
-func i18nNothingToday() string {
-	return "—"
-}
-
-func countDoneTasksByPriority(userFS *fs.FS, projectPath, emoji string, emojis []string) int {
-	md, err := userFS.Read(projectPath, life.TasksFilename)
-	if err != nil {
+func countNewNotes(userFS *fs.FS, projectPath string, kind life.Kind, since time.Time) int {
+	if projectPath == "" {
 		return 0
 	}
-	return countDoneInMD(md, emoji, emojis)
-}
-
-func countInboxDoneByPriority(userFS *fs.FS, emojis []string, since time.Time) map[string]int {
-	out := map[string]int{}
-	md, err := userFS.Read(fs.DirUserRoot, fs.ChatFilename)
-	if err != nil {
-		return out
-	}
-	for _, task := range parseTasks(md) {
-		if !task.done {
-			continue
-		}
-		e := priority.Detect(task.text, emojis)
-		if e == "" {
-			e = "⚪️"
-		}
-		out[e]++
-	}
-	_ = since
-	return out
-}
-
-func countDoneInMD(md, emoji string, emojis []string) int {
-	n := 0
-	for _, task := range parseTasks(md) {
-		if !task.done {
-			continue
-		}
-		e := priority.Detect(task.text, emojis)
-		if e == "" {
-			e = "⚪️"
-		}
-		if e == emoji {
-			n++
-		}
-	}
-	return n
-}
-
-func countNewNotes(userFS *fs.FS, projectPath string, kind life.Kind, since time.Time) int {
 	dir := life.DocDir(projectPath, kind)
 	entries, err := userFS.FilesAndDirs(dir)
 	if err != nil {
@@ -175,14 +212,6 @@ func countNewNotes(userFS *fs.FS, projectPath string, kind life.Kind, since time
 		n++
 	}
 	return n
-}
-
-func countNotesInDir(userFS *fs.FS, dir string) int {
-	entries, err := userFS.FilesAndDirs(dir)
-	if err != nil {
-		return 0
-	}
-	return len(fs.OnlyFiles(entries))
 }
 
 func beginningOfDay(t time.Time) time.Time {

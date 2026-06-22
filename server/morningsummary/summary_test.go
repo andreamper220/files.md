@@ -38,5 +38,42 @@ func TestBuild_IncludesNotesSection(t *testing.T) {
 
 	report, err := Build(userFS, cfg)
 	r.NoError(err)
-	r.Contains(report, "💼")
+	r.Contains(report, "💼 Работа")
+	r.Contains(report, "🔴0")
+	r.Contains(report, "📝 0")
+	r.NotContains(report, "✨")
+	r.NotContains(report, "💬")
+}
+
+func TestBuild_ShowsDoneTaskCountsByPriority(t *testing.T) {
+	r := require.New(t)
+
+	savedCtime := fs.Ctime
+	defer func() { fs.Ctime = savedCtime }()
+	fs.Ctime = func(fi os.FileInfo) int64 { return 0 }
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	r.NoError(userFS.CreateSystemDirs())
+	r.NoError(life.Init(userFS))
+
+	spheres, err := life.ListSpheres(userFS)
+	r.NoError(err)
+	r.NotEmpty(spheres)
+
+	projectPath, err := life.CreateProject(userFS, spheres[0], "Тест")
+	r.NoError(err)
+
+	err = userFS.Write(projectPath, life.TasksFilename, "- [x] 🔴 Done one\n- [x] 🟠 Done two\n")
+	r.NoError(err)
+
+	cfg := userconfig.NewConfig(userFS, 1, "config.json")
+	r.NoError(cfg.CreateDefaultIfNotExists())
+
+	report, err := Build(userFS, cfg)
+	r.NoError(err)
+	r.Contains(report, "🔴1")
+	r.Contains(report, "🟠1")
+	r.Contains(report, "Тест")
+	r.NotContains(report, "⚪️")
 }

@@ -254,6 +254,11 @@ func SphereTitle(spherePath string) string {
 	return fs.DisplayName(name)
 }
 
+// AreaTitle returns a display title for an area (project) path.
+func AreaTitle(projectPath string) string {
+	return fs.DisplayName(baseName(projectPath))
+}
+
 // IsInitialized reports whether the life structure has been set up.
 func IsInitialized(fsys *fs.FS) bool {
 	exists, err := fsys.Exists(fs.DirUserRoot, IndexFilename)

@@ -1,14 +1,22 @@
 package server
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/zakirullin/files.md/server/fs"
 	"github.com/zakirullin/files.md/server/i18n"
 	"github.com/zakirullin/files.md/server/life"
 	"github.com/zakirullin/files.md/server/pkg/tg"
+	"github.com/zakirullin/files.md/server/pkg/txt"
+	"github.com/zakirullin/files.md/server/priority"
 )
+
+const noPriorityEmoji = "⚪️"
 
 func (b *Bot) storePendingDraft(content string) string {
 	hash := fs.Hash(fmt.Sprintf("%s:%d", content, time.Now().UnixNano()))
@@ -43,26 +51,82 @@ func (b *Bot) showSaveType(params []string) error {
 }
 
 func (b *Bot) saveAsTask(params []string) error {
-	content, err := b.takePendingDraft(params[0])
-	if err != nil {
-		return err
+	draftHash := params[0]
+	if _, ok := b.db.PendingDraft(draftHash); !ok {
+		return b.ShowHome(nil)
 	}
+	return b.showTaskPriorityPicker(draftHash)
+}
 
-	msgHash, err := b.appendToChat(content, b.cfg.Timezone())
-	if err != nil {
-		return fmt.Errorf("save as task: %w", err)
+func (b *Bot) pickTaskPriority(params []string) error {
+	if len(params) < 2 {
+		return fmt.Errorf("pick task priority: missing params")
 	}
-
-	return b.showTaskActions([]string{msgHash})
+	draftHash := params[0]
+	if _, ok := b.db.PendingDraft(draftHash); !ok {
+		return b.ShowHome(nil)
+	}
+	return b.showTaskAreaPicker(draftHash, params[1])
 }
 
 func (b *Bot) saveAsNote(params []string) error {
 	draftHash := params[0]
-	_, ok := b.db.PendingDraft(draftHash)
-	if !ok {
+	if _, ok := b.db.PendingDraft(draftHash); !ok {
 		return b.ShowHome(nil)
 	}
 	return b.showNoteAreaPicker(draftHash)
+}
+
+func (b *Bot) showTaskPriorityPicker(draftHash string) error {
+	emojis := displayPriorityEmojis(b.cfg.PriorityEmojis())
+	if len(emojis) == 0 {
+		return b.showTaskAreaPicker(draftHash, "0")
+	}
+
+	kb := tg.NewKeyboard(nil)
+	row := tg.NewRow()
+	for i, emoji := range emojis {
+		row = append(row, tg.NewBtn(emoji, tg.NewCmd(CmdPickTaskPriority, []string{draftHash, strconv.Itoa(i)})))
+		if len(row) >= btnsPerRow {
+			kb.AddRow(row)
+			row = tg.NewRow()
+		}
+	}
+	if len(row) > 0 {
+		kb.AddRow(row)
+	}
+	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
+
+	return b.showHTML(i18n.Tr("Выбери срочность:"), kb)
+}
+
+func (b *Bot) showTaskAreaPicker(draftHash, priorityIdxStr string) error {
+	_ = life.EnsureSpheresRoot(b.fs)
+	spheres, err := life.ListSpheres(b.fs)
+	if err != nil {
+		return fmt.Errorf("task area picker: %w", err)
+	}
+
+	kb := tg.NewKeyboard(nil)
+	for _, spherePath := range spheres {
+		projects, err := life.ListProjects(b.fs, spherePath)
+		if err != nil {
+			continue
+		}
+		for _, projectPath := range projects {
+			label := life.SphereEmoji(spherePath) + " " + life.AreaEmoji(projectPath) + " " + life.AreaTitle(projectPath)
+			kb.AddRow(tg.NewBtn(
+				label,
+				tg.NewCmd(CmdSaveTaskToArea, []string{draftHash, fs.ShortHash(projectPath), priorityIdxStr}),
+			))
+		}
+	}
+	if len(spheres) == 0 {
+		kb.AddRow(tg.NewBtn(i18n.Tr("🏗 Создать структуру"), tg.NewCmd(CmdInitLife, nil)))
+	}
+	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
+
+	return b.showHTML(i18n.Tr("Выбери область для задачи:"), kb)
 }
 
 func (b *Bot) showNoteAreaPicker(draftHash string) error {
@@ -92,6 +156,78 @@ func (b *Bot) showNoteAreaPicker(draftHash string) error {
 	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
 
 	return b.showHTML(i18n.Tr("Выбери область:"), kb)
+}
+
+func (b *Bot) saveTaskToArea(params []string) error {
+	if len(params) < 3 {
+		return fmt.Errorf("save task to area: missing priority")
+	}
+	draftHash := params[0]
+	projectPath, err := b.fs.ResolveDirParam(params[1])
+	if err != nil {
+		return fmt.Errorf("save task to area: %w", err)
+	}
+
+	content, err := b.takePendingDraft(draftHash)
+	if err != nil {
+		return err
+	}
+
+	taskText, err := taskTextFromDraft(content)
+	if err != nil {
+		return fmt.Errorf("save task to area: %w", err)
+	}
+
+	if emoji, ok := priorityEmojiAt(b.cfg.PriorityEmojis(), params[2]); ok {
+		taskText = priority.Apply(taskText, emoji, b.cfg.PriorityEmojis())
+	}
+
+	md, readErr := b.fs.Read(projectPath, life.TasksFilename)
+	if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
+		return fmt.Errorf("save task to area: %w", readErr)
+	}
+	md = txt.AddChecklistItem(md, taskText, false)
+	if err := b.fs.Write(projectPath, life.TasksFilename, md); err != nil {
+		return fmt.Errorf("save task to area: %w", err)
+	}
+
+	b.setRecentLifeProject(projectPath)
+	b.delAllKeyboards()
+	msg := fmt.Sprintf(i18n.Tr("Сохранено в <b>%s %s</b>"), life.AreaEmoji(projectPath), life.AreaTitle(projectPath))
+	_, _ = b.tg.Send(b.userID, msg, nil, tg.MarkupHTML)
+
+	return b.ShowHome(nil)
+}
+
+func displayPriorityEmojis(emojis []string) []string {
+	out := make([]string, 0, len(emojis))
+	for _, e := range emojis {
+		if e == noPriorityEmoji {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
+func priorityEmojiAt(emojis []string, idxStr string) (string, bool) {
+	idx, err := strconv.Atoi(idxStr)
+	if err != nil {
+		return "", false
+	}
+	display := displayPriorityEmojis(emojis)
+	if idx < 0 || idx >= len(display) {
+		return "", false
+	}
+	return display[idx], true
+}
+
+func taskTextFromDraft(content string) (string, error) {
+	content = strings.TrimSpace(txt.NormNewLines(content))
+	if content == "" {
+		return "", fmt.Errorf("empty task")
+	}
+	return strings.ReplaceAll(content, "\n", " "), nil
 }
 
 func (b *Bot) saveNoteToArea(params []string) error {
@@ -133,10 +269,6 @@ func (b *Bot) saveNoteToArea(params []string) error {
 }
 
 func (b *Bot) queueIncomingContent(content string) error {
-	if b.cfg.ChatOnlyMode() {
-		_, err := b.appendToChat(content, b.cfg.Timezone())
-		return err
-	}
 	if b.cfg.JournalOnlyMode() {
 		hash := b.storePendingDraft(content)
 		return b.saveAsNote([]string{hash})
@@ -146,67 +278,6 @@ func (b *Bot) queueIncomingContent(content string) error {
 	return b.showSaveType([]string{draftHash})
 }
 
-// showTaskActions shows compact emoji controls for a saved task.
-func (b *Bot) showTaskActions(params []string) error {
-	msgHash := params[0]
-
-	kb := tg.NewKeyboard(nil)
-	prioBtns := b.priorityBtns(msgHash)
-	if len(prioBtns) > 0 {
-		kb.AddRow(tg.NewRow(prioBtns...))
-	}
-
-	areaBtns := b.areaTaskBtns(msgHash)
-	for _, row := range chunkBtns(areaBtns, btnsPerRow) {
-		kb.AddRow(row)
-	}
-
-	kb.AddRow(tg.NewRow(
-		tg.NewBtn("⏳", tg.NewCmd(CmdMoveToLater, []string{msgHash})),
-		tg.NewBtn("🌚", tg.NewCmd(CmdScheduleForTmrw, []string{msgHash})),
-		tg.NewBtn("🗒", tg.NewCmd(CmdMoveToDraft, []string{msgHash})),
-		tg.NewBtn("🌐", tg.NewCmd(CmdShowLifeSpheres, nil)),
-	))
-
-	b.delAllKeyboards()
-	return b.showHTML(i18n.Tr("Saved!"), kb)
-}
-
-func (b *Bot) areaTaskBtns(msgHash string) []tg.Btn {
-	_ = life.EnsureSpheresRoot(b.fs)
-	spheres, err := life.ListSpheres(b.fs)
-	if err != nil {
-		return nil
-	}
-
-	var btns []tg.Btn
-	for _, spherePath := range spheres {
-		projects, err := life.ListProjects(b.fs, spherePath)
-		if err != nil {
-			continue
-		}
-		for _, projectPath := range projects {
-			label := life.SphereEmoji(spherePath) + life.AreaEmoji(projectPath)
-			btns = append(btns, tg.NewBtn(
-				label,
-				tg.NewCmd(CmdMoveToAreaTask, []string{fs.ShortHash(projectPath), msgHash}),
-			))
-		}
-	}
-	return btns
-}
-
-func chunkBtns(btns []tg.Btn, size int) [][]tg.Btn {
-	if len(btns) == 0 {
-		return nil
-	}
-	var rows [][]tg.Btn
-	for i := 0; i < len(btns); i += size {
-		end := i + size
-		if end > len(btns) {
-			end = len(btns)
-		}
-		rows = append(rows, btns[i:end])
-	}
-	return rows
+func (b *Bot) showTaskActions(_ []string) error {
+	return b.ShowHome(nil)
 }

@@ -32,11 +32,66 @@ func pendingDraftHash(fakeDB *db.FakeDB) string {
 }
 
 func saveIncomingAsTask(bot *Bot, fakeDB *db.FakeDB) error {
+	projectPath, err := ensureTestProject(bot)
+	if err != nil {
+		return err
+	}
 	h := pendingDraftHash(fakeDB)
 	if h == "" {
 		return fmt.Errorf("no pending draft")
 	}
-	return bot.saveAsTask([]string{h})
+	if err := bot.saveAsTask([]string{h}); err != nil {
+		return err
+	}
+	h = pendingDraftHash(fakeDB)
+	if h == "" {
+		return fmt.Errorf("pending draft gone after saveAsTask")
+	}
+	if err := bot.pickTaskPriority([]string{h, "0"}); err != nil {
+		return err
+	}
+	h = pendingDraftHash(fakeDB)
+	if h == "" {
+		return fmt.Errorf("pending draft gone after pickTaskPriority")
+	}
+	return bot.saveTaskToArea([]string{h, fs.ShortHash(projectPath), "0"})
+}
+
+// saveIncomingToInbox keeps legacy Chat.md flows working in tests (move/schedule panels).
+func saveIncomingToInbox(bot *Bot, fakeDB *db.FakeDB) error {
+	h := pendingDraftHash(fakeDB)
+	if h == "" {
+		return fmt.Errorf("no pending draft")
+	}
+	content, err := bot.takePendingDraft(h)
+	if err != nil {
+		return err
+	}
+	_, err = bot.appendToChat(content, bot.cfg.Timezone())
+	return err
+}
+
+func ensureTestProject(bot *Bot) (string, error) {
+	if err := life.Init(bot.fs); err != nil {
+		return "", err
+	}
+	spherePath := life.SpherePath("Личное")
+	projects, err := life.ListProjects(bot.fs, spherePath)
+	if err != nil {
+		return "", err
+	}
+	if len(projects) > 0 {
+		return projects[0], nil
+	}
+	return life.CreateProject(bot.fs, spherePath, "test")
+}
+
+func tasksMDForTestProject(bot *Bot) (string, error) {
+	projectPath, err := ensureTestProject(bot)
+	if err != nil {
+		return "", err
+	}
+	return bot.fs.Read(projectPath, life.TasksFilename)
 }
 
 func saveIncomingAsNoteToProject(bot *Bot, fakeDB *db.FakeDB, projectPath string) error {
@@ -70,9 +125,9 @@ func lifeDraftsDir(projectPath string) string {
 func homeNavKeyboard() *tg.Keyboard {
 	return tg.NewKeyboard([]tg.Row{
 		tg.NewRow(
-			tg.NewBtn("📋", tg.NewCmd(CmdShowTasksView, nil)),
-			tg.NewBtn("🗒", tg.NewCmd(CmdShowNotesHub, nil)),
-			tg.NewBtn("🌐", tg.NewCmd(CmdShowLifeSpheres, nil)),
+			tg.NewBtn(i18n.Tr("📋 Tasks"), tg.NewCmd(CmdShowTasksView, nil)),
+			tg.NewBtn(i18n.Tr("🗒 Notes"), tg.NewCmd(CmdShowNotesHub, nil)),
+			tg.NewBtn(i18n.Tr("🌐 Spheres"), tg.NewCmd(CmdShowLifeSpheres, nil)),
 		),
 	})
 }
@@ -182,6 +237,15 @@ func fullSaveKeyboard(h string) *tg.Keyboard {
 	))
 
 	return &kb
+}
+
+// tasksContainsTaskInput checks that a saved area task reflects the user input.
+func tasksContainsTaskInput(tasksMD, input string) bool {
+	input = strings.TrimSpace(strings.ReplaceAll(txt.NormNewLines(input), "\n", " "))
+	if input == "" {
+		return tasksMD == "" || !strings.Contains(tasksMD, "- [ ]")
+	}
+	return chatContainsTaskInput(tasksMD, input)
 }
 
 // chatContainsTaskInput checks that a saved inbox entry reflects the user input.

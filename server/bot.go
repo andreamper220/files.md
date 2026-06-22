@@ -57,7 +57,7 @@ const (
 	maxMsgLength             = 4096 // In UTF-8 characters (runes), skin-tone emojis count as 2
 	maxMsgsToSendAtOnce      = 5    // For lengthy messages
 	maxHeaderLength          = 100
-	maxHeaderLengthForMobile = 33 // Fits regular mobile screen
+	maxHeaderLengthForMobile = 18 // Task button preview in tasks list
 	inlineResultsCacheTime   = 15 // Seconds
 
 	// On mobile phones buttons shrink to the message width, and sometimes it's too narrow, so we make the message wider
@@ -228,12 +228,16 @@ const (
 	CmdAddToDiscussionShortcut         = "disc_sc"
 	CmdShowSaveType                    = "save_type"
 	CmdSaveAsTask                      = "as_task"
+	CmdPickTaskPriority                = "task_prio"
 	CmdSaveAsNote                      = "as_note"
 	CmdShowTasksView                   = "tasks_v"
 	CmdShowNotesHub                    = "notes_h"
 	CmdSaveNoteToArea                  = "note_area"
+	CmdSaveTaskToArea                  = "task_area"
 	CmdMoveToAreaTask                  = "mv_area"
 	CmdCompleteAreaTask                = "area_c"
+	CmdShowTask                        = "task_show"
+	CmdDeleteTask                      = "task_del"
 	CmdShowTaskActions               = "task_act"
 )
 
@@ -328,7 +332,7 @@ func (b *Bot) Reply(u Update) error {
 
 		if callbackQueryID, ok := u.CallbackQueryID(); ok {
 			// We can tolerate an error here, that won't affect UX
-			if cmd.Name == CmdCompleteHabit || cmd.Name == CmdComplete {
+			if cmd.Name == CmdCompleteHabit || cmd.Name == CmdComplete || cmd.Name == CmdCompleteAreaTask {
 				_ = b.tg.AnswerCallbackQuery(callbackQueryID, completedMsg())
 			} else if cmd.Name == CmdShare {
 				_ = b.tg.AnswerCallbackQuery(callbackQueryID, i18n.Tr("Shared 💚!"))
@@ -395,12 +399,16 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdSetPriority:               b.setPriority,
 		CmdShowSaveType:              b.showSaveType,
 		CmdSaveAsTask:                b.saveAsTask,
+		CmdPickTaskPriority:          b.pickTaskPriority,
 		CmdSaveAsNote:                b.saveAsNote,
 		CmdShowTasksView:             b.showTasksView,
 		CmdShowNotesHub:              b.showNotesHub,
 		CmdSaveNoteToArea:            b.saveNoteToArea,
+		CmdSaveTaskToArea:            b.saveTaskToArea,
 		CmdMoveToAreaTask:            b.moveToAreaTask,
 		CmdCompleteAreaTask:          b.completeAreaTask,
+		CmdShowTask:                  b.showTask,
+		CmdDeleteTask:                b.deleteTask,
 		CmdShowTaskActions:           b.showTaskActions,
 		CmdRandomNote:                b.randomNote,
 		CmdShowMoveExisting:   b.showMoveExisting,
@@ -601,14 +609,10 @@ func (b *Bot) saveFromImage(u Update) error {
 	}
 
 	if b.cfg.ChatOnlyMode() {
-		msgHash, err := b.appendToChat(content, b.cfg.Timezone())
-		if err != nil {
-			return fmt.Errorf("save from image: %w", err)
+		if updateHasTime {
+			setFirstMsgTime(b.userID, msgTime)
 		}
-		msgID, _ := u.MsgID()
-		_ = b.tg.SendReaction(b.userID, msgID, "👌")
-		_ = msgHash
-		return nil
+		return b.queueIncomingContent(content)
 	}
 
 	if updateHasTime {
@@ -626,16 +630,6 @@ func (b *Bot) saveFromAudio(u Update) error {
 
 	if replyMsgID, ok := u.ReplyToMsgID(); ok {
 		return b.addToReplied(replyMsgID, content)
-	}
-
-	if b.cfg.ChatOnlyMode() {
-		_, err := b.appendToChat(content, b.cfg.Timezone())
-		if err != nil {
-			return fmt.Errorf("save from audio: %w", err)
-		}
-		msgID, _ := u.MsgID()
-		_ = b.tg.SendReaction(b.userID, msgID, "👌")
-		return nil
 	}
 
 	return b.queueIncomingContent(content)
@@ -1240,9 +1234,9 @@ func (b *Bot) ShowHome(_ []string) error {
 
 	kb := tg.NewKeyboard([]tg.Row{
 		tg.NewRow(
-			tg.NewBtn("📋", tg.NewCmd(CmdShowTasksView, nil)),
-			tg.NewBtn("🗒", tg.NewCmd(CmdShowNotesHub, nil)),
-			tg.NewBtn("🌐", tg.NewCmd(CmdShowLifeSpheres, nil)),
+			tg.NewBtn(i18n.Tr("📋 Tasks"), tg.NewCmd(CmdShowTasksView, nil)),
+			tg.NewBtn(i18n.Tr("🗒 Notes"), tg.NewCmd(CmdShowNotesHub, nil)),
+			tg.NewBtn(i18n.Tr("🌐 Spheres"), tg.NewCmd(CmdShowLifeSpheres, nil)),
 		),
 	})
 
@@ -1276,8 +1270,8 @@ func (b *Bot) showLaterTasks(_ []string) error {
 	if len(laterChecklistMD) != 0 {
 		tasks := txt.IncompleteChecklistItems(laterChecklistMD)
 		for _, task := range tasks {
-			cmd := tg.NewCmd(CmdCompleteChecklistItem, []string{fs.Hash(fs.LaterFilename), fs.Hash(task)})
-			btn := tg.NewBtn(taskBtnLabel(task), cmd)
+			cmd := tg.NewCmd(CmdShowTask, []string{taskKindList, fs.Hash(fs.LaterFilename), fs.Hash(task)})
+			btn := tg.NewBtn(taskPreviewLabel(task), cmd)
 			kb.AddRow(btn)
 		}
 	}
@@ -1717,75 +1711,20 @@ func (b *Bot) showLongItemFromChecklist(params []string) error {
 
 	checklist, err := b.fs.Unhash(fs.DirUserRoot, checklistHash)
 	if err != nil {
-		return fmt.Errorf("complete checklist item: can't unhash checklist %s: %w", checklistHash, err)
+		return fmt.Errorf("show checklist task: %w", err)
 	}
 
-	checklistMD, err := b.fs.Read(fs.DirUserRoot, checklist)
-	if err != nil {
-		return fmt.Errorf("complete checklist item: can't read checklist %s: %w", checklist, err)
-	}
-
-	item := txt.ChecklistItem(checklistMD, itemHash)
-
-	cmd := CmdShowHome
+	back := tg.NewCmd(CmdShowHome, nil)
 	if checklist == fs.LaterFilename {
-		cmd = CmdShowLater
+		back = tg.NewCmd(CmdShowTasksView, nil)
+	} else if checklist != fs.ChatFilename {
+		back = tg.NewCmd(CmdShowChecklist, []string{checklistHash})
 	}
-
-	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn(i18n.Tr(i18n.StrBack), tg.NewCmd(cmd, []string{})),
-			tg.NewBtn(i18n.Tr(i18n.StrDelete), tg.NewCmd(CmdCompleteChecklistItem, []string{checklistHash, itemHash})),
-		),
-	})
-
-	err = b.showMD(item, kb)
-	if err != nil {
-		return fmt.Errorf("show task: %w", err)
-	}
-
-	return nil
+	return b.showListTaskWithBack(checklistHash, itemHash, back)
 }
 
 func (b *Bot) showLongItem(params []string) error {
-	msgHash := params[0]
-
-	chatMD, err := b.fs.Read(fs.DirUserRoot, fs.ChatFilename)
-	if err != nil {
-		return fmt.Errorf("show long item: can't read inbox file: %w", err)
-	}
-
-	_, block, ok := findChatMsgByHash(chatMD, msgHash)
-	if !ok {
-		return fmt.Errorf("show long item: msgHash %q not found in inbox", msgHash)
-	}
-
-	// Strip optional `- [ ]` / `- [x] ` prefix + backtick-timestamp prefix.
-	prefixRegex := regexp.MustCompile(`^(?:- \[[ xX]\] )?` + "`" + `\d{2}:\d{2}` + "`" + ` `)
-	if loc := prefixRegex.FindStringIndex(block); loc != nil {
-		block = strings.TrimSpace(block[loc[1]:])
-	}
-
-	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn(i18n.Tr(i18n.StrBack), tg.NewCmd(CmdShowTasksView, []string{})),
-			tg.NewBtn("📋", tg.NewCmd(CmdShowTaskActions, []string{msgHash})),
-			tg.NewBtn(i18n.Tr(i18n.StrDelete), tg.NewCmd(CmdComplete, []string{msgHash})),
-		),
-	})
-
-	if err := b.showMD(block, kb); err != nil {
-		return fmt.Errorf("show long item from inbox: %w", err)
-	}
-
-	// Track msgID → msgHash so a user reply to this rendered chat item
-	// gets routed back to it via addToRepliedFile's chat-item branch.
-	msgID, hasLastKeyboard := b.db.LastKeyboardMsgID()
-	if hasLastKeyboard {
-		b.db.SetHashOrPathByMsgID(msgID, "#"+msgHash)
-	}
-
-	return nil
+	return b.showChatTask(params[0])
 }
 
 func (b *Bot) showFile(params []string) error {
@@ -2056,7 +1995,7 @@ func (b *Bot) completeChecklistItem(params []string) error {
 	_ = journal.AddRecord(b.fs, fmt.Sprintf("✅ %s", fs.DisplayName(txt.StripChatTimestamp(item))), b.cfg.Timezone(), b.cfg.JournalTimestampsEnabled())
 
 	if checklist == fs.LaterFilename {
-		return b.showLaterTasks(nil)
+		return b.showTasksView(nil)
 	} else if checklist != fs.ChatFilename {
 		return b.showChecklist([]string{checklist})
 	}
@@ -2412,7 +2351,7 @@ func (b *Bot) moveToLater(params []string) error {
 	return b.moveToChecklist([]string{fs.LaterFilename, msgHash})
 }
 
-// complete removes a single Chat.md entry (delete, not mark done).
+// complete marks a Chat.md entry as done (`[ ]` → `[x]`), keeping it in the file.
 func (b *Bot) complete(params []string) error {
 	msgHash := params[0]
 
@@ -2429,14 +2368,19 @@ func (b *Bot) complete(params []string) error {
 		return fmt.Errorf("complete: can't read inbox: %w", err)
 	}
 
-	newContent, item := txt.RemoveChecklistItem(content, msgHash)
-	if item == "" {
-		return b.ShowHome(nil)
+	newContent, item, flipped, err := completeChatMsg(content, msgHash)
+	if err != nil {
+		return fmt.Errorf("complete: %w", err)
+	}
+	if !flipped {
+		return b.showTasksView(nil)
 	}
 
 	if err := b.fs.Write(fs.DirUserRoot, fs.ChatFilename, newContent); err != nil {
 		return fmt.Errorf("complete: can't write inbox: %w", err)
 	}
+
+	_ = journal.AddRecord(b.fs, fmt.Sprintf("✅ %s", fs.DisplayName(txt.StripChatTimestamp(item))), b.cfg.Timezone(), b.cfg.JournalTimestampsEnabled())
 
 	return b.showTasksView(nil)
 }

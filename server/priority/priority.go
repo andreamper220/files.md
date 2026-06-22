@@ -18,6 +18,9 @@ func Strip(text string, emojis []string) string {
 			return strings.TrimSpace(strings.TrimPrefix(text, emoji))
 		}
 	}
+	if strings.HasPrefix(text, "![") || strings.HasPrefix(text, "[") {
+		return text
+	}
 	r, size := utf8.DecodeRuneInString(text)
 	if r != utf8.RuneError && size > 0 && !isLetterOrDigit(r) {
 		return strings.TrimSpace(text[size:])

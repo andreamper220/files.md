@@ -1,16 +1,13 @@
 package server
 
 import (
-	"errors"
 	"fmt"
-	"os"
-	"regexp"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/zakirullin/files.md/server/fs"
 	"github.com/zakirullin/files.md/server/i18n"
+	"github.com/zakirullin/files.md/server/journal"
 	"github.com/zakirullin/files.md/server/life"
 	"github.com/zakirullin/files.md/server/morningsummary"
 	"github.com/zakirullin/files.md/server/pkg/tg"
@@ -18,26 +15,228 @@ import (
 	"github.com/zakirullin/files.md/server/priority"
 )
 
-func (b *Bot) moveToAreaTask(params []string) error {
-	projectPath, err := b.fs.ResolveDirParam(params[0])
-	if err != nil {
-		return fmt.Errorf("move to area task: %w", err)
-	}
-	msgHash := params[1]
+const (
+	taskKindChat = "c"
+	taskKindList = "k"
+	taskKindArea = "a"
+)
 
-	err = b.moveFromChat(func(content string, _ time.Time) error {
-		md, readErr := b.fs.Read(projectPath, life.TasksFilename)
-		if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
-			return readErr
+func (b *Bot) showTask(params []string) error {
+	if len(params) < 2 {
+		return fmt.Errorf("show task: missing params")
+	}
+	switch params[0] {
+	case taskKindChat:
+		return b.showChatTask(params[1])
+	case taskKindList:
+		if len(params) < 3 {
+			return fmt.Errorf("show task: missing checklist params")
 		}
-		md = txt.AddChecklistItem(md, content, false)
-		return b.fs.Write(projectPath, life.TasksFilename, md)
-	}, true, msgHash)
+		return b.showListTask(params[1], params[2])
+	case taskKindArea:
+		if len(params) < 3 {
+			return fmt.Errorf("show task: missing area params")
+		}
+		return b.showAreaTask(params[1], params[2])
+	default:
+		return fmt.Errorf("show task: unknown kind %q", params[0])
+	}
+}
+
+func (b *Bot) deleteTask(params []string) error {
+	if len(params) < 2 {
+		return fmt.Errorf("delete task: missing params")
+	}
+	switch params[0] {
+	case taskKindChat:
+		return b.deleteChatTask(params[1])
+	case taskKindList:
+		if len(params) < 3 {
+			return fmt.Errorf("delete task: missing checklist params")
+		}
+		return b.deleteListTask(params[1], params[2])
+	case taskKindArea:
+		if len(params) < 3 {
+			return fmt.Errorf("delete task: missing area params")
+		}
+		return b.deleteAreaTask(params[1], params[2])
+	default:
+		return fmt.Errorf("delete task: unknown kind %q", params[0])
+	}
+}
+
+func (b *Bot) showChatTask(msgHash string) error {
+	chatMD, err := b.fs.Read(fs.DirUserRoot, fs.ChatFilename)
 	if err != nil {
-		return fmt.Errorf("move to area task: %w", err)
+		return fmt.Errorf("show chat task: %w", err)
+	}
+	_, block, ok := findChatMsgByHash(chatMD, msgHash)
+	if !ok {
+		return b.showTasksView(nil)
 	}
 
-	b.delAllKeyboards()
+	kb := taskDetailKeyboard(
+		tg.NewCmd(CmdShowTasksView, nil),
+		tg.NewCmd(CmdComplete, []string{msgHash}),
+		tg.NewCmd(CmdDeleteTask, []string{taskKindChat, msgHash}),
+	)
+	if err := b.showMD(chatTaskDisplayBody(block), kb); err != nil {
+		return fmt.Errorf("show chat task: %w", err)
+	}
+
+	msgID, hasLastKeyboard := b.db.LastKeyboardMsgID()
+	if hasLastKeyboard {
+		b.db.SetHashOrPathByMsgID(msgID, "#"+msgHash)
+	}
+	return nil
+}
+
+func (b *Bot) showListTask(checklistHash, itemHash string) error {
+	return b.showListTaskWithBack(checklistHash, itemHash, tg.NewCmd(CmdShowTasksView, nil))
+}
+
+func (b *Bot) showListTaskWithBack(checklistHash, itemHash string, back tg.Cmd) error {
+	checklist, err := b.fs.Unhash(fs.DirUserRoot, checklistHash)
+	if err != nil {
+		return fmt.Errorf("show list task: %w", err)
+	}
+	md, err := b.fs.Read(fs.DirUserRoot, checklist)
+	if err != nil {
+		return fmt.Errorf("show list task: %w", err)
+	}
+	item := txt.ChecklistItem(md, itemHash)
+	if item == "" {
+		return b.dispatchBack(back)
+	}
+
+	kb := taskDetailKeyboard(
+		back,
+		tg.NewCmd(CmdCompleteChecklistItem, []string{checklistHash, itemHash}),
+		tg.NewCmd(CmdDeleteTask, []string{taskKindList, checklistHash, itemHash}),
+	)
+	return b.showMD(item, kb)
+}
+
+func (b *Bot) dispatchBack(back tg.Cmd) error {
+	switch back.Name {
+	case CmdShowTasksView:
+		return b.showTasksView(nil)
+	case CmdShowChecklist:
+		return b.showChecklist(back.Params)
+	default:
+		return b.ShowHome(nil)
+	}
+}
+
+func (b *Bot) showAreaTask(projectHash, itemHash string) error {
+	projectPath, err := b.fs.ResolveDirParam(projectHash)
+	if err != nil {
+		return fmt.Errorf("show area task: %w", err)
+	}
+	md, err := b.fs.Read(projectPath, life.TasksFilename)
+	if err != nil {
+		return fmt.Errorf("show area task: %w", err)
+	}
+	item := txt.ChecklistItem(md, itemHash)
+	if item == "" {
+		return b.showTasksView(nil)
+	}
+
+	kb := taskDetailKeyboard(
+		tg.NewCmd(CmdShowTasksView, nil),
+		tg.NewCmd(CmdCompleteAreaTask, []string{projectHash, itemHash}),
+		tg.NewCmd(CmdDeleteTask, []string{taskKindArea, projectHash, itemHash}),
+	)
+	return b.showMD(item, kb)
+}
+
+func (b *Bot) deleteChatTask(msgHash string) error {
+	key, err := b.fs.SafePath(fs.DirUserRoot, "")
+	if err != nil {
+		return fmt.Errorf("delete chat task: %w", err)
+	}
+	lock := userLock(key)
+	lock.Lock()
+	defer lock.Unlock()
+
+	content, err := b.fs.Read(fs.DirUserRoot, fs.ChatFilename)
+	if err != nil {
+		return fmt.Errorf("delete chat task: %w", err)
+	}
+	newContent, removed, err := deleteChatMsg(content, msgHash)
+	if err != nil {
+		return fmt.Errorf("delete chat task: %w", err)
+	}
+	if !removed {
+		return b.showTasksView(nil)
+	}
+	if err := b.fs.Write(fs.DirUserRoot, fs.ChatFilename, newContent); err != nil {
+		return fmt.Errorf("delete chat task: %w", err)
+	}
+	return b.showTasksView(nil)
+}
+
+func (b *Bot) deleteListTask(checklistHash, itemHash string) error {
+	checklist, err := b.fs.Unhash(fs.DirUserRoot, checklistHash)
+	if err != nil {
+		return fmt.Errorf("delete list task: %w", err)
+	}
+	md, err := b.fs.Read(fs.DirUserRoot, checklist)
+	if err != nil {
+		return fmt.Errorf("delete list task: %w", err)
+	}
+	newMD, item := txt.RemoveChecklistItem(md, itemHash)
+	if item == "" {
+		return b.showTasksView(nil)
+	}
+	if err := b.fs.Write(fs.DirUserRoot, checklist, newMD); err != nil {
+		return fmt.Errorf("delete list task: %w", err)
+	}
+	return b.showTasksView(nil)
+}
+
+func (b *Bot) deleteAreaTask(projectHash, itemHash string) error {
+	projectPath, err := b.fs.ResolveDirParam(projectHash)
+	if err != nil {
+		return fmt.Errorf("delete area task: %w", err)
+	}
+	md, err := b.fs.Read(projectPath, life.TasksFilename)
+	if err != nil {
+		return fmt.Errorf("delete area task: %w", err)
+	}
+	newMD, item := txt.RemoveChecklistItem(md, itemHash)
+	if item == "" {
+		return b.showTasksView(nil)
+	}
+	if err := b.fs.Write(projectPath, life.TasksFilename, newMD); err != nil {
+		return fmt.Errorf("delete area task: %w", err)
+	}
+	return b.showTasksView(nil)
+}
+
+func taskDetailKeyboard(back, complete, delete tg.Cmd) *tg.Keyboard {
+	return tg.NewKeyboard([]tg.Row{
+		tg.NewRow(
+			tg.NewBtn(i18n.Tr(i18n.StrBack), back),
+			tg.NewBtn(i18n.Tr(i18n.StrComplete), complete),
+			tg.NewBtn(i18n.Tr(i18n.StrDelete), delete),
+		),
+	})
+}
+
+func taskPreviewLabel(text string) string {
+	label := strings.TrimSpace(text)
+	if label == "" {
+		return "…"
+	}
+	if len([]rune(label)) > maxHeaderLengthForMobile {
+		return txt.Substr(label, 0, maxHeaderLengthForMobile-1) + "…"
+	}
+	return label
+}
+
+func (b *Bot) moveToAreaTask(params []string) error {
+	// Legacy: tasks no longer pass through Chat.md; new tasks use CmdSaveTaskToArea.
 	return b.ShowHome(nil)
 }
 
@@ -52,13 +251,16 @@ func (b *Bot) completeAreaTask(params []string) error {
 	if err != nil {
 		return fmt.Errorf("complete area task: %w", err)
 	}
-	newMD, item := txt.RemoveChecklistItem(md, itemHash)
+	newMD, item := txt.CompleteChecklistItem(md, itemHash)
 	if item == "" {
 		return b.showTasksView(nil)
 	}
 	if err := b.fs.Write(projectPath, life.TasksFilename, newMD); err != nil {
 		return fmt.Errorf("complete area task: %w", err)
 	}
+
+	_ = journal.AddRecord(b.fs, fmt.Sprintf("✅ %s", fs.DisplayName(item)), b.cfg.Timezone(), b.cfg.JournalTimestampsEnabled())
+
 	return b.showTasksView(nil)
 }
 
@@ -76,7 +278,7 @@ func (b *Bot) showTasksView(_ []string) error {
 
 		areaKey := entry.areaKey
 		if areaKey == "" {
-			areaKey = "inbox"
+			continue
 		}
 		byArea[areaKey] = append(byArea[areaKey], entry)
 	}
@@ -131,8 +333,6 @@ func (b *Bot) showTasksView(_ []string) error {
 
 type taskEntry struct {
 	text    string
-	msgHash string
-	source  string
 	areaKey string
 	cmd     tg.Cmd
 }
@@ -140,30 +340,16 @@ type taskEntry struct {
 func (b *Bot) collectOpenTasks() []taskEntry {
 	var entries []taskEntry
 
-	chatMD, err := b.fs.Read(fs.DirUserRoot, fs.ChatFilename)
-	if err == nil {
-		entries = append(entries, parseChatTasks(chatMD, fs.ChatFilename)...)
-	}
-	laterMD, err := b.fs.Read(fs.DirUserRoot, fs.LaterFilename)
-	if err == nil {
-		for _, t := range parseChecklistTasks(laterMD, fs.LaterFilename) {
-			entries = append(entries, t)
-		}
-	}
-
 	_ = life.EnsureSpheresRoot(b.fs)
 	spheres, _ := life.ListSpheres(b.fs)
 	for _, sphere := range spheres {
 		projects, _ := life.ListProjects(b.fs, sphere)
 		for _, project := range projects {
-			tasksFile := fs.JoinDir(project, life.TasksFilename)
 			md, err := b.fs.Read(project, life.TasksFilename)
 			if err != nil {
 				continue
 			}
-			for _, t := range parseChecklistTasks(md, tasksFile) {
-				t.areaKey = project
-				t.cmd = tg.NewCmd(CmdCompleteAreaTask, []string{fs.ShortHash(project), fs.Hash(t.text)})
+			for _, t := range parseAreaTasks(md, project) {
 				entries = append(entries, t)
 			}
 		}
@@ -172,47 +358,20 @@ func (b *Bot) collectOpenTasks() []taskEntry {
 	return entries
 }
 
-var chatEntryRE = regexp.MustCompile("^- \\[ \\] (?:`\\d{2}:\\d{2}` )?(.*)$")
-
-func parseChatTasks(md, source string) []taskEntry {
-	var out []taskEntry
-	for _, block := range readChatMsgs(md) {
-		firstLine := strings.SplitN(block, "\n", 2)[0]
-		m := chatEntryRE.FindStringSubmatch(firstLine)
-		if m == nil {
-			continue
-		}
-		hash := chatBlockHash(block)
-		text := strings.TrimSpace(m[1])
-		out = append(out, taskEntry{
-			text:    text,
-			msgHash: hash,
-			source:  source,
-			cmd:     tg.NewCmd(CmdComplete, []string{hash}),
-		})
-	}
-	return out
-}
-
-func parseChecklistTasks(md, source string) []taskEntry {
+func parseAreaTasks(md, projectPath string) []taskEntry {
 	var out []taskEntry
 	for _, item := range txt.IncompleteChecklistItems(md) {
 		out = append(out, taskEntry{
 			text:    item,
-			msgHash: fs.Hash(item),
-			source:  source,
-			cmd:     tg.NewCmd(CmdCompleteChecklistItem, []string{fs.Hash(source), fs.Hash(item)}),
+			areaKey: projectPath,
+			cmd:     tg.NewCmd(CmdShowTask, []string{taskKindArea, fs.ShortHash(projectPath), fs.Hash(item)}),
 		})
 	}
 	return out
 }
 
 func taskBtn(t taskEntry) tg.Btn {
-	label := t.text
-	if len([]rune(label)) > maxHeaderLengthForMobile {
-		label = txt.Substr(label, 0, maxHeaderLengthForMobile-1) + "…"
-	}
-	return tg.NewBtn(label, t.cmd)
+	return tg.NewBtn(taskPreviewLabel(t.text), t.cmd)
 }
 
 func sortedAreaKeys(m map[string][]taskEntry) []string {
@@ -220,28 +379,12 @@ func sortedAreaKeys(m map[string][]taskEntry) []string {
 	for k := range m {
 		keys = append(keys, k)
 	}
-	// inbox first, then alphabetical paths
 	sort.Strings(keys)
-	if idx := indexOf(keys, "inbox"); idx > 0 {
-		keys = append([]string{"inbox"}, append(keys[:idx], keys[idx+1:]...)...)
-	}
 	return keys
 }
 
-func indexOf(ss []string, s string) int {
-	for i, v := range ss {
-		if v == s {
-			return i
-		}
-	}
-	return -1
-}
-
 func areaLabelForKey(key string) string {
-	if key == "inbox" {
-		return "📥"
-	}
-	return life.AreaEmoji(key)
+	return life.AreaEmoji(key) + " " + life.AreaTitle(key)
 }
 
 func (b *Bot) showNotesHub(_ []string) error {

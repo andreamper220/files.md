@@ -15,8 +15,10 @@ import (
 	"github.com/zakirullin/files.md/server/fs"
 	"github.com/zakirullin/files.md/server/i18n"
 	"github.com/zakirullin/files.md/server/journal"
+	"github.com/zakirullin/files.md/server/life"
 	"github.com/zakirullin/files.md/server/pkg/tg"
 	"github.com/zakirullin/files.md/server/pkg/txt"
+	"github.com/zakirullin/files.md/server/priority"
 	"github.com/zakirullin/files.md/server/userconfig"
 )
 
@@ -76,12 +78,12 @@ func TestSaveFromTextMsg(t *testing.T) {
 	bot := NewBot(-1, tgram, userFS, fakeDB, fakeConfig())
 	r.NoError(bot.Reply(tg.NewUpd(-1, "New task")))
 	r.Contains(tgram.LastSentText, i18n.Tr("Choose: task or note?"))
+	_ = initLifeTestProject(t, userFS)
 	r.NoError(saveIncomingAsTask(bot, fakeDB))
 
-	chat, err := bot.fs.Read("/", "Chat.md")
+	tasksMD, err := tasksMDForTestProject(bot)
 	r.NoError(err)
-
-	r.Equal("#### 29 June, Sunday\n- [ ] `12:00` New task\n", chat)
+	r.Contains(tasksMD, "New task")
 }
 
 // A message containing a slash-token in the middle (e.g. "Check the /token
@@ -127,11 +129,12 @@ func TestSaveFromTextMsgWithSlashCmdInTheMiddle(t *testing.T) {
 	}
 	err = bot.Reply(tg.NewTGUpd(rawUpdate))
 	r.NoError(err)
+	_ = initLifeTestProject(t, userFS)
 	r.NoError(saveIncomingAsTask(bot, fakeDB))
 
-	chat, err := bot.fs.Read("/", "Chat.md")
+	tasksMD, err := tasksMDForTestProject(bot)
 	r.NoError(err)
-	r.Equal("#### 29 June, Sunday\n- [ ] `12:00` Check the /token please\n", chat)
+	r.Contains(tasksMD, "Check the /token please")
 }
 
 // TODO Chat.md
@@ -509,11 +512,13 @@ func TestSaveFromPhotoWithCaption(t *testing.T) {
 	upd.PhotoCaption = "Caption"
 	err = bot.Reply(upd)
 	r.NoError(err)
+	_ = initLifeTestProject(t, userFS)
 	r.NoError(saveIncomingAsTask(bot, fakeDB))
 
-	content, err := userFS.Read("/", "Chat.md")
+	tasksMD, err := tasksMDForTestProject(bot)
 	r.NoError(err)
-	r.Equal("#### 11 August, Sunday\n- [ ] `09:54` ![](media/tg_PHOTO_ID)\nCaption\n", content)
+	r.Contains(tasksMD, "![](media/tg_PHOTO_ID)")
+	r.Contains(tasksMD, "Caption")
 
 	projectPath := initLifeTestProject(t, userFS)
 	upd2 := tg.NewUpd(-1, "")
@@ -529,9 +534,9 @@ func TestSaveFromPhotoWithCaption(t *testing.T) {
 	r.Equal("Caption.md", files[0].Name)
 	r.True(files[0].IsMultiline)
 
-	content, err = bot.fs.Read(lifeDraftsDir(projectPath), "Caption.md")
+	noteContent, err := bot.fs.Read(lifeDraftsDir(projectPath), "Caption.md")
 	r.NoError(err)
-	r.Equal("![](media/tg_PHOTO_ID2)\nCaption", content)
+	r.Equal("![](media/tg_PHOTO_ID2)\nCaption", noteContent)
 }
 
 func TestSaveFromPhotoWithLongCaption(t *testing.T) {
@@ -599,9 +604,10 @@ func TestSaveFromPhotoWithSanitizedCaption(t *testing.T) {
 	r.NoError(err)
 	r.NoError(saveIncomingAsTask(bot, fakeDB))
 
-	content, err := userFS.Read("/", "Chat.md")
+	tasksMD, err := tasksMDForTestProject(bot)
 	r.NoError(err)
-	r.Equal("#### 11 August, Sunday\n- [ ] `09:54` ![](media/tg_PHOTO_ID)\nCaption/\n", content)
+	r.Contains(tasksMD, "![](media/tg_PHOTO_ID)")
+	r.Contains(tasksMD, "Caption/")
 
 	upd2 := tg.NewUpd(-1, "")
 	upd2.PhotoID = "PHOTO_ID2"
@@ -617,9 +623,9 @@ func TestSaveFromPhotoWithSanitizedCaption(t *testing.T) {
 	r.Equal("Caption／.md", files[0].Name)
 	r.True(files[0].IsMultiline)
 
-	content, err = bot.fs.Read(lifeDraftsDir(projectPath), "Caption／.md")
+	noteContent, err := bot.fs.Read(lifeDraftsDir(projectPath), "Caption／.md")
 	r.NoError(err)
-	r.Equal("![](media/tg_PHOTO_ID2)\nCaption/", content)
+	r.Equal("![](media/tg_PHOTO_ID2)\nCaption/", noteContent)
 }
 
 func TestSaveFromPhotoWithoutCaption(t *testing.T) {
@@ -656,9 +662,9 @@ func TestSaveFromPhotoWithoutCaption(t *testing.T) {
 	r.NoError(err)
 	r.NoError(saveIncomingAsTask(bot, fakeDB))
 
-	content, err := userFS.Read("/", "Chat.md")
+	tasksMD, err := tasksMDForTestProject(bot)
 	r.NoError(err)
-	r.Equal("#### 11 August, Sunday\n- [ ] `09:54` ![](media/tg_PHOTO_ID)\n", content)
+	r.Contains(tasksMD, "![](media/tg_PHOTO_ID)")
 
 	upd2 := tg.NewUpd(-1, "")
 	upd2.PhotoID = "PHOTO_ID2"
@@ -675,9 +681,9 @@ func TestSaveFromPhotoWithoutCaption(t *testing.T) {
 	r.True(files[0].IsMultiline)
 
 	// Be aware that it's not regular ꞉
-	content, err = bot.fs.Read(lifeDraftsDir(projectPath), fmt.Sprintf(i18n.Tr("Img %s"), "11.08.24 09꞉54")+".md")
+	noteContent, err := bot.fs.Read(lifeDraftsDir(projectPath), fmt.Sprintf(i18n.Tr("Img %s"), "11.08.24 09꞉54")+".md")
 	r.NoError(err)
-	r.Equal("![](media/tg_PHOTO_ID2)", content)
+	r.Equal("![](media/tg_PHOTO_ID2)", noteContent)
 }
 
 func TestSaveFromReplyPhotoWithCaption(t *testing.T) {
@@ -760,12 +766,12 @@ func completeTask(t *testing.T, initial, hashed string) string {
 
 func TestCompleteTask_Incomplete_NoTimestamp_NoHeader(t *testing.T) {
 	got := completeTask(t, "- [ ] New task", "- [ ] New task")
-	require.Equal(t, "", got)
+	require.Equal(t, "- [x] New task", got)
 }
 
 func TestCompleteTask_Incomplete_WithTimestamp_NoHeader(t *testing.T) {
 	got := completeTask(t, "- [ ] `00:00` New task", "- [ ] `00:00` New task")
-	require.Equal(t, "", got)
+	require.Equal(t, "- [x] `00:00` New task", got)
 }
 
 func TestCompleteTask_Incomplete_NoTimestamp_WithHeader(t *testing.T) {
@@ -773,7 +779,7 @@ func TestCompleteTask_Incomplete_NoTimestamp_WithHeader(t *testing.T) {
 		"#### 1 January, Thursday\n- [ ] New task",
 		"- [ ] New task",
 	)
-	require.Equal(t, "#### 1 January, Thursday", got)
+	require.Equal(t, "#### 1 January, Thursday\n- [x] New task", got)
 }
 
 func TestCompleteTask_Incomplete_WithTimestamp_WithHeader(t *testing.T) {
@@ -781,18 +787,18 @@ func TestCompleteTask_Incomplete_WithTimestamp_WithHeader(t *testing.T) {
 		"#### 1 January, Thursday\n- [ ] `09:30` New task",
 		"- [ ] `09:30` New task",
 	)
-	require.Equal(t, "#### 1 January, Thursday", got)
+	require.Equal(t, "#### 1 January, Thursday\n- [x] `09:30` New task", got)
 }
 
 func TestCompleteTask_Multiline_FlipsBox(t *testing.T) {
 	block := "- [ ] `00:00` First task\nsome continuation"
 	got := completeTask(t, block, block)
-	require.Equal(t, "some continuation", got)
+	require.Equal(t, "- [x] `00:00` First task\nsome continuation", got)
 }
 
 func TestCompleteTask_AlreadyCompleted_IsNoOp(t *testing.T) {
 	got := completeTask(t, "- [x] Done task", "- [x] Done task")
-	require.Equal(t, "", got)
+	require.Equal(t, "- [x] Done task", got)
 }
 
 func TestCompleteTask_Pomodoro_AddsSchedule(t *testing.T) {
@@ -812,7 +818,7 @@ func TestCompleteTask_Pomodoro_AddsSchedule(t *testing.T) {
 
 	todayMD, err := userFS.Read("/", fs.ChatFilename)
 	r.NoError(err)
-	r.Equal("", todayMD)
+	r.Equal("- [x] "+fs.PomodoroTask, todayMD)
 
 	schedules, err := cfg.Schedules()
 	r.NoError(err)
@@ -880,7 +886,8 @@ func TestToday(t *testing.T) {
 
 	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
 	r.NoError(err)
-	err = userFS.Write("/", "Chat.md", "- [ ] `00:00` First task\n- [ ] `00:00` Second task")
+	projectPath := initLifeTestProject(t, userFS)
+	err = userFS.Write(projectPath, life.TasksFilename, "- [ ] First task\n- [ ] Second task\n")
 	r.NoError(err)
 
 	tgram := tg.NewFakeTG()
@@ -946,7 +953,8 @@ func TestTodayMultilineTaskShownAsLong(t *testing.T) {
 
 	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
 	r.NoError(err)
-	err = userFS.Write("/", "Chat.md", "- [ ] `00:00` First task\nsome continuation")
+	projectPath := initLifeTestProject(t, userFS)
+	err = userFS.Write(projectPath, life.TasksFilename, "- [ ] First task some continuation\n")
 	r.NoError(err)
 
 	tgram := tg.NewFakeTG()
@@ -976,9 +984,9 @@ func TestTodayMixedSingleAndMultilineTasks(t *testing.T) {
 
 	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
 	r.NoError(err)
-	content := "- [ ] `00:00` First task\n" +
-		"- [ ] `00:00` Second task\nextra detail line"
-	err = userFS.Write("/", "Chat.md", content)
+	projectPath := initLifeTestProject(t, userFS)
+	content := "- [ ] First task\n- [ ] Second task extra detail line\n"
+	err = userFS.Write(projectPath, life.TasksFilename, content)
 	r.NoError(err)
 
 	tgram := tg.NewFakeTG()
@@ -1114,7 +1122,7 @@ func TestAddSingleItemToChecklist(t *testing.T) {
 
 	err = bot.Reply(tg.NewUpd(-1, "Item"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, fakeDB))
+	r.NoError(saveIncomingToInbox(bot, fakeDB))
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mv_to_chk", []string{inboxMsgHash(t, userFS, 0), "-checklist1-"})))
 	r.NoError(err)
@@ -1149,7 +1157,7 @@ func TestAddMultipleItemsToChecklist(t *testing.T) {
 
 	err = bot.Reply(tg.NewUpd(-1, "Item\nItem2\nItem3"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, fakeDB))
+	r.NoError(saveIncomingToInbox(bot, fakeDB))
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("mv_to_chk", []string{inboxMsgHash(t, userFS, 0), "-checklist1-"})))
 	r.NoError(err)
@@ -1753,10 +1761,8 @@ func TestShowMoveTo(t *testing.T) {
 	bot := NewBot(-1, tgram, userFS, fakeDB, cfg)
 	err = bot.Reply(tg.NewUpd(-1, "New task\nContent"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, fakeDB))
+	r.NoError(saveIncomingToInbox(bot, fakeDB))
 
-	r.Equal(i18n.Tr("Saved!"), tgram.LastSentText)
-	r.True(keyboardHasTaskNamed(tgram.LastSentKeyboard, "⏳") || len(tgram.LastSentKeyboard.Btns) > 0)
 	h := inboxMsgHash(t, userFS, 0)
 	r.NotEmpty(h)
 }
@@ -2004,7 +2010,7 @@ func TestForwardCollapse_HashStableAcrossContinuations(t *testing.T) {
 	u1.TimeVal = 100
 	u1.HasTimeVal = true
 	r.NoError(bot.Reply(u1))
-	r.NoError(saveIncomingAsTask(bot, fakeDB))
+	r.NoError(saveIncomingToInbox(bot, fakeDB))
 
 	msgHash1 := inboxMsgHash(t, userFS, 0)
 
@@ -2100,7 +2106,7 @@ func TestMoveToChecklistSplittable(t *testing.T) {
 	bot := NewBot(-1, tgram, userFS, fakeDB, fakeConfig())
 	err = bot.Reply(tg.NewUpd(-1, "item1\nitem2"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, fakeDB))
+	r.NoError(saveIncomingToInbox(bot, fakeDB))
 
 	content, err := userFS.Read("/", "Chat.md")
 	r.NoError(err)
@@ -2498,7 +2504,7 @@ func TestSchedule(t *testing.T) {
 
 	err = bot.Reply(tg.NewUpd(-1, "Task"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, fakeDB))
+	r.NoError(saveIncomingToInbox(bot, fakeDB))
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("sc", []string{inboxMsgHash(t, userFS, 0), "345600", "0 0 * * 1-5"})))
 	r.NoError(err)
@@ -2546,7 +2552,7 @@ func TestScheduleRepeatedWithTruncatedHash(t *testing.T) {
 
 	err = bot.Reply(tg.NewUpd(-1, "Task"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, fakeDB))
+	r.NoError(saveIncomingToInbox(bot, fakeDB))
 
 	fullHash := inboxMsgHash(t, userFS, 0)
 	truncated := fullHash[:4]
@@ -2588,7 +2594,7 @@ func TestScheduleNoRepeat(t *testing.T) {
 
 	err = bot.Reply(tg.NewUpd(-1, "Task"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, fakeDB))
+	r.NoError(saveIncomingToInbox(bot, fakeDB))
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("sc", []string{inboxMsgHash(t, userFS, 0), "345600", ""})))
 	r.NoError(err)
@@ -2959,7 +2965,7 @@ func TestSaveToExistingFile(t *testing.T) {
 	bot := NewBot(-1, tgram, userFS, database, cfg)
 	err = bot.Reply(tg.NewUpd(-1, "New content"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, database))
+	r.NoError(saveIncomingToInbox(bot, database))
 
 	h := inboxMsgHash(t, userFS, 1)
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{h})))
@@ -3024,7 +3030,7 @@ func TestSaveToExistingFileModeTasks(t *testing.T) {
 	bot := NewBot(-1, tgram, userFS, database, cfg)
 	err = bot.Reply(tg.NewUpd(-1, "Text"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, database))
+	r.NoError(saveIncomingToInbox(bot, database))
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 1)})))
 	r.NoError(err)
@@ -3085,7 +3091,7 @@ func TestSaveToNewFile(t *testing.T) {
 	bot := NewBot(-1, tgram, userFS, database, cfg)
 	err = bot.Reply(tg.NewUpd(-1, "Text"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, database))
+	r.NoError(saveIncomingToInbox(bot, database))
 
 	content, err := userFS.Read("/", "Chat.md")
 	r.NoError(err)
@@ -3150,7 +3156,7 @@ func TestSaveToNewDirFull(t *testing.T) {
 	bot := NewBot(-1, tgram, userFS, database, cfg)
 	err = bot.Reply(tg.NewUpd(-1, "Text"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, database))
+	r.NoError(saveIncomingToInbox(bot, database))
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})))
 	r.NoError(err)
@@ -3216,7 +3222,7 @@ func TestSaveToNewDir(t *testing.T) {
 	bot := NewBot(-1, tgram, userFS, database, cfg)
 	err = bot.Reply(tg.NewUpd(-1, "Text"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, database))
+	r.NoError(saveIncomingToInbox(bot, database))
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})))
 	r.NoError(err)
@@ -3284,7 +3290,7 @@ func TestSaveToNewMultilineFile(t *testing.T) {
 	bot := NewBot(-1, tgram, userFS, database, cfg)
 	err = bot.Reply(tg.NewUpd(-1, "Multiline\ncontent"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, database))
+	r.NoError(saveIncomingToInbox(bot, database))
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})))
 	r.NoError(err)
@@ -3343,7 +3349,7 @@ func TestSaveToNewCustomFile(t *testing.T) {
 	bot := NewBot(-1, tgram, userFS, database, cfg)
 	err = bot.Reply(tg.NewUpd(-1, "Text"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, database))
+	r.NoError(saveIncomingToInbox(bot, database))
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})))
 	r.NoError(err)
@@ -3404,7 +3410,7 @@ func TestSaveToRecentFile(t *testing.T) {
 	bot := NewBot(-1, tgram, userFS, database, cfg)
 	err = bot.Reply(tg.NewUpd(-1, "New text"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, database))
+	r.NoError(saveIncomingToInbox(bot, database))
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("to_file", []string{inboxMsgHash(t, userFS, 0)})))
 	r.NoError(err)
@@ -3427,8 +3433,7 @@ func TestSaveToRecentFile(t *testing.T) {
 	// Adding text again to see if we have a recent file
 	err = bot.Reply(tg.NewUpd(-1, "Text2"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, database))
-	r.Equal(i18n.Tr("Saved!"), tgram.LastSentText)
+	r.NoError(saveIncomingToInbox(bot, database))
 
 	r.Nil(database.InputExpectation())
 	msgID, ok := database.LastKeyboardMsgID()
@@ -3458,7 +3463,8 @@ func TestSaveToTodayTask(t *testing.T) {
 	err = userFS.CreateSystemDirs()
 	r.NoError(err)
 
-	err = userFS.Write("", "Chat.md", txt.AddChecklistItem("", "Existing task", false))
+	projectPath := initLifeTestProject(t, userFS)
+	err = userFS.Write(projectPath, life.TasksFilename, txt.AddChecklistItem("", "Existing task", false))
 	r.NoError(err)
 
 	cfg := userconfig.NewConfig(userFS, -1, "config.json")
@@ -3475,19 +3481,23 @@ func TestSaveToTodayTask(t *testing.T) {
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd(CmdShowTasksView, nil)))
 	r.NoError(err)
 
-	chatMD, err := userFS.Read(fs.DirUserRoot, fs.ChatFilename)
+	tasksMD, err := userFS.Read(projectPath, life.TasksFilename)
 	r.NoError(err)
-	r.Contains(chatMD, "Existing task")
-	r.Contains(chatMD, "New task")
+	r.Contains(tasksMD, "Existing task")
+	r.Contains(tasksMD, "New task")
 
-	newHash := inboxMsgHash(t, userFS, 1)
-	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("c", []string{newHash})))
+	newTask := priority.Apply("New task", "🔴", priority.DefaultEmojis)
+	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd(CmdShowTask, []string{taskKindArea, fs.ShortHash(projectPath), fs.Hash(newTask)})))
+	r.NoError(err)
+	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd(CmdCompleteAreaTask, []string{fs.ShortHash(projectPath), fs.Hash(newTask)})))
 	r.NoError(err)
 
-	chatMD, err = userFS.Read(fs.DirUserRoot, fs.ChatFilename)
+	tasksMD, err = userFS.Read(projectPath, life.TasksFilename)
 	r.NoError(err)
-	r.Contains(chatMD, "Existing task")
-	r.NotContains(chatMD, "New task")
+	r.Contains(tasksMD, "Existing task")
+	r.Contains(tasksMD, "- [x]")
+	r.Contains(tasksMD, "New task")
+	r.NotContains(tasksMD, "- [ ] New task")
 }
 
 func TestCollapseToMsg(t *testing.T) {
@@ -3583,7 +3593,7 @@ func TestCollapseForwardedMessages(t *testing.T) {
 	upd.HasTimeVal = true
 	err = bot.Reply(upd)
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, fakeDB))
+	r.NoError(saveIncomingToInbox(bot, fakeDB))
 
 	upd = tg.NewUpd(-1, "Second msg")
 	upd.TimeVal = 0
@@ -3854,7 +3864,7 @@ func TestSaveFromImage_MultilineCaption(t *testing.T) {
 
 	err = bot.saveFromImage(upd)
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, fakeDB))
+	r.NoError(saveIncomingToInbox(bot, fakeDB))
 
 	content, err := userFS.Read("/", "Chat.md")
 	r.NoError(err)
@@ -4145,7 +4155,7 @@ func TestMoveToExistingNote_Success(t *testing.T) {
 
 	err = bot.Reply(tg.NewUpd(-1, "Task content"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, fakeDB))
+	r.NoError(saveIncomingToInbox(bot, fakeDB))
 
 	toDirHash := fs.Hash("notes")
 	toFilenameHash := fs.Hash("ExistingNote.md")
@@ -4287,13 +4297,13 @@ func FuzzSaveFromTextMsg(f *testing.F) {
 		}
 
 		r.NoError(saveIncomingAsTask(bot, fakeDB))
-		chat, err := userFS.Read(fs.DirUserRoot, fs.ChatFilename)
+		tasksMD, err := tasksMDForTestProject(bot)
 		r.NoError(err)
 		if input == "" {
-			r.Equal("", chat)
+			r.Equal("", tasksMD)
 			return
 		}
-		r.True(chatContainsTaskInput(chat, input))
+		r.True(tasksContainsTaskInput(tasksMD, input))
 	})
 }
 
@@ -4592,7 +4602,7 @@ func TestScheduleForTmrw(t *testing.T) {
 	bot := NewBot(-1, tgram, userFS, fakeDB, cfg)
 	err = bot.Reply(tg.NewUpd(-1, "Task for tomorrow"))
 	r.NoError(err)
-	r.NoError(saveIncomingAsTask(bot, fakeDB))
+	r.NoError(saveIncomingToInbox(bot, fakeDB))
 
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd("sc_tmrw", []string{inboxMsgHash(t, userFS, 0)})))
 	r.NoError(err)

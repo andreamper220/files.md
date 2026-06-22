@@ -321,6 +321,70 @@ func (b *Bot) moveFromChat(
 	return b.fs.Write(fs.DirUserRoot, fs.ChatFilename, modifiedContent)
 }
 
+// completeChatMsg marks the inbox block identified by msgHash as done (`[ ]` → `[x]`).
+// Returns rewritten content, the stripped item body, and whether the block was flipped.
+func completeChatMsg(content, msgHash string) (string, string, bool, error) {
+	blocks := readChatMsgs(content)
+	idx := -1
+	for i, block := range blocks {
+		if inboxHeaderRegex.MatchString(block) {
+			continue
+		}
+		if chatBlockHash(block) == msgHash {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		return content, "", false, nil
+	}
+
+	block := blocks[idx]
+	lines := strings.Split(block, "\n")
+	first := lines[0]
+	if strings.HasPrefix(first, "- [x] ") || strings.HasPrefix(first, "- [X] ") {
+		return content, stripInboxEntryPrefix(block), false, nil
+	}
+	if !strings.HasPrefix(first, "- [ ] ") {
+		return content, "", false, fmt.Errorf("inbox block %q is not a checklist entry", msgHash)
+	}
+
+	lines[0] = "- [x] " + strings.TrimPrefix(first, "- [ ] ")
+	blocks[idx] = strings.Join(lines, "\n")
+	return strings.Join(blocks, "\n"), stripInboxEntryPrefix(block), true, nil
+}
+
+// deleteChatMsg removes the inbox block identified by msgHash.
+func deleteChatMsg(content, msgHash string) (string, bool, error) {
+	blocks := readChatMsgs(content)
+	idx := -1
+	for i, block := range blocks {
+		if inboxHeaderRegex.MatchString(block) {
+			continue
+		}
+		if chatBlockHash(block) == msgHash {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		return content, false, nil
+	}
+
+	out := append(blocks[:idx], blocks[idx+1:]...)
+	return strings.TrimSpace(strings.Join(out, "\n")), true, nil
+}
+
+// chatTaskDisplayBody returns task text with media, without checklist marker/timestamp.
+func chatTaskDisplayBody(block string) string {
+	lines := strings.Split(block, "\n")
+	if len(lines) == 0 {
+		return ""
+	}
+	lines[0] = strings.TrimSpace(inboxEntryPrefix.ReplaceAllString(lines[0], ""))
+	return strings.Join(lines, "\n")
+}
+
 // readChatMsgs parses content into logical blocks
 // Returns slice where each element is either a header or a complete record
 func readChatMsgs(content string) []string {
