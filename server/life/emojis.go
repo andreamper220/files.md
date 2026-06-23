@@ -77,9 +77,17 @@ func pickEmoji(seed string, pool []string) string {
 	return pool[int(h.Sum32())%len(pool)]
 }
 
-// AreaLabel returns emoji-only label for UI buttons.
+// AreaListPrefix marks areas nested under spheres in lists.
+const AreaListPrefix = "└ "
+
+// AreaLabel returns emoji + title for UI buttons.
 func AreaLabel(projectPath string) string {
-	return AreaEmoji(projectPath)
+	return AreaEmoji(projectPath) + " " + AreaTitle(projectPath)
+}
+
+// NestedAreaLabel returns an area label with a tree marker for nested lists.
+func NestedAreaLabel(projectPath string) string {
+	return AreaListPrefix + AreaLabel(projectPath)
 }
 
 // SphereLabel returns emoji-only label for UI buttons.

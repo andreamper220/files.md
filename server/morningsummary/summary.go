@@ -76,7 +76,7 @@ func formatSphereHeader(spherePath string) string {
 
 // formatAreaLine builds " 🏗 Стройка 🔴0 🟠1 ... 📝 3".
 func formatAreaLine(projectPath string, emojis []string, userFS *fs.FS, startOfDay time.Time) string {
-	parts := []string{" " + formatAreaHeader(projectPath)}
+	parts := []string{life.AreaListPrefix + formatAreaHeader(projectPath)}
 	parts = append(parts, formatPriorityCounts(emojis, countDoneByPriorityInMD(readAreaTasksMD(userFS, projectPath), emojis))...)
 	parts = append(parts, formatNoteTotal(userFS, projectPath, startOfDay))
 	return strings.Join(parts, " ")
@@ -180,7 +180,7 @@ func BuildNotesHub(userFS *fs.FS, cfg *userconfig.Config) (string, error) {
 		lines = append(lines, formatSphereHeader(spherePath))
 		projects, _ := life.ListProjects(userFS, spherePath)
 		for _, projectPath := range projects {
-			parts := []string{" " + formatAreaHeader(projectPath)}
+			parts := []string{life.AreaListPrefix + formatAreaHeader(projectPath)}
 			parts = append(parts, fmt.Sprintf("📝 %d", totalNewNotes(userFS, projectPath, startOfDay)))
 			lines = append(lines, strings.Join(parts, " "))
 		}

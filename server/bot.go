@@ -206,7 +206,6 @@ const (
 	CmdShare                           = "share"
 	CmdSetPriority                     = "prio"
 	CmdShowMorning                     = "morning"
-	CmdShowLife                        = "life"
 	CmdInitLife                        = "life_init"
 	CmdShowLifeSpheres                 = "life_sph"
 	CmdShowLifeSphere                  = "life_s1"
@@ -248,6 +247,12 @@ var Shortcuts = map[string][]string{
 	CmdAddToDraftShortcut:              {"/д", "draft", "черновик", "д"},
 	CmdAddToFinalizeShortcut:           {"/ф", "fin", "фин", "финализировать", "ф"},
 	CmdAddToDiscussionShortcut:         {"/об", "disc", "обсуждение", "об"},
+}
+
+var allowedSlashCommands = map[string]bool{
+	CmdShowHome:  true,
+	CmdShowDirs:  true,
+	CmdShowFiles: true,
 }
 
 // Bot has all the things that we need to handle a message or command from a user.
@@ -376,7 +381,6 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdShowRename:         b.showRename,
 		CmdShowStats:          b.showStats,
 		CmdShowMorning:        b.showMorningSummary,
-		CmdShowLife:            b.showLife,
 		CmdInitLife:            b.initLife,
 		CmdShowLifeSpheres:     b.showLifeSpheres,
 		CmdShowLifeSphere:      b.showLifeSphere,
@@ -486,6 +490,11 @@ func (b *Bot) handlers() map[string]func([]string) error {
 func (b *Bot) extractCmd(u Update) (*tg.Cmd, error) {
 	cmd := u.Cmd()
 	if cmd != nil {
+		if _, isCallback := u.CallbackQueryID(); !isCallback && !allowedSlashCommands[cmd.Name] {
+			_, _ = b.tg.Send(b.userID, i18n.Tr("I know nothing about this command 😕"), nil, tg.MarkupHTML)
+			return nil, fmt.Errorf("unknown command: %s", cmd.Name)
+		}
+
 		// Check if the command is known
 		_, ok := b.handlers()[cmd.Name]
 		if !ok {

@@ -147,7 +147,8 @@ func (b *Bot) showAreaTask(projectHash, itemHash string) error {
 		tg.NewCmd(CmdCompleteAreaTask, []string{projectHash, itemHash}),
 		tg.NewCmd(CmdDeleteTask, []string{taskKindArea, projectHash, itemHash}),
 	)
-	return b.showMD(item, kb)
+	title := fmt.Sprintf("%s %s", life.AreaEmoji(projectPath), life.AreaTitle(projectPath))
+	return b.showMD(title+"\n\n"+item, kb)
 }
 
 func (b *Bot) deleteChatTask(msgHash string) error {
@@ -328,7 +329,19 @@ func (b *Bot) showTasksView(_ []string) error {
 	}
 
 	kbPtr.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
-	return b.showHTML(i18n.Tr("📋 Tasks"), kbPtr)
+	return b.showHTML(tasksViewMessage(byArea), kbPtr)
+}
+
+func tasksViewMessage(byArea map[string][]taskEntry) string {
+	lines := []string{i18n.Tr("📋 Tasks")}
+	for _, key := range sortedAreaKeys(byArea) {
+		tasks := byArea[key]
+		if len(tasks) == 0 {
+			continue
+		}
+		lines = append(lines, life.AreaListPrefix+areaLabelForKey(key))
+	}
+	return strings.Join(lines, "\n")
 }
 
 type taskEntry struct {
@@ -384,7 +397,7 @@ func sortedAreaKeys(m map[string][]taskEntry) []string {
 }
 
 func areaLabelForKey(key string) string {
-	return life.AreaEmoji(key) + " " + life.AreaTitle(key)
+	return life.AreaLabel(key)
 }
 
 func (b *Bot) showNotesHub(_ []string) error {
@@ -400,7 +413,7 @@ func (b *Bot) showNotesHub(_ []string) error {
 		projects, _ := life.ListProjects(b.fs, spherePath)
 		row := tg.NewRow()
 		for _, projectPath := range projects {
-			label := life.SphereEmoji(spherePath) + life.AreaEmoji(projectPath)
+			label := life.SphereEmoji(spherePath) + " " + life.AreaLabel(projectPath)
 			row = append(row, tg.NewBtn(label, tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)})))
 			if len(row) >= btnsPerRow {
 				kb.AddRow(row)

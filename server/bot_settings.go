@@ -20,9 +20,7 @@ var AvailableMoveToBtns = []tg.Btn{
 	tg.NewBtn(i18n.Tr(i18n.StrToDiscussion), tg.NewCmd(CmdMoveToDiscussion, nil)),
 }
 
-var AvailableQuickBtns = []tg.Btn{
-	tg.NewBtn("Life", tg.NewCmd(CmdShowLife, nil)),
-}
+var AvailableQuickBtns = []tg.Btn{}
 
 func (b *Bot) showSettings(_ []string) error {
 	return b.ShowHome(nil)

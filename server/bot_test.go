@@ -897,7 +897,8 @@ func TestToday(t *testing.T) {
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd(CmdShowTasksView, nil)))
 	r.NoError(err)
 
-	r.Equal(i18n.Tr("📋 Tasks"), tgram.LastSentText)
+	r.Contains(tgram.LastSentText, i18n.Tr("📋 Tasks"))
+	r.Contains(tgram.LastSentText, "Test")
 	r.True(keyboardHasTaskNamed(tgram.LastSentKeyboard, "First task"))
 	r.True(keyboardHasTaskNamed(tgram.LastSentKeyboard, "Second task"))
 }
@@ -963,7 +964,8 @@ func TestTodayMultilineTaskShownAsLong(t *testing.T) {
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd(CmdShowTasksView, nil)))
 	r.NoError(err)
 
-	r.Equal(i18n.Tr("📋 Tasks"), tgram.LastSentText)
+	r.Contains(tgram.LastSentText, i18n.Tr("📋 Tasks"))
+	r.Contains(tgram.LastSentText, "Test")
 	r.True(keyboardHasTaskNamed(tgram.LastSentKeyboard, "First task"))
 }
 
@@ -995,7 +997,8 @@ func TestTodayMixedSingleAndMultilineTasks(t *testing.T) {
 	err = bot.Reply(tg.NewUpdCmd(-1, tg.NewCmd(CmdShowTasksView, nil)))
 	r.NoError(err)
 
-	r.Equal(i18n.Tr("📋 Tasks"), tgram.LastSentText)
+	r.Contains(tgram.LastSentText, i18n.Tr("📋 Tasks"))
+	r.Contains(tgram.LastSentText, "Test")
 	r.True(keyboardHasTaskNamed(tgram.LastSentKeyboard, "First task"))
 	r.True(keyboardHasTaskNamed(tgram.LastSentKeyboard, "Second task"))
 }

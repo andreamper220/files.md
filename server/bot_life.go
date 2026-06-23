@@ -13,36 +13,16 @@ import (
 
 const CmdLifeRecentProject = "life_prj_recent"
 
-func (b *Bot) showLife(params []string) error {
-	if len(params) > 0 && params[0] == "init" {
-		return b.initLife(nil)
-	}
-
-	preview, err := life.ShortIndexText(b.fs)
-	if err != nil {
-		return fmt.Errorf("show life: %w", err)
-	}
-
-	var kb tg.Keyboard
-	kb.AddRow(tg.NewBtn(i18n.Tr("🌐 Сферы"), tg.NewCmd(CmdShowLifeSpheres, nil)))
-	if !life.IsInitialized(b.fs) {
-		kb.AddRow(tg.NewBtn(i18n.Tr("🏗 Создать структуру"), tg.NewCmd(CmdInitLife, nil)))
-	}
-	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
-
-	return b.showMD(preview, &kb)
-}
-
 func (b *Bot) initLife(_ []string) error {
 	if err := life.Init(b.fs); err != nil {
 		return fmt.Errorf("init life: %w", err)
 	}
 
 	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewBtn(i18n.Tr("🗺 Жизнь"), tg.NewCmd(CmdShowLife, nil)),
+		tg.NewBtn(i18n.Tr("🌐 Сферы"), tg.NewCmd(CmdShowLifeSpheres, nil)),
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	})
-	return b.showHTML(i18n.Tr("Структура жизни создана 👌\n\nОткрой <b>Life.md</b> в приложении или /life в боте."), kb)
+	return b.showHTML(i18n.Tr("Структура жизни создана 👌\n\nОткрой <b>Life.md</b> в приложении."), kb)
 }
 
 func (b *Bot) showLifeSpheres(_ []string) error {
@@ -63,10 +43,7 @@ func (b *Bot) showLifeSpheres(_ []string) error {
 	if len(spheres) == 0 {
 		kb.AddRow(tg.NewBtn(i18n.Tr("🏗 Создать структуру"), tg.NewCmd(CmdInitLife, nil)))
 	}
-	kb.AddRow(tg.NewRow(
-		tg.NewBtn(i18n.Tr("🗺 Жизнь"), tg.NewCmd(CmdShowLife, nil)),
-		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
-	))
+	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
 
 	return b.showHTML(i18n.Tr("🌐 Сферы жизни:"), &kb)
 }
@@ -85,7 +62,7 @@ func (b *Bot) showLifeSphere(params []string) error {
 	var kb tg.Keyboard
 	for _, projectPath := range projects {
 		btn := tg.NewBtn(
-			life.AreaLabel(projectPath),
+			life.NestedAreaLabel(projectPath),
 			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)}),
 		)
 		kb.AddRow(btn)
@@ -97,7 +74,7 @@ func (b *Bot) showLifeSphere(params []string) error {
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	))
 
-	title := fmt.Sprintf("%s", i18n.Tr("🏗 Области сферы:"))
+	title := fmt.Sprintf("%s %s", i18n.Tr("🏗 Области сферы:"), life.SphereTitle(spherePath))
 	return b.showHTML(title, &kb)
 }
 
@@ -124,7 +101,7 @@ func (b *Bot) showLifeProject(params []string) error {
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	))
 
-	title := fmt.Sprintf("%s", i18n.Tr("🏗 Область:"))
+	title := fmt.Sprintf("%s %s", i18n.Tr("🏗 Область:"), life.AreaTitle(projectPath))
 	return b.showHTML(title, &kb)
 }
 
