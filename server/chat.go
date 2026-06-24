@@ -382,7 +382,12 @@ func chatTaskDisplayBody(block string) string {
 		return ""
 	}
 	lines[0] = strings.TrimSpace(inboxEntryPrefix.ReplaceAllString(lines[0], ""))
-	return strings.Join(lines, "\n")
+	body := strings.Join(lines, "\n")
+	display := txt.DisplayText(body)
+	if display != "" {
+		return display
+	}
+	return body
 }
 
 // readChatMsgs parses content into logical blocks

@@ -1,7 +1,9 @@
 package server
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -75,11 +77,11 @@ func (b *Bot) showChatTask(msgHash string) error {
 		return b.showTasksView(nil)
 	}
 
-	kb := taskDetailKeyboard(
-		tg.NewCmd(CmdShowTasksView, nil),
-		tg.NewCmd(CmdComplete, []string{msgHash}),
-		tg.NewCmd(CmdDeleteTask, []string{taskKindChat, msgHash}),
-	)
+	kb := taskDetailKeyboard(taskDetailOpts{
+		back:     tg.NewCmd(CmdShowTasksView, nil),
+		complete: tg.NewCmd(CmdComplete, []string{msgHash}),
+		delete:   tg.NewCmd(CmdDeleteTask, []string{taskKindChat, msgHash}),
+	})
 	if err := b.showMD(chatTaskDisplayBody(block), kb); err != nil {
 		return fmt.Errorf("show chat task: %w", err)
 	}
@@ -109,11 +111,11 @@ func (b *Bot) showListTaskWithBack(checklistHash, itemHash string, back tg.Cmd) 
 		return b.dispatchBack(back)
 	}
 
-	kb := taskDetailKeyboard(
-		back,
-		tg.NewCmd(CmdCompleteChecklistItem, []string{checklistHash, itemHash}),
-		tg.NewCmd(CmdDeleteTask, []string{taskKindList, checklistHash, itemHash}),
-	)
+	kb := taskDetailKeyboard(taskDetailOpts{
+		back:     back,
+		complete: tg.NewCmd(CmdCompleteChecklistItem, []string{checklistHash, itemHash}),
+		delete:   tg.NewCmd(CmdDeleteTask, []string{taskKindList, checklistHash, itemHash}),
+	})
 	return b.showMD(item, kb)
 }
 
@@ -142,13 +144,19 @@ func (b *Bot) showAreaTask(projectHash, itemHash string) error {
 		return b.showTasksView(nil)
 	}
 
-	kb := taskDetailKeyboard(
-		tg.NewCmd(CmdShowTasksView, nil),
-		tg.NewCmd(CmdCompleteAreaTask, []string{projectHash, itemHash}),
-		tg.NewCmd(CmdDeleteTask, []string{taskKindArea, projectHash, itemHash}),
-	)
-	title := fmt.Sprintf("%s %s", life.AreaEmoji(projectPath), life.AreaTitle(projectPath))
-	return b.showMD(title+"\n\n"+item, kb)
+	moveCmd := tg.NewCmd(CmdMoveToAreaTask, []string{projectHash, itemHash})
+	kb := taskDetailKeyboard(taskDetailOpts{
+		back:     tg.NewCmd(CmdShowTasksView, nil),
+		complete: tg.NewCmd(CmdCompleteAreaTask, []string{projectHash, itemHash}),
+		delete:   tg.NewCmd(CmdDeleteTask, []string{taskKindArea, projectHash, itemHash}),
+		move:     &moveCmd,
+	})
+	title := fmt.Sprintf("%s %s", life.AreaEmoji(projectPath), life.AreaFullTitle(projectPath))
+	displayItem := txt.DisplayText(item)
+	if displayItem == "" {
+		displayItem = item
+	}
+	return b.showMD(title+"\n\n"+displayItem, kb)
 }
 
 func (b *Bot) deleteChatTask(msgHash string) error {
@@ -215,18 +223,110 @@ func (b *Bot) deleteAreaTask(projectHash, itemHash string) error {
 	return b.showTasksView(nil)
 }
 
-func taskDetailKeyboard(back, complete, delete tg.Cmd) *tg.Keyboard {
-	return tg.NewKeyboard([]tg.Row{
-		tg.NewRow(
-			tg.NewBtn(i18n.Tr(i18n.StrBack), back),
-			tg.NewBtn(i18n.Tr(i18n.StrComplete), complete),
-			tg.NewBtn(i18n.Tr(i18n.StrDelete), delete),
-		),
-	})
+type taskDetailOpts struct {
+	back     tg.Cmd
+	complete tg.Cmd
+	delete   tg.Cmd
+	move     *tg.Cmd
+}
+
+func taskDetailKeyboard(opts taskDetailOpts) *tg.Keyboard {
+	row := tg.NewRow(
+		tg.NewBtn("⬅️", opts.back),
+		tg.NewBtn("🔎", tg.NewCustomCmd(CmdInlineQuerySearchEveryWhere, nil, tg.CmdTypeInlineQueryCurrentChat)),
+		tg.NewBtn("✅", opts.complete),
+	)
+	if opts.move != nil {
+		row = append(row, tg.NewBtn("↔️", *opts.move))
+	}
+	row = append(row,
+		tg.NewBtn("🗑", opts.delete),
+		tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)),
+	)
+	return tg.NewKeyboard([]tg.Row{row})
+}
+
+func (b *Bot) showMoveAreaTask(params []string) error {
+	if len(params) < 2 {
+		return fmt.Errorf("show move area task: missing params")
+	}
+	srcHash := params[0]
+	itemHash := params[1]
+
+	_ = life.EnsureSpheresRoot(b.fs)
+	spheres, err := life.ListSpheres(b.fs)
+	if err != nil {
+		return fmt.Errorf("show move area task: %w", err)
+	}
+
+	var kb tg.Keyboard
+	for _, spherePath := range spheres {
+		areas, err := life.ListAllAreas(b.fs, spherePath)
+		if err != nil {
+			continue
+		}
+		for _, areaPath := range areas {
+			if fs.ShortHash(areaPath) == srcHash {
+				continue
+			}
+			kb.AddRow(tg.NewBtn(
+				life.AreaPickerLabel(spherePath, areaPath),
+				tg.NewCmd(CmdMoveAreaTask, []string{srcHash, itemHash, fs.ShortHash(areaPath)}),
+			))
+		}
+	}
+	if len(kb.Btns) == 0 {
+		kb.AddRow(tg.NewBtn("—", tg.NewCmd(CmdDoNothing, nil)))
+	}
+	kb.AddRow(tg.NewBtn("⬅️", tg.NewCmd(CmdShowTask, []string{taskKindArea, srcHash, itemHash})))
+
+	return b.showHTML(i18n.Tr("Переместить задачу в область:"), &kb)
+}
+
+func (b *Bot) moveAreaTask(params []string) error {
+	if len(params) < 3 {
+		return fmt.Errorf("move area task: missing params")
+	}
+	srcPath, err := b.fs.ResolveDirParam(params[0])
+	if err != nil {
+		return fmt.Errorf("move area task: %w", err)
+	}
+	dstPath, err := b.fs.ResolveDirParam(params[2])
+	if err != nil {
+		return fmt.Errorf("move area task: %w", err)
+	}
+	itemHash := params[1]
+
+	srcMD, err := b.fs.Read(srcPath, life.TasksFilename)
+	if err != nil {
+		return fmt.Errorf("move area task: %w", err)
+	}
+	newSrcMD, item := txt.RemoveChecklistItem(srcMD, itemHash)
+	if item == "" {
+		return b.showTasksView(nil)
+	}
+
+	dstMD, readErr := b.fs.Read(dstPath, life.TasksFilename)
+	if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
+		return fmt.Errorf("move area task: %w", readErr)
+	}
+	dstMD = txt.AddChecklistItem(dstMD, item, false)
+
+	if err := b.fs.Write(srcPath, life.TasksFilename, newSrcMD); err != nil {
+		return fmt.Errorf("move area task: %w", err)
+	}
+	if err := b.fs.Write(dstPath, life.TasksFilename, dstMD); err != nil {
+		return fmt.Errorf("move area task: %w", err)
+	}
+
+	return b.showTasksView(nil)
 }
 
 func taskPreviewLabel(text string) string {
-	label := strings.TrimSpace(text)
+	label := strings.TrimSpace(txt.DisplayText(text))
+	if label == "" {
+		label = strings.TrimSpace(text)
+	}
 	if label == "" {
 		return "…"
 	}
@@ -237,8 +337,7 @@ func taskPreviewLabel(text string) string {
 }
 
 func (b *Bot) moveToAreaTask(params []string) error {
-	// Legacy: tasks no longer pass through Chat.md; new tasks use CmdSaveTaskToArea.
-	return b.ShowHome(nil)
+	return b.showMoveAreaTask(params)
 }
 
 func (b *Bot) completeAreaTask(params []string) error {
@@ -356,8 +455,8 @@ func (b *Bot) collectOpenTasks() []taskEntry {
 	_ = life.EnsureSpheresRoot(b.fs)
 	spheres, _ := life.ListSpheres(b.fs)
 	for _, sphere := range spheres {
-		projects, _ := life.ListProjects(b.fs, sphere)
-		for _, project := range projects {
+		areas, _ := life.ListAllAreas(b.fs, sphere)
+		for _, project := range areas {
 			md, err := b.fs.Read(project, life.TasksFilename)
 			if err != nil {
 				continue
@@ -397,7 +496,7 @@ func sortedAreaKeys(m map[string][]taskEntry) []string {
 }
 
 func areaLabelForKey(key string) string {
-	return life.AreaLabel(key)
+	return life.AreaEmoji(key) + " " + life.AreaFullTitle(key)
 }
 
 func (b *Bot) showNotesHub(_ []string) error {
@@ -410,10 +509,10 @@ func (b *Bot) showNotesHub(_ []string) error {
 	_ = life.EnsureSpheresRoot(b.fs)
 	spheres, _ := life.ListSpheres(b.fs)
 	for _, spherePath := range spheres {
-		projects, _ := life.ListProjects(b.fs, spherePath)
+		areas, _ := life.ListAllAreas(b.fs, spherePath)
 		row := tg.NewRow()
-		for _, projectPath := range projects {
-			label := life.SphereEmoji(spherePath) + " " + life.AreaLabel(projectPath)
+		for _, projectPath := range areas {
+			label := life.AreaPickerLabel(spherePath, projectPath)
 			row = append(row, tg.NewBtn(label, tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)})))
 			if len(row) >= btnsPerRow {
 				kb.AddRow(row)

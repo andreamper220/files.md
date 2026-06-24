@@ -242,6 +242,25 @@ func (u *TGUpd) AudioOnlyID() (string, bool) {
 	return u.audioID()
 }
 
+// DocumentOnlyID returns generic document IDs (not image/video/audio).
+func (u *TGUpd) DocumentOnlyID() (string, bool) {
+	message := u.raw.Message
+	if message == nil || message.Document == nil {
+		return "", false
+	}
+	mime := message.Document.MimeType
+	if slices.Contains(imageMimeTypes, mime) {
+		return "", false
+	}
+	if slices.Contains(videoMimeTypes, mime) {
+		return "", false
+	}
+	if slices.Contains(audioMimeTypes, mime) {
+		return "", false
+	}
+	return message.Document.FileID, true
+}
+
 // Caption returns the caption for the animation, audio,
 // document, paid media, photo, video or voice
 func (u *TGUpd) Caption() string {

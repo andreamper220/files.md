@@ -1,7 +1,9 @@
 package life
 
 import (
+	"fmt"
 	"hash/fnv"
+	"strings"
 )
 
 // Sphere emoji markers for home summary (names are not shown).
@@ -87,7 +89,27 @@ func AreaLabel(projectPath string) string {
 
 // NestedAreaLabel returns an area label with a tree marker for nested lists.
 func NestedAreaLabel(projectPath string) string {
-	return AreaListPrefix + AreaLabel(projectPath)
+	return AreaTreePrefix(AreaDepth(projectPath)) + AreaLabel(projectPath)
+}
+
+// AreaTreePrefix returns indentation for a nested area depth (1 = top-level).
+func AreaTreePrefix(depth int) string {
+	if depth <= 1 {
+		return AreaListPrefix
+	}
+	return strings.Repeat("│  ", depth-1) + "└ "
+}
+
+// SaveLocationLabel returns sphere + area names for save confirmations.
+func SaveLocationLabel(spherePath, areaPath string) string {
+	return fmt.Sprintf("%s %s → %s %s",
+		SphereEmoji(spherePath), SphereTitle(spherePath),
+		AreaEmoji(areaPath), AreaFullTitle(areaPath))
+}
+
+// AreaPickerLabel returns a button label for area pickers.
+func AreaPickerLabel(spherePath, areaPath string) string {
+	return SaveLocationLabel(spherePath, areaPath)
 }
 
 // SphereLabel returns emoji-only label for UI buttons.

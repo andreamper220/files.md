@@ -109,12 +109,12 @@ func (b *Bot) showTaskAreaPicker(draftHash, priorityIdxStr string) error {
 
 	kb := tg.NewKeyboard(nil)
 	for _, spherePath := range spheres {
-		projects, err := life.ListProjects(b.fs, spherePath)
+		areas, err := life.ListAllAreas(b.fs, spherePath)
 		if err != nil {
 			continue
 		}
-		for _, projectPath := range projects {
-			label := life.SphereEmoji(spherePath) + " " + life.AreaEmoji(projectPath) + " " + life.AreaTitle(projectPath)
+		for _, projectPath := range areas {
+			label := life.AreaPickerLabel(spherePath, projectPath)
 			kb.AddRow(tg.NewBtn(
 				label,
 				tg.NewCmd(CmdSaveTaskToArea, []string{draftHash, fs.ShortHash(projectPath), priorityIdxStr}),
@@ -138,12 +138,12 @@ func (b *Bot) showNoteAreaPicker(draftHash string) error {
 
 	kb := tg.NewKeyboard(nil)
 	for _, spherePath := range spheres {
-		projects, err := life.ListProjects(b.fs, spherePath)
+		areas, err := life.ListAllAreas(b.fs, spherePath)
 		if err != nil {
 			continue
 		}
-		for _, projectPath := range projects {
-			label := life.SphereEmoji(spherePath) + life.AreaEmoji(projectPath)
+		for _, projectPath := range areas {
+			label := life.AreaPickerLabel(spherePath, projectPath)
 			kb.AddRow(tg.NewBtn(
 				label,
 				tg.NewCmd(CmdSaveNoteToArea, []string{draftHash, fs.ShortHash(projectPath), life.KindCode(life.KindDraft)}),
@@ -193,7 +193,8 @@ func (b *Bot) saveTaskToArea(params []string) error {
 
 	b.setRecentLifeProject(projectPath)
 	b.delAllKeyboards()
-	msg := fmt.Sprintf(i18n.Tr("Сохранено в <b>%s %s</b>"), life.AreaEmoji(projectPath), life.AreaTitle(projectPath))
+	spherePath := life.SpherePathFromArea(projectPath)
+	msg := fmt.Sprintf(i18n.Tr("Сохранено в <b>%s</b>"), life.SaveLocationLabel(spherePath, projectPath))
 	_, _ = b.tg.Send(b.userID, msg, nil, tg.MarkupHTML)
 
 	return b.ShowHome(nil)
@@ -227,7 +228,15 @@ func taskTextFromDraft(content string) (string, error) {
 	if content == "" {
 		return "", fmt.Errorf("empty task")
 	}
-	return strings.ReplaceAll(content, "\n", " "), nil
+	var parts []string
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts = append(parts, line)
+	}
+	return strings.Join(parts, " "), nil
 }
 
 func (b *Bot) saveNoteToArea(params []string) error {
@@ -262,7 +271,8 @@ func (b *Bot) saveNoteToArea(params []string) error {
 
 	b.setRecentLifeProject(projectPath)
 	b.delAllKeyboards()
-	msg := fmt.Sprintf(i18n.Tr("Сохранено в <b>%s</b> → %s"), life.AreaEmoji(projectPath), lifeKindLabel(kind))
+	spherePath := life.SpherePathFromArea(projectPath)
+	msg := fmt.Sprintf(i18n.Tr("Сохранено в <b>%s</b> → %s"), life.SaveLocationLabel(spherePath, projectPath), lifeKindLabel(kind))
 	_, _ = b.tg.Send(b.userID, msg, nil, tg.MarkupHTML)
 
 	return b.ShowHome(nil)

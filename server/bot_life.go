@@ -85,6 +85,15 @@ func (b *Bot) showLifeProject(params []string) error {
 	}
 
 	var kb tg.Keyboard
+	sections, _ := life.ListChildAreas(b.fs, projectPath)
+	for _, sectionPath := range sections {
+		btn := tg.NewBtn(
+			life.NestedAreaLabel(sectionPath),
+			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(sectionPath)}),
+		)
+		kb.AddRow(btn)
+	}
+
 	kb.AddRow(tg.NewRow(
 		tg.NewBtn(i18n.Tr("📝 Черновики"), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindDraft)})),
 		tg.NewBtn(i18n.Tr("✨ Финальные"), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindFinal)})),
@@ -92,16 +101,22 @@ func (b *Bot) showLifeProject(params []string) error {
 	kb.AddRow(tg.NewBtn(i18n.Tr("💬 Обсуждения"), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindDiscussion)})))
 	kb.AddRow(tg.NewBtn(i18n.Tr("📄 Проект"), tg.NewCmd(CmdShowFile, []string{fs.ShortHash(projectPath), fs.ShortHash(life.ProjectHubFile)})))
 
-	if life.IsProjectPath(projectPath) {
-		kb.AddRow(tg.NewBtn(i18n.Tr("↔️ В другую сферу"), tg.NewCmd(CmdShowMoveToSphere, []string{fs.ShortHash(projectPath)})))
+	if life.IsAreaPath(projectPath) {
+		kb.AddRow(tg.NewBtn("➕", tg.NewCmd(CmdLifeNewSection, []string{fs.ShortHash(projectPath)})))
+		kb.AddRow(tg.NewBtn("↔️", tg.NewCmd(CmdShowMoveToSphere, []string{fs.ShortHash(projectPath)})))
 	}
 
-	kb.AddRow(tg.NewRow(
-		tg.NewBtn(i18n.Tr("🌐 Сферы"), tg.NewCmd(CmdShowLifeSpheres, nil)),
-		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
-	))
+	parent := life.ParentAreaPath(projectPath)
+	if life.IsSpherePath(parent) {
+		kb.AddRow(tg.NewBtn("⬅️", tg.NewCmd(CmdShowLifeSphere, []string{fs.ShortHash(parent)})))
+	} else if parent != "" {
+		kb.AddRow(tg.NewBtn("⬅️", tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(parent)})))
+	}
+	kb.AddRow(tg.NewBtn("🌐", tg.NewCmd(CmdShowLifeSpheres, nil)))
 
-	title := fmt.Sprintf("%s %s", i18n.Tr("🏗 Область:"), life.AreaTitle(projectPath))
+	kb.AddRow(tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)))
+
+	title := fmt.Sprintf("%s %s", i18n.Tr("🏗 Область:"), life.AreaFullTitle(projectPath))
 	return b.showHTML(title, &kb)
 }
 
@@ -263,7 +278,33 @@ func (b *Bot) createLifeProjectOnly(params []string) error {
 		tg.NewBtn(i18n.Tr("🏗 Проект"), tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)})),
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	})
-	msg := fmt.Sprintf(i18n.Tr("Проект <b>%s</b> создан"), fs.DisplayName(projectPath))
+	msg := fmt.Sprintf(i18n.Tr("Проект <b>%s</b> создан"), life.AreaFullTitle(projectPath))
+	return b.showHTML(msg, kb)
+}
+
+func (b *Bot) lifeNewSection(params []string) error {
+	areaHash := params[0]
+	b.db.SetInputExpectation(tg.NewCmd(CmdLifeCreateSection, []string{areaHash, "%s"}))
+	return b.showHTML(i18n.Tr("Пришли имя нового раздела:"), nil)
+}
+
+func (b *Bot) createLifeSection(params []string) error {
+	parentPath, err := b.fs.ResolveDirParam(params[0])
+	if err != nil {
+		return fmt.Errorf("create section: %w", err)
+	}
+	sectionName := params[1]
+
+	sectionPath, err := life.CreateSection(b.fs, parentPath, sectionName)
+	if err != nil {
+		return fmt.Errorf("create section: %w", err)
+	}
+
+	kb := tg.NewKeyboard([]tg.Row{
+		tg.NewBtn("🏗", tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(sectionPath)})),
+		tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)),
+	})
+	msg := fmt.Sprintf(i18n.Tr("Раздел <b>%s</b> создан"), life.AreaFullTitle(sectionPath))
 	return b.showHTML(msg, kb)
 }
 
@@ -293,7 +334,8 @@ func (b *Bot) saveChatToLifeProject(projectPath string, kind life.Kind, msgHash 
 	b.delAllKeyboards()
 
 	label := lifeKindLabel(kind)
-	projectLabel := fs.DisplayName(projectPath)
+	spherePath := life.SpherePathFromArea(projectPath)
+	projectLabel := life.SaveLocationLabel(spherePath, projectPath)
 	msg := fmt.Sprintf(i18n.Tr("Сохранено в <b>%s</b> → %s"), projectLabel, label)
 	_, _ = b.tg.Send(b.userID, msg, nil, tg.MarkupHTML)
 
@@ -313,13 +355,13 @@ func (b *Bot) addToLifeFromShortcut(kind life.Kind, params []string) error {
 		}
 	}
 
-	spherePath, projectName, err := resolveLifeShortcutProject(b.fs, projectPath)
+	spherePath, fullProjectPath, err := resolveLifeShortcutProject(b.fs, projectPath)
 	if err != nil {
 		return fmt.Errorf("life shortcut: %w", err)
 	}
-	fullProjectPath, err := life.CreateProject(b.fs, spherePath, projectName)
-	if err != nil {
-		return fmt.Errorf("life shortcut: %w", err)
+	_ = spherePath
+	if !life.IsAreaPath(fullProjectPath) {
+		return fmt.Errorf("life shortcut: can't resolve area")
 	}
 
 	title, body, err := b.extractHeaderAndBody(content, maxHeaderLength)
@@ -338,7 +380,7 @@ func (b *Bot) addToLifeFromShortcut(kind life.Kind, params []string) error {
 
 	b.setRecentLifeProject(fullProjectPath)
 	label := lifeKindLabel(kind)
-	msg := fmt.Sprintf(i18n.Tr("Сохранено в <b>%s</b> → %s"), fs.DisplayName(fullProjectPath), label)
+	msg := fmt.Sprintf(i18n.Tr("Сохранено в <b>%s</b> → %s"), life.SaveLocationLabel(life.SpherePathFromArea(fullProjectPath), fullProjectPath), label)
 	_, _ = b.tg.Send(b.userID, msg, nil, tg.MarkupHTML)
 
 	return b.ShowHome(nil)
@@ -479,16 +521,15 @@ func parseLifeShortcutTarget(text string) (target, rest string, ok bool) {
 	return parts[0], strings.TrimSpace(parts[1]), true
 }
 
-func resolveLifeShortcutProject(fsys *fs.FS, shortcut string) (spherePath, projectName string, err error) {
+func resolveLifeShortcutProject(fsys *fs.FS, shortcut string) (spherePath, areaPath string, err error) {
 	shortcut = strings.Trim(shortcut, "/")
 	parts := strings.Split(shortcut, "/")
 	if len(parts) < 2 {
 		return "", "", fmt.Errorf("shortcut project needs Sphere/Project format")
 	}
 	sphereName := parts[0]
-	projectName = strings.Join(parts[1:], "/")
-	spherePath = life.SpherePath(sphereName)
-	exists, err := fsys.Exists(spherePath, "")
+	areaPath = life.SpherePath(sphereName)
+	exists, err := fsys.Exists(areaPath, "")
 	if err != nil {
 		return "", "", err
 	}
@@ -497,7 +538,20 @@ func resolveLifeShortcutProject(fsys *fs.FS, shortcut string) (spherePath, proje
 			return "", "", err
 		}
 	}
-	return spherePath, projectName, nil
+	for i, name := range parts[1:] {
+		var child string
+		var createErr error
+		if i == 0 {
+			child, createErr = life.CreateProject(fsys, areaPath, name)
+		} else {
+			child, createErr = life.CreateSection(fsys, areaPath, name)
+		}
+		if createErr != nil {
+			return "", "", createErr
+		}
+		areaPath = child
+	}
+	return life.SpherePath(sphereName), areaPath, nil
 }
 
 func lifeKindLabel(kind life.Kind) string {
@@ -513,11 +567,147 @@ func lifeKindLabel(kind life.Kind) string {
 	}
 }
 
+func noteDetailKeyboard(dir, filename, dirHash string) *tg.Keyboard {
+	row := tg.NewRow(
+		tg.NewBtn("⬅️", noteBackCmd(dir)),
+		tg.NewBtn("🔎", tg.NewCustomCmd(CmdInlineQuerySearchEveryWhere, nil, tg.CmdTypeInlineQueryCurrentChat)),
+	)
+
+	if life.IsDocDir(dir) {
+		currentKind, _ := life.KindFromSubdir(baseName(dir))
+		for _, kind := range []life.Kind{life.KindDraft, life.KindFinal, life.KindDiscussion} {
+			if kind == currentKind {
+				continue
+			}
+			row = append(row, tg.NewBtn(
+				life.KindEmoji(kind),
+				tg.NewCmd(CmdMoveNoteKind, []string{dirHash, fs.Hash(filename), life.KindCode(kind)}),
+			))
+		}
+		row = append(row, tg.NewBtn("↔️", tg.NewCmd(CmdShowMoveNoteArea, []string{dirHash, fs.Hash(filename)})))
+	}
+
+	if canDeleteNote(dir, filename) {
+		row = append(row, tg.NewBtn("🗑", tg.NewCmd(CmdShowDeleteFile, []string{dirHash, fs.Hash(filename)})))
+	}
+	row = append(row, tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)))
+	return tg.NewKeyboard([]tg.Row{row})
+}
+
+func (b *Bot) moveNoteKind(params []string) error {
+	if len(params) < 3 {
+		return fmt.Errorf("move note kind: missing params")
+	}
+	dir, err := b.fs.ResolveDirParam(params[0])
+	if err != nil {
+		return fmt.Errorf("move note kind: %w", err)
+	}
+	filename, err := b.fs.Unhash(dir, params[1])
+	if err != nil {
+		return fmt.Errorf("move note kind: %w", err)
+	}
+	kind, ok := life.KindFromCode(params[2])
+	if !ok {
+		return fmt.Errorf("move note kind: bad kind")
+	}
+	if err := life.MoveDocKind(b.fs, dir, filename, kind); err != nil {
+		return fmt.Errorf("move note kind: %w", err)
+	}
+	newDir := life.DocDir(lifeMustAreaPathFromDoc(dir), kind)
+	return b.showFile([]string{fs.ShortHash(newDir), fs.Hash(filename)})
+}
+
+func (b *Bot) showMoveNoteArea(params []string) error {
+	if len(params) < 2 {
+		return fmt.Errorf("show move note area: missing params")
+	}
+	dirHash := params[0]
+	filenameHash := params[1]
+	srcDir, err := b.fs.ResolveDirParam(dirHash)
+	if err != nil {
+		return fmt.Errorf("show move note area: %w", err)
+	}
+	srcArea, ok := life.ProjectPathFromDoc(srcDir)
+	if !ok {
+		return fmt.Errorf("show move note area: not a life doc")
+	}
+
+	_ = life.EnsureSpheresRoot(b.fs)
+	spheres, err := life.ListSpheres(b.fs)
+	if err != nil {
+		return fmt.Errorf("show move note area: %w", err)
+	}
+
+	var kb tg.Keyboard
+	for _, spherePath := range spheres {
+		areas, err := life.ListAllAreas(b.fs, spherePath)
+		if err != nil {
+			continue
+		}
+		for _, areaPath := range areas {
+			if areaPath == srcArea {
+				continue
+			}
+			kb.AddRow(tg.NewBtn(
+				life.AreaPickerLabel(spherePath, areaPath),
+				tg.NewCmd(CmdMoveNoteArea, []string{dirHash, filenameHash, fs.ShortHash(areaPath)}),
+			))
+		}
+	}
+	if len(kb.Btns) == 0 {
+		kb.AddRow(tg.NewBtn("—", tg.NewCmd(CmdDoNothing, nil)))
+	}
+	kb.AddRow(tg.NewBtn("⬅️", tg.NewCmd(CmdShowFile, []string{dirHash, filenameHash})))
+	return b.showHTML(i18n.Tr("Переместить заметку в область:"), &kb)
+}
+
+func (b *Bot) moveNoteArea(params []string) error {
+	if len(params) < 3 {
+		return fmt.Errorf("move note area: missing params")
+	}
+	dir, err := b.fs.ResolveDirParam(params[0])
+	if err != nil {
+		return fmt.Errorf("move note area: %w", err)
+	}
+	filename, err := b.fs.Unhash(dir, params[1])
+	if err != nil {
+		return fmt.Errorf("move note area: %w", err)
+	}
+	dstArea, err := b.fs.ResolveDirParam(params[2])
+	if err != nil {
+		return fmt.Errorf("move note area: %w", err)
+	}
+	if err := life.MoveDocToArea(b.fs, dir, filename, dstArea); err != nil {
+		return fmt.Errorf("move note area: %w", err)
+	}
+	kind, _ := life.KindFromSubdir(baseName(dir))
+	newDir := life.DocDir(dstArea, kind)
+	return b.showFile([]string{fs.ShortHash(newDir), fs.Hash(filename)})
+}
+
+func lifeMustAreaPathFromDoc(docDir string) string {
+	area, ok := life.ProjectPathFromDoc(docDir)
+	if !ok {
+		return ""
+	}
+	return area
+}
+
+func noteBackCmd(dir string) tg.Cmd {
+	if projectPath, ok := life.ProjectPathFromDoc(dir); ok {
+		if kind, ok := life.KindFromSubdir(baseName(dir)); ok {
+			return tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(kind)})
+		}
+		return tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)})
+	}
+	return tg.NewCmd(CmdShowFiles, nil)
+}
+
 func lifeFinalizeBtn(dir, filename string) *tg.Btn {
 	if baseName(dir) != life.SubDirDrafts {
 		return nil
 	}
-	btn := tg.NewBtn(i18n.Tr("✨ Финализировать"), tg.NewCmd(CmdFinalizeDoc, []string{fs.ShortHash(dir), fs.ShortHash(filename)}))
+	btn := tg.NewBtn("✨", tg.NewCmd(CmdFinalizeDoc, []string{fs.ShortHash(dir), fs.ShortHash(filename)}))
 	return &btn
 }
 
@@ -535,7 +725,7 @@ func lifeMoveSphereBtn(dir, filename string) *tg.Btn {
 	if !life.IsLifePath(itemPath) {
 		return nil
 	}
-	btn := tg.NewBtn(i18n.Tr("↔️ В другую сферу"), tg.NewCmd(CmdShowMoveToSphere, params))
+	btn := tg.NewBtn("↔️", tg.NewCmd(CmdShowMoveToSphere, params))
 	return &btn
 }
 

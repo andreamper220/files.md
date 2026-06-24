@@ -95,6 +95,10 @@ func (u *Upd) AudioOnlyID() (string, bool) {
 	return "", false
 }
 
+func (u *Upd) DocumentOnlyID() (string, bool) {
+	return "", false
+}
+
 func (u *Upd) Caption() string {
 	return u.PhotoCaption
 }

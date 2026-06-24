@@ -79,6 +79,7 @@ type Update interface {
 	ReplyToMsgID() (int, bool)
 	PhotoOrImageID() (string, bool)
 	AudioOnlyID() (string, bool)
+	DocumentOnlyID() (string, bool)
 	Caption() string
 	MsgID() (int, bool)
 	Time() (int, bool)
@@ -220,6 +221,8 @@ const (
 	CmdLifeCreateProject               = "lp_cr"
 	CmdLifeNewProject                  = "lp_new"
 	CmdLifeCreateProjectOnly           = "lp_cro"
+	CmdLifeNewSection                  = "lp_nsec"
+	CmdLifeCreateSection               = "lp_csec"
 	CmdShowMoveToSphere                = "mv_sph"
 	CmdMoveToSphere                    = "mv_sp"
 	CmdAddToDraftShortcut              = "draft_sc"
@@ -234,6 +237,10 @@ const (
 	CmdSaveNoteToArea                  = "note_area"
 	CmdSaveTaskToArea                  = "task_area"
 	CmdMoveToAreaTask                  = "mv_area"
+	CmdMoveAreaTask                    = "mv_ar"
+	CmdMoveNoteKind                    = "note_k"
+	CmdShowMoveNoteArea                = "note_ma"
+	CmdMoveNoteArea                    = "note_m2"
 	CmdCompleteAreaTask                = "area_c"
 	CmdShowTask                        = "task_show"
 	CmdDeleteTask                      = "task_del"
@@ -353,6 +360,8 @@ func (b *Bot) Reply(u Update) error {
 		err = b.saveFromAudio(u)
 	} else if _, hasImage := u.PhotoOrImageID(); hasImage {
 		err = b.saveFromImage(u)
+	} else if _, hasDoc := u.DocumentOnlyID(); hasDoc {
+		err = b.saveFromDocument(u)
 	} else {
 		err = b.saveFromTextMsg(u)
 	}
@@ -395,6 +404,8 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdLifeCreateProject:   b.createLifeProject,
 		CmdLifeNewProject:      b.lifeNewProject,
 		CmdLifeCreateProjectOnly: b.createLifeProjectOnly,
+		CmdLifeNewSection:        b.lifeNewSection,
+		CmdLifeCreateSection:     b.createLifeSection,
 		CmdShowMoveToSphere:    b.showMoveToSphere,
 		CmdMoveToSphere:        b.moveToSphere,
 		CmdAddToDraftShortcut:      b.addToDraftFromShortcut,
@@ -409,7 +420,11 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdShowNotesHub:              b.showNotesHub,
 		CmdSaveNoteToArea:            b.saveNoteToArea,
 		CmdSaveTaskToArea:            b.saveTaskToArea,
-		CmdMoveToAreaTask:            b.moveToAreaTask,
+		CmdMoveToAreaTask:            b.showMoveAreaTask,
+		CmdMoveAreaTask:              b.moveAreaTask,
+		CmdMoveNoteKind:              b.moveNoteKind,
+		CmdShowMoveNoteArea:          b.showMoveNoteArea,
+		CmdMoveNoteArea:              b.moveNoteArea,
 		CmdCompleteAreaTask:          b.completeAreaTask,
 		CmdShowTask:                  b.showTask,
 		CmdDeleteTask:                b.deleteTask,
@@ -680,13 +695,50 @@ func (b *Bot) saveAudio(u Update) (string, error) {
 		}
 	}
 	if content == "" {
-		content = "🎙 Голосовое сообщение"
+		content = txt.VoicePlaceholder
 	}
 	content = fmt.Sprintf("%s\n\n![](%s)", content, audioPath)
 
 	if u.Caption() != "" {
 		caption := txt.TelegramEntitiesToMarkdown(u.Caption(), u.CaptionEntities())
 		content = fmt.Sprintf("%s\n%s", content, strings.TrimSpace(caption))
+	}
+
+	return content, nil
+}
+
+func (b *Bot) saveFromDocument(u Update) error {
+	content, err := b.saveDocument(u)
+	if err != nil {
+		return fmt.Errorf("save from document: %w", err)
+	}
+
+	if replyMsgID, ok := u.ReplyToMsgID(); ok {
+		return b.addToReplied(replyMsgID, content)
+	}
+
+	return b.queueIncomingContent(content)
+}
+
+func (b *Bot) saveDocument(u Update) (string, error) {
+	docID, _ := u.DocumentOnlyID()
+
+	var buf bytes.Buffer
+	extension, err := b.tg.DownloadFile(docID, &buf)
+	if err != nil {
+		return "", fmt.Errorf("can't download document: %w", err)
+	}
+
+	docFilename := fmt.Sprintf("tg_%s%s", docID, extension)
+	if err := b.fs.Write(fs.DirMedia, docFilename, buf.String()); err != nil {
+		return "", fmt.Errorf("can't save document: %w", err)
+	}
+
+	docPath := fmt.Sprintf("%s/%s", fs.DirMedia, docFilename)
+	content := fmt.Sprintf("📎 [%s](%s)", fs.DisplayName(docFilename), docPath)
+	if u.Caption() != "" {
+		caption := txt.TelegramEntitiesToMarkdown(u.Caption(), u.CaptionEntities())
+		content = fmt.Sprintf("%s\n%s", strings.TrimSpace(caption), content)
 	}
 
 	return content, nil
@@ -912,6 +964,11 @@ func (b *Bot) extractHeaderAndBody(msg string, maxHeaderLen int) (string, string
 
 	parts := strings.Split(msg, "\n")
 	title := txt.Ucfirst(strings.TrimSpace(parts[0]))
+	if title == txt.VoicePlaceholder {
+		if alt := txt.DisplayText(msg); alt != "" && alt != txt.VoicePlaceholder {
+			title = txt.Ucfirst(alt)
+		}
+	}
 	if txt.HasImage(title) {
 		if len(parts) > 1 {
 			title = txt.Ucfirst(strings.TrimSpace(parts[1]))
@@ -1765,28 +1822,13 @@ func (b *Bot) showFile(params []string) error {
 	}
 
 	isNotesDir := len(fs.OnlyNoteDirs([]fs.File{{Name: dir}})) > 0
-	row := tg.NewRow()
-	if isNotesDir {
-		inlineCmd := tg.NewCustomCmd(CmdInlineQuerySearchEveryWhere, nil, tg.CmdTypeInlineQueryCurrentChat)
-		row = append(row, tg.NewBtn(i18n.Tr("🔎 Search"), inlineCmd))
-
-		hasChannelsToPrint := len(b.cfg.Channels()) > 0
-		if hasChannelsToPrint {
-			cmd := tg.NewCmd(CmdShare, []string{fs.Hash(dir), fs.Hash(filename)})
-			row = append(row, tg.NewBtn(i18n.Tr("🖨 Share"), cmd))
-		}
+	var kb *tg.Keyboard
+	if life.IsDocDir(dir) || isNotesDir {
+		kb = noteDetailKeyboard(dir, filename, dirHash)
+	} else {
+		row := tg.NewRow(tg.NewBtn("⬅️", noteBackCmd(dir)), tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)))
+		kb = tg.NewKeyboard([]tg.Row{row})
 	}
-	if finalizeBtn := lifeFinalizeBtn(dir, filename); finalizeBtn != nil {
-		row = append(row, *finalizeBtn)
-	}
-	if moveBtn := lifeMoveSphereBtn(dir, filename); moveBtn != nil {
-		row = append(row, *moveBtn)
-	}
-	if canDeleteNote(dir, filename) {
-		row = append(row, tg.NewBtn(i18n.Tr("🗑 Delete"), tg.NewCmd(CmdShowDeleteFile, []string{dirHash, fs.Hash(filename)})))
-	}
-	row = append(row, tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
-	kb := tg.NewKeyboard([]tg.Row{row})
 
 	md := fmt.Sprintf("**%s**\n\n%s", fs.DisplayName(filename), content)
 	err = b.showMD(md, kb)
