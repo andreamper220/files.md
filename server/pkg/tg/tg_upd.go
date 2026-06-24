@@ -261,6 +261,15 @@ func (u *TGUpd) DocumentOnlyID() (string, bool) {
 	return message.Document.FileID, true
 }
 
+// DocumentFileName returns the original filename for a document attachment.
+func (u *TGUpd) DocumentFileName() string {
+	message := u.raw.Message
+	if message == nil || message.Document == nil {
+		return ""
+	}
+	return message.Document.FileName
+}
+
 // Caption returns the caption for the animation, audio,
 // document, paid media, photo, video or voice
 func (u *TGUpd) Caption() string {

@@ -134,7 +134,7 @@ func (b *Bot) deleteFile(params []string) error {
 	b.delAllKeyboards()
 	_, _ = b.tg.Send(b.userID, b.tr("Deleted <b>%s</b>", fs.DisplayName(filename)), nil, tg.MarkupHTML)
 
-	return b.showDirs([]string{dirHashParam(dir)})
+	return b.ShowHome(nil)
 }
 
 func (b *Bot) showDeleteDirConfirm(params []string) error {
@@ -147,12 +147,10 @@ func (b *Bot) showDeleteDirConfirm(params []string) error {
 	}
 
 	dirHash := fs.ShortHash(dir)
-	parent := fs.ParentDirPath(dir)
-	backParam := dirHashParam(parent)
 
 	kb := tg.NewKeyboard([]tg.Row{
 		tg.NewRow(
-			tg.NewBtn(i18n.Tr(i18n.StrBack), tg.NewCmd(CmdShowDirs, []string{backParam})),
+			tg.NewBtn(i18n.Tr(i18n.StrBack), tg.NewCmd(CmdShowHome, nil)),
 			tg.NewBtn(i18n.Tr("Yes, delete"), tg.NewCmd(CmdDeleteDir, []string{dirHash})),
 		),
 	})
@@ -177,7 +175,7 @@ func (b *Bot) deleteDir(params []string) error {
 	b.delAllKeyboards()
 	_, _ = b.tg.Send(b.userID, b.tr("Deleted folder <b>%s</b>", fs.DisplayName(dir)), nil, tg.MarkupHTML)
 
-	return b.showDirs([]string{dirHashParam(fs.ParentDirPath(dir))})
+	return b.ShowHome(nil)
 }
 
 func (b *Bot) resolveNotePath(dirHash, filenameHash string) (string, string, error) {

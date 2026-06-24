@@ -60,13 +60,7 @@ func (b *Bot) showLifeSphere(params []string) error {
 	}
 
 	var kb tg.Keyboard
-	for _, projectPath := range projects {
-		btn := tg.NewBtn(
-			life.NestedAreaLabel(projectPath),
-			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)}),
-		)
-		kb.AddRow(btn)
-	}
+	addAreaNavBtns(&kb, projects, CmdShowLifeProject)
 
 	kb.AddRow(tg.NewBtn(i18n.Tr("➕ Новая область"), tg.NewCmd(CmdLifeNewProject, []string{fs.ShortHash(spherePath)})))
 	kb.AddRow(tg.NewRow(
@@ -86,20 +80,13 @@ func (b *Bot) showLifeProject(params []string) error {
 
 	var kb tg.Keyboard
 	sections, _ := life.ListChildAreas(b.fs, projectPath)
-	for _, sectionPath := range sections {
-		btn := tg.NewBtn(
-			life.NestedAreaLabel(sectionPath),
-			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(sectionPath)}),
-		)
-		kb.AddRow(btn)
-	}
+	addAreaNavBtns(&kb, sections, CmdShowLifeProject)
 
 	kb.AddRow(tg.NewRow(
 		tg.NewBtn(i18n.Tr("📝 Черновики"), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindDraft)})),
 		tg.NewBtn(i18n.Tr("✨ Финальные"), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindFinal)})),
 	))
 	kb.AddRow(tg.NewBtn(i18n.Tr("💬 Обсуждения"), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindDiscussion)})))
-	kb.AddRow(tg.NewBtn(i18n.Tr("📄 Проект"), tg.NewCmd(CmdShowFile, []string{fs.ShortHash(projectPath), fs.ShortHash(life.ProjectHubFile)})))
 
 	if life.IsAreaPath(projectPath) {
 		kb.AddRow(tg.NewBtn("➕", tg.NewCmd(CmdLifeNewSection, []string{fs.ShortHash(projectPath)})))
@@ -107,7 +94,9 @@ func (b *Bot) showLifeProject(params []string) error {
 	}
 
 	parent := life.ParentAreaPath(projectPath)
-	if life.IsSpherePath(parent) {
+	if life.AreaDepth(projectPath) >= 2 && parent != "" {
+		kb.AddRow(tg.NewBtn("⬆️", tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(parent)})))
+	} else if life.IsSpherePath(parent) {
 		kb.AddRow(tg.NewBtn("⬅️", tg.NewCmd(CmdShowLifeSphere, []string{fs.ShortHash(parent)})))
 	} else if parent != "" {
 		kb.AddRow(tg.NewBtn("⬅️", tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(parent)})))
@@ -700,7 +689,24 @@ func noteBackCmd(dir string) tg.Cmd {
 		}
 		return tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)})
 	}
-	return tg.NewCmd(CmdShowFiles, nil)
+	return tg.NewCmd(CmdShowHome, nil)
+}
+
+func addAreaNavBtns(kb *tg.Keyboard, areaPaths []string, cmd string) {
+	row := tg.NewRow()
+	for _, areaPath := range areaPaths {
+		row = append(row, tg.NewBtn(
+			life.AreaNavBtnLabel(areaPath),
+			tg.NewCmd(cmd, []string{fs.ShortHash(areaPath)}),
+		))
+		if len(row) >= btnsPerRow {
+			kb.AddRow(row)
+			row = tg.NewRow()
+		}
+	}
+	if len(row) > 0 {
+		kb.AddRow(row)
+	}
 }
 
 func lifeFinalizeBtn(dir, filename string) *tg.Btn {

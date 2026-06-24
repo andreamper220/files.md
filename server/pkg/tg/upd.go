@@ -99,6 +99,10 @@ func (u *Upd) DocumentOnlyID() (string, bool) {
 	return "", false
 }
 
+func (u *Upd) DocumentFileName() string {
+	return ""
+}
+
 func (u *Upd) Caption() string {
 	return u.PhotoCaption
 }

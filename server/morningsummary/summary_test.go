@@ -45,7 +45,7 @@ func TestBuild_IncludesNotesSection(t *testing.T) {
 	r.NotContains(report, "💬")
 }
 
-func TestBuild_ShowsDoneTaskCountsByPriority(t *testing.T) {
+func TestBuild_ShowsOpenTaskCountsByPriority(t *testing.T) {
 	r := require.New(t)
 
 	savedCtime := fs.Ctime
@@ -64,7 +64,7 @@ func TestBuild_ShowsDoneTaskCountsByPriority(t *testing.T) {
 	projectPath, err := life.CreateProject(userFS, spheres[0], "Тест")
 	r.NoError(err)
 
-	err = userFS.Write(projectPath, life.TasksFilename, "- [x] 🔴 Done one\n- [x] 🟠 Done two\n")
+	err = userFS.Write(projectPath, life.TasksFilename, "- [ ] 🔴 Open one\n- [ ] 🟠 Open two\n")
 	r.NoError(err)
 
 	cfg := userconfig.NewConfig(userFS, 1, "config.json")

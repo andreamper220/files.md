@@ -80,6 +80,7 @@ type Update interface {
 	PhotoOrImageID() (string, bool)
 	AudioOnlyID() (string, bool)
 	DocumentOnlyID() (string, bool)
+	DocumentFileName() string
 	Caption() string
 	MsgID() (int, bool)
 	Time() (int, bool)
@@ -97,6 +98,7 @@ type Chat interface {
 	AnswerCallbackQuery(queryID string, text string) error
 	AnswerInlineQuery(queryID string, results []interface{}, cacheTime int, offset string) error
 	DownloadFile(fileID string, outFile io.Writer) (string, error)
+	SendDocument(userID int64, filename string, content io.Reader, caption string, kb *tg.Keyboard) (int, error)
 }
 
 // Database stores per user data like "last sent message id"
@@ -232,6 +234,7 @@ const (
 	CmdSaveAsTask                      = "as_task"
 	CmdPickTaskPriority                = "task_prio"
 	CmdSaveAsNote                      = "as_note"
+	CmdApplyDraftTitle                 = "d_title"
 	CmdShowTasksView                   = "tasks_v"
 	CmdShowNotesHub                    = "notes_h"
 	CmdSaveNoteToArea                  = "note_area"
@@ -416,6 +419,7 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdSaveAsTask:                b.saveAsTask,
 		CmdPickTaskPriority:          b.pickTaskPriority,
 		CmdSaveAsNote:                b.saveAsNote,
+		CmdApplyDraftTitle:           b.applyDraftTitle,
 		CmdShowTasksView:             b.showTasksView,
 		CmdShowNotesHub:              b.showNotesHub,
 		CmdSaveNoteToArea:            b.saveNoteToArea,
@@ -525,16 +529,20 @@ func (b *Bot) extractCmd(u Update) (*tg.Cmd, error) {
 	// Input expectation is mostly used for renaming things
 	cmd = b.db.InputExpectation()
 	if cmd != nil {
-		slog.Debug("Got command from input expectation", "command", cmd.Name)
-		b.db.DelInputExpectation()
+		if cmd.Name == CmdApplyDraftTitle && isMediaUpdate(u) {
+			b.db.DelInputExpectation()
+		} else {
+			slog.Debug("Got command from input expectation", "command", cmd.Name)
+			b.db.DelInputExpectation()
 
-		for i, param := range cmd.Params {
-			if param == "%s" {
-				cmd.Params[i] = u.MsgText()
+			for i, param := range cmd.Params {
+				if param == "%s" {
+					cmd.Params[i] = u.MsgText()
+				}
 			}
-		}
 
-		return cmd, nil
+			return cmd, nil
+		}
 	}
 
 	for canonicalCMD, shortcuts := range Shortcuts {
@@ -572,6 +580,19 @@ func (b *Bot) extractCmd(u Update) (*tg.Cmd, error) {
 	}
 
 	return nil, nil
+}
+
+func isMediaUpdate(u Update) bool {
+	if _, ok := u.AudioOnlyID(); ok {
+		return true
+	}
+	if _, ok := u.PhotoOrImageID(); ok {
+		return true
+	}
+	if _, ok := u.DocumentOnlyID(); ok {
+		return true
+	}
+	return false
 }
 
 func (b *Bot) saveFromTextMsg(u Update) error {
@@ -647,7 +668,12 @@ func (b *Bot) saveFromImage(u Update) error {
 }
 
 func (b *Bot) saveFromAudio(u Update) error {
+	statusID := b.sendVoiceTranscriptionStatus()
+
 	content, err := b.saveAudio(u)
+	if statusID > 0 {
+		b.finishVoiceTranscriptionStatus(statusID, content, err)
+	}
 	if err != nil {
 		return fmt.Errorf("save from audio: %w", err)
 	}
@@ -657,6 +683,36 @@ func (b *Bot) saveFromAudio(u Update) error {
 	}
 
 	return b.queueIncomingContent(content)
+}
+
+func (b *Bot) sendVoiceTranscriptionStatus() int {
+	var msg string
+	if config.ServerCfg.KieAPIKey != "" {
+		msg = i18n.Tr("🎙 Расшифровываю…")
+	} else {
+		msg = i18n.Tr("🎙 Сохраняю голосовое…")
+	}
+	id, err := b.tg.Send(b.userID, msg, nil, tg.MarkupHTML)
+	if err != nil {
+		return 0
+	}
+	return id
+}
+
+func (b *Bot) finishVoiceTranscriptionStatus(statusID int, content string, saveErr error) {
+	var msg string
+	switch {
+	case saveErr != nil:
+		msg = i18n.Tr("🎙 Ошибка сохранения")
+	case config.ServerCfg.KieAPIKey == "":
+		msg = i18n.Tr("🎙 Сохранено")
+	case txt.VoiceSummary(content) != "":
+		msg = i18n.Tr("🎙 Расшифровано ✓")
+	default:
+		msg = i18n.Tr("🎙 Не удалось расшифровать")
+	}
+	_ = b.tg.Edit(b.userID, statusID, msg, nil, tg.MarkupHTML)
+	_ = b.tg.Del(b.userID, statusID)
 }
 
 func (b *Bot) saveAudio(u Update) (string, error) {
@@ -691,7 +747,7 @@ func (b *Bot) saveAudio(u Update) (string, error) {
 		if sttErr != nil {
 			slog.Warn("voice transcription failed", "err", sttErr)
 		} else if strings.TrimSpace(transcript) != "" {
-			content = txt.Ucfirst(strings.TrimSpace(transcript))
+			content = txt.FormatVoiceContent(strings.TrimSpace(transcript))
 		}
 	}
 	if content == "" {
@@ -735,7 +791,7 @@ func (b *Bot) saveDocument(u Update) (string, error) {
 	}
 
 	docPath := fmt.Sprintf("%s/%s", fs.DirMedia, docFilename)
-	content := fmt.Sprintf("📎 [%s](%s)", fs.DisplayName(docFilename), docPath)
+	content := txt.FormatAttachmentContent(docPath)
 	if u.Caption() != "" {
 		caption := txt.TelegramEntitiesToMarkdown(u.Caption(), u.CaptionEntities())
 		content = fmt.Sprintf("%s\n%s", strings.TrimSpace(caption), content)
@@ -965,7 +1021,7 @@ func (b *Bot) extractHeaderAndBody(msg string, maxHeaderLen int) (string, string
 	parts := strings.Split(msg, "\n")
 	title := txt.Ucfirst(strings.TrimSpace(parts[0]))
 	if title == txt.VoicePlaceholder {
-		if alt := txt.DisplayText(msg); alt != "" && alt != txt.VoicePlaceholder {
+		if alt := txt.VoiceSummary(msg); alt != "" {
 			title = txt.Ucfirst(alt)
 		}
 	}
@@ -1452,85 +1508,8 @@ func (b *Bot) showFiles(_ []string) error {
 	return nil
 }
 
-func (b *Bot) showDirs(params []string) error {
-	parentDir := fs.DirUserRoot
-	if len(params) > 0 && params[0] != "" {
-		resolved, err := b.fs.ResolveDirParam(params[0])
-		if err != nil {
-			return fmt.Errorf("show dirs: can't resolve dir: %w", err)
-		}
-		parentDir = resolved
-	}
-
-	entries, err := b.fs.FilesAndDirs(parentDir)
-	if err != nil {
-		return fmt.Errorf("show dirs: can't get entries: %w", err)
-	}
-
-	dirs := fs.OnlyNoteDirs(fs.OnlyDirs(entries))
-	mdFiles := fs.ExcludeConfig(fs.OnlyUserMDFiles(entries))
-
-	var kb tg.Keyboard
-	var dirBtns []tg.Btn
-	for _, dir := range dirs {
-		fullPath := fs.JoinDir(parentDir, dir.Name)
-		if parentDir == fs.DirUserRoot {
-			fullPath = dir.Name
-		}
-		cmd := tg.NewCmd(CmdShowDirs, []string{fs.ShortHash(fullPath)})
-		btn := tg.NewBtn(fmt.Sprintf("%s %s", i18n.Emoji("dir"), dir.DisplayName), cmd)
-		dirBtns = append(dirBtns, btn)
-	}
-	for _, row := range slice.Chunk(dirBtns, btnsPerRow) {
-		kb.AddRow(tg.NewRow(row...))
-	}
-
-	var fileBtns []tg.Btn
-	dirHash := ""
-	if parentDir != fs.DirUserRoot {
-		dirHash = fs.ShortHash(parentDir)
-	}
-	for _, file := range mdFiles {
-		cmd := tg.NewCmd(CmdShowFile, []string{dirHash, fs.Hash(file.Name)})
-		fileBtns = append(fileBtns, tg.NewBtn(fs.UnsanitizeFilename(file.DisplayName), cmd))
-	}
-	for _, row := range slice.Chunk(fileBtns, btnsPerRow) {
-		kb.AddRow(tg.NewRow(row...))
-	}
-
-	if parentDir != fs.DirUserRoot {
-		parent := fs.ParentDirPath(parentDir)
-		backParam := ""
-		if parent != "" {
-			backParam = fs.ShortHash(parent)
-		}
-		backRow := tg.NewRow(tg.NewBtn("⬅️ Назад", tg.NewCmd(CmdShowDirs, []string{backParam})))
-		if life.IsProjectPath(parentDir) {
-			backRow = append(backRow, tg.NewBtn(i18n.Tr("↔️ В другую сферу"), tg.NewCmd(CmdShowMoveToSphere, []string{dirHash})))
-		}
-		if canDeleteDir(parentDir) {
-			backRow = append(backRow, tg.NewBtn(i18n.Tr("🗑 Delete"), tg.NewCmd(CmdShowDeleteDir, []string{dirHash})))
-		}
-		kb.AddRow(backRow)
-	}
-
-	inlineCmd := tg.NewCustomCmd(CmdInlineQuerySearchEveryWhere, nil, tg.CmdTypeInlineQueryCurrentChat)
-	footer := tg.NewRow(tg.NewBtn(i18n.Tr("🔎 Search"), inlineCmd))
-	if !b.cfg.NotesOnlyMode() {
-		footer = append(footer, tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
-	}
-	kb.AddRow(footer)
-
-	title := b.tr("🗂 Your dirs:")
-	if parentDir != fs.DirUserRoot {
-		title = fmt.Sprintf("%s\n<code>%s</code>", title, fs.DisplayName(parentDir))
-	}
-	err = b.showHTML(title+wideSpacer, &kb)
-	if err != nil {
-		return fmt.Errorf("show dirs: %w", err)
-	}
-
-	return nil
+func (b *Bot) showDirs(_ []string) error {
+	return b.ShowHome(nil)
 }
 
 func (b *Bot) showChecklists(_ []string) error {
@@ -1830,7 +1809,16 @@ func (b *Bot) showFile(params []string) error {
 		kb = tg.NewKeyboard([]tg.Row{row})
 	}
 
-	md := fmt.Sprintf("**%s**\n\n%s", fs.DisplayName(filename), content)
+	if att, ok := txt.ParseAttachment(content); ok {
+		return b.showAttachmentFile(att, kb)
+	}
+
+	displayContent := content
+	if txt.VoiceSummary(content) != "" {
+		displayContent = txt.VoiceDetailBody(content)
+	}
+
+	md := fmt.Sprintf("**%s**\n\n%s", fs.DisplayName(filename), displayContent)
 	err = b.showMD(md, kb)
 	if err != nil {
 		return fmt.Errorf("show file: %w", err)
@@ -1841,6 +1829,28 @@ func (b *Bot) showFile(params []string) error {
 		b.db.SetHashOrPathByMsgID(msgID, filepath.ToSlash(filepath.Join(dir, filename)))
 	}
 
+	return nil
+}
+
+func (b *Bot) showAttachmentFile(att txt.AttachmentInfo, kb *tg.Keyboard) error {
+	displayName := txt.AttachmentDisplayName(att.Name, att.Path)
+	dir, filename := txt.AttachmentMediaPath(att.Path)
+	data, err := b.fs.Read(dir, filename)
+	if err != nil {
+		md := fmt.Sprintf("**%s**\n\n📎 %s", displayName, att.Path)
+		return b.showMD(md, kb)
+	}
+
+	b.delAllKeyboards()
+	_, err = b.tg.SendDocument(b.userID, displayName, strings.NewReader(data), displayName, kb)
+	if err != nil {
+		return fmt.Errorf("show attachment: %w", err)
+	}
+
+	msgID, hasLastKeyboard := b.db.LastKeyboardMsgID()
+	if hasLastKeyboard {
+		b.db.SetHashOrPathByMsgID(msgID, att.Path)
+	}
 	return nil
 }
 
@@ -2640,32 +2650,8 @@ func (b *Bot) showMoveToFileOrDir(params []string) error {
 		kb.AddRow(row)
 	}
 
-	dirBtns, err := b.moveToDirBtns(msgHash)
-	if err != nil {
-		return fmt.Errorf("to file dialog: %w", err)
-	}
-	if len(dirBtns) > maxRecentBtns {
-		dirBtns = dirBtns[:maxRecentBtns]
-		skippedBtns = true
-	}
-	// Add "New Dir" to the end of the dirs list
-	// TODO add tests for all these cases
-	if len(dirBtns) == maxRecentBtns {
-		// Free up space for the new dir button
-		dirBtns = dirBtns[:len(fileBtns)-1]
-	}
-	btn := tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd(CmdRequestNewDir, []string{msgHash}))
-	dirBtns = append(dirBtns, btn)
-
-	//shouldAddSeparator := len(fileBtns) > 0
-	//if shouldAddSeparator {
 	searchCMD := tg.NewCustomCmd(CmdInlineQuerySearchEveryWhere, nil, tg.CmdTypeInlineQueryCurrentChat)
 	kb.AddRow(tg.NewBtn(i18n.Tr("Search"), searchCMD))
-	//}
-	dirBtnsByRows := slice.Chunk(dirBtns, btnsPerRow)
-	for _, row := range dirBtnsByRows {
-		kb.AddRow(row)
-	}
 
 	if skippedBtns {
 		kb.AddRow(tg.NewBtn(i18n.Tr("More..."), tg.NewCmd(CmdShowMoveToDirOrFile, []string{msgHash, "full"})))

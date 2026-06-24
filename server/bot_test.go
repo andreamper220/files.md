@@ -517,7 +517,6 @@ func TestSaveFromPhotoWithCaption(t *testing.T) {
 
 	tasksMD, err := tasksMDForTestProject(bot)
 	r.NoError(err)
-	r.Contains(tasksMD, "![](media/tg_PHOTO_ID)")
 	r.Contains(tasksMD, "Caption")
 
 	projectPath := initLifeTestProject(t, userFS)
@@ -606,7 +605,6 @@ func TestSaveFromPhotoWithSanitizedCaption(t *testing.T) {
 
 	tasksMD, err := tasksMDForTestProject(bot)
 	r.NoError(err)
-	r.Contains(tasksMD, "![](media/tg_PHOTO_ID)")
 	r.Contains(tasksMD, "Caption/")
 
 	upd2 := tg.NewUpd(-1, "")
@@ -664,7 +662,7 @@ func TestSaveFromPhotoWithoutCaption(t *testing.T) {
 
 	tasksMD, err := tasksMDForTestProject(bot)
 	r.NoError(err)
-	r.Contains(tasksMD, "![](media/tg_PHOTO_ID)")
+	r.Contains(tasksMD, "Photo")
 
 	upd2 := tg.NewUpd(-1, "")
 	upd2.PhotoID = "PHOTO_ID2"
@@ -683,7 +681,7 @@ func TestSaveFromPhotoWithoutCaption(t *testing.T) {
 	// Be aware that it's not regular ꞉
 	noteContent, err := bot.fs.Read(lifeDraftsDir(projectPath), fmt.Sprintf(i18n.Tr("Img %s"), "11.08.24 09꞉54")+".md")
 	r.NoError(err)
-	r.Equal("![](media/tg_PHOTO_ID2)", noteContent)
+	r.Contains(noteContent, "![](media/tg_PHOTO_ID2)")
 }
 
 func TestSaveFromReplyPhotoWithCaption(t *testing.T) {
@@ -1545,7 +1543,6 @@ func TestShowToFileNoDirs(t *testing.T) {
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewRow(tg.NewBtn("Note", tg.NewCmd("mf", []string{"345fb", h}))),
 		tg.NewBtn(i18n.Tr("Search"), tg.NewCustomCmd("search", nil, "iq")),
-		tg.NewRow(tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd("new_dir", []string{h}))),
 	},
 	), tgram.LastSentKeyboard)
 }
@@ -1569,11 +1566,6 @@ func TestShowMoveToFile(t *testing.T) {
 
 	r.Equal(tg.NewKeyboard([]tg.Row{
 		tg.NewBtn(i18n.Tr("Search"), tg.NewCustomCmd("search", nil, "iq")),
-		tg.NewRow(
-			tg.NewBtn("🗂️ Dir", tg.NewCmd("mv", []string{"73600", h})),
-			tg.NewBtn("🗂️ Notes", tg.NewCmd("mv", []string{"4358b", h})),
-			tg.NewBtn(i18n.Tr("🗂 New Dir"), tg.NewCmd("new_dir", []string{h})),
-		),
 	}), tgram.LastSentKeyboard)
 }
 
@@ -3964,7 +3956,8 @@ func TestSaveFromImage_EmptyCaption(t *testing.T) {
 
 	content, err := bot.fs.Read(lifeDraftsDir(projectPath), fmt.Sprintf(i18n.Tr("Img %s"), "01.01.70 00꞉00")+".md")
 	r.NoError(err)
-	r.Equal("![](media/tg_PHOTO_ID)", content)
+	r.Contains(content, "![](media/tg_PHOTO_ID)")
+	r.Contains(content, "01.01.70")
 }
 
 func TestCreateOrAdd_NewFile(t *testing.T) {

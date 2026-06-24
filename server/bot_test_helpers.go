@@ -47,6 +47,9 @@ func saveIncomingAsTask(bot *Bot, fakeDB *db.FakeDB) error {
 	if h == "" {
 		return fmt.Errorf("pending draft gone after saveAsTask")
 	}
+	if err := ensureDraftTitled(bot, h, draftKindTask); err != nil {
+		return err
+	}
 	if err := bot.pickTaskPriority([]string{h, "0"}); err != nil {
 		return err
 	}
@@ -106,7 +109,34 @@ func saveIncomingAsNoteToProject(bot *Bot, fakeDB *db.FakeDB, projectPath string
 	if h == "" {
 		return fmt.Errorf("pending draft gone after saveAsNote")
 	}
+	if err := ensureDraftTitled(bot, h, draftKindNote); err != nil {
+		return err
+	}
 	return bot.saveNoteToArea([]string{h, fs.ShortHash(projectPath), life.KindCode(life.KindDraft)})
+}
+
+func ensureDraftTitled(bot *Bot, draftHash, kind string) error {
+	content, ok := bot.db.PendingDraft(draftHash)
+	if !ok || !txt.NeedsUserTitle(content) {
+		return nil
+	}
+	return bot.applyDraftTitle([]string{draftHash, kind, defaultTestDraftTitle(content, kind)})
+}
+
+func defaultTestDraftTitle(content, kind string) string {
+	if title := txt.DraftTitle(content); title != "" {
+		return title
+	}
+	if txt.HasImage(content) {
+		if kind == draftKindNote {
+			return fmt.Sprintf(i18n.Tr("Img %s"), now().Format("02.01.06 15:04"))
+		}
+		return "Photo"
+	}
+	if att, ok := txt.ParseAttachment(content); ok {
+		return txt.AttachmentDisplayName(att.Name, att.Path)
+	}
+	return "Draft"
 }
 
 func initLifeTestProject(t *testing.T, userFS *fs.FS) string {

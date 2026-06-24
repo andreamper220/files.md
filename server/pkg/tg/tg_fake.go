@@ -83,6 +83,14 @@ func (f *FakeTG) DownloadFile(fileID string, writer io.Writer) (string, error) {
 	return "", nil
 }
 
+func (f *FakeTG) SendDocument(userID int64, filename string, content io.Reader, caption string, kb *Keyboard) (int, error) {
+	f.LastSentText = caption
+	f.SentTexts = append(f.SentTexts, caption)
+	f.LastSentKeyboard = kb
+	f.LastSentMessageID++
+	return f.LastSentMessageID, nil
+}
+
 func (f *FakeTG) ChannelCreatorID(chatID int64) (int64, error) {
 	return 0, nil
 }

@@ -18,6 +18,11 @@ import (
 
 const noPriorityEmoji = "⚪️"
 
+const (
+	draftKindTask = "t"
+	draftKindNote = "n"
+)
+
 func (b *Bot) storePendingDraft(content string) string {
 	hash := fs.Hash(fmt.Sprintf("%s:%d", content, time.Now().UnixNano()))
 	b.db.SetPendingDraft(hash, content)
@@ -52,8 +57,12 @@ func (b *Bot) showSaveType(params []string) error {
 
 func (b *Bot) saveAsTask(params []string) error {
 	draftHash := params[0]
-	if _, ok := b.db.PendingDraft(draftHash); !ok {
+	content, ok := b.db.PendingDraft(draftHash)
+	if !ok {
 		return b.ShowHome(nil)
+	}
+	if txt.NeedsUserTitle(content) {
+		return b.showDraftTitlePrompt(draftHash, draftKindTask)
 	}
 	return b.showTaskPriorityPicker(draftHash)
 }
@@ -71,8 +80,12 @@ func (b *Bot) pickTaskPriority(params []string) error {
 
 func (b *Bot) saveAsNote(params []string) error {
 	draftHash := params[0]
-	if _, ok := b.db.PendingDraft(draftHash); !ok {
+	content, ok := b.db.PendingDraft(draftHash)
+	if !ok {
 		return b.ShowHome(nil)
+	}
+	if txt.NeedsUserTitle(content) {
+		return b.showDraftTitlePrompt(draftHash, draftKindNote)
 	}
 	return b.showNoteAreaPicker(draftHash)
 }
@@ -224,19 +237,47 @@ func priorityEmojiAt(emojis []string, idxStr string) (string, bool) {
 }
 
 func taskTextFromDraft(content string) (string, error) {
+	if title := txt.DraftTitle(content); title != "" {
+		return title, nil
+	}
 	content = strings.TrimSpace(txt.NormNewLines(content))
 	if content == "" {
 		return "", fmt.Errorf("empty task")
 	}
-	var parts []string
-	for _, line := range strings.Split(content, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		parts = append(parts, line)
+	return "", fmt.Errorf("empty task")
+}
+
+func (b *Bot) showDraftTitlePrompt(draftHash, kind string) error {
+	b.db.SetInputExpectation(tg.NewCmd(CmdApplyDraftTitle, []string{draftHash, kind, "%s"}))
+	return b.showHTML(i18n.Tr("Пришли название:"), nil)
+}
+
+func (b *Bot) applyDraftTitle(params []string) error {
+	if len(params) < 3 {
+		return fmt.Errorf("apply draft title: missing params")
 	}
-	return strings.Join(parts, " "), nil
+	draftHash := params[0]
+	kind := params[1]
+	title := strings.TrimSpace(params[2])
+	if title == "" {
+		return b.showDraftTitlePrompt(draftHash, kind)
+	}
+
+	content, ok := b.db.PendingDraft(draftHash)
+	if !ok {
+		return b.ShowHome(nil)
+	}
+	b.db.SetPendingDraft(draftHash, txt.ApplyDraftTitle(content, title))
+	b.db.DelInputExpectation()
+
+	switch kind {
+	case draftKindTask:
+		return b.showTaskPriorityPicker(draftHash)
+	case draftKindNote:
+		return b.showNoteAreaPicker(draftHash)
+	default:
+		return b.ShowHome(nil)
+	}
 }
 
 func (b *Bot) saveNoteToArea(params []string) error {

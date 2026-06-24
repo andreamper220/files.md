@@ -79,7 +79,7 @@ func formatAreaBlock(projectPath string, emojis []string, userFS *fs.FS, startOf
 	depth := life.AreaDepth(projectPath)
 	header := life.AreaTreePrefix(depth) + formatAreaHeader(projectPath)
 	indent := strings.Repeat("   ", depth)
-	taskLine := indent + strings.Join(formatPriorityCounts(emojis, countDoneByPriorityInMD(readAreaTasksMD(userFS, projectPath), emojis)), " ")
+	taskLine := indent + strings.Join(formatPriorityCounts(emojis, countOpenByPriorityInMD(readAreaTasksMD(userFS, projectPath), emojis)), " ")
 	noteLine := indent + formatNoteTotal(userFS, projectPath, startOfDay)
 	return []string{header, taskLine, noteLine}
 }
@@ -158,10 +158,10 @@ func readAreaTasksMD(userFS *fs.FS, projectPath string) string {
 	return md
 }
 
-func countDoneByPriorityInMD(md string, emojis []string) map[string]int {
+func countOpenByPriorityInMD(md string, emojis []string) map[string]int {
 	counts := emptyPriorityCounts(emojis)
 	for _, task := range parseTasks(md) {
-		if !task.done {
+		if task.done {
 			continue
 		}
 		emoji := priority.Detect(task.text, emojis)

@@ -142,6 +142,21 @@ func (tg *TG) sendDocuments(userID int64, photos []string) ([]int, error) {
 	return msgIDs, nil
 }
 
+func (tg *TG) SendDocument(userID int64, filename string, content io.Reader, caption string, kb *Keyboard) (int, error) {
+	doc := tgbotapi.NewDocument(userID, tgbotapi.FileReader{
+		Name:   filename,
+		Reader: content,
+	})
+	doc.Caption = caption
+	doc.ReplyMarkup = tg.buildInlineKeyboard(kb)
+
+	resp, err := tg.api.Send(doc)
+	if err != nil {
+		return 0, fmt.Errorf("tg send document: %w", err)
+	}
+	return resp.MessageID, nil
+}
+
 func (tg *TG) Edit(userID int64, msgID int, text string, kb *Keyboard, markup string) error {
 	msg := tgbotapi.NewEditMessageText(userID, msgID, text)
 

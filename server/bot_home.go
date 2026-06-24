@@ -152,7 +152,10 @@ func (b *Bot) showAreaTask(projectHash, itemHash string) error {
 		move:     &moveCmd,
 	})
 	title := fmt.Sprintf("%s %s", life.AreaEmoji(projectPath), life.AreaFullTitle(projectPath))
-	displayItem := txt.DisplayText(item)
+	displayItem := txt.VoiceDetailBody(item)
+	if displayItem == "" {
+		displayItem = txt.DisplayText(item)
+	}
 	if displayItem == "" {
 		displayItem = item
 	}
@@ -510,18 +513,7 @@ func (b *Bot) showNotesHub(_ []string) error {
 	spheres, _ := life.ListSpheres(b.fs)
 	for _, spherePath := range spheres {
 		areas, _ := life.ListAllAreas(b.fs, spherePath)
-		row := tg.NewRow()
-		for _, projectPath := range areas {
-			label := life.AreaPickerLabel(spherePath, projectPath)
-			row = append(row, tg.NewBtn(label, tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)})))
-			if len(row) >= btnsPerRow {
-				kb.AddRow(row)
-				row = tg.NewRow()
-			}
-		}
-		if len(row) > 0 {
-			kb.AddRow(row)
-		}
+		addAreaNavBtns(kb, areas, CmdShowLifeProject)
 	}
 
 	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))

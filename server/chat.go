@@ -383,6 +383,9 @@ func chatTaskDisplayBody(block string) string {
 	}
 	lines[0] = strings.TrimSpace(inboxEntryPrefix.ReplaceAllString(lines[0], ""))
 	body := strings.Join(lines, "\n")
+	if detail := txt.VoiceDetailBody(body); detail != body || txt.VoiceSummary(body) != "" {
+		return detail
+	}
 	display := txt.DisplayText(body)
 	if display != "" {
 		return display
