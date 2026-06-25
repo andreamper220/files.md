@@ -50,9 +50,17 @@ func (b *Bot) showSaveType(params []string) error {
 		tg.NewRow(
 			tg.NewBtn("📋", tg.NewCmd(CmdSaveAsTask, []string{draftHash})),
 			tg.NewBtn("🗒", tg.NewCmd(CmdSaveAsNote, []string{draftHash})),
+			tg.NewBtn("✕", tg.NewCmd(CmdCancelPendingDraft, []string{draftHash})),
 		),
 	})
 	return b.showHTML(i18n.Tr("Choose: task or note?"), kb)
+}
+
+func (b *Bot) cancelPendingDraft(params []string) error {
+	if len(params) > 0 {
+		b.db.DelPendingDraft(params[0])
+	}
+	return b.ShowHome(nil)
 }
 
 func (b *Bot) saveAsTask(params []string) error {

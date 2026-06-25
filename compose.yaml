@@ -8,6 +8,7 @@ services:
     volumes:
       - storage:/app/storage
       - tokens:/app/tokens
+      - ./.env:/app/.env:ro
       # Optional: mount Obsidian vault for one-time import (see docs/your-own-server.md)
       # - ${OBSIDIAN_SRC:-./obsidian}:/obsidian:ro
     env_file:

@@ -104,6 +104,33 @@ func createTask(apiKey, audioURL string) (string, error) {
 		},
 	})
 
+	var lastErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		taskID, err := createTaskOnce(apiKey, body)
+		if err == nil {
+			return taskID, nil
+		}
+		lastErr = err
+		if attempt < 3 && isRetryableSTTError(err) {
+			time.Sleep(time.Duration(attempt) * time.Second)
+			continue
+		}
+		return "", err
+	}
+	return "", lastErr
+}
+
+func isRetryableSTTError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "server exception") ||
+		strings.Contains(msg, "try again") ||
+		strings.Contains(msg, "timeout")
+}
+
+func createTaskOnce(apiKey string, body []byte) (string, error) {
 	req, err := http.NewRequest(http.MethodPost, createTaskURL, bytes.NewReader(body))
 	if err != nil {
 		return "", err
@@ -129,7 +156,7 @@ func createTask(apiKey, audioURL string) (string, error) {
 		return "", fmt.Errorf("stt create task: parse response: %w", err)
 	}
 	if parsed.Data.TaskID == "" {
-		return "", fmt.Errorf("stt create task failed: %s", strings.TrimSpace(parsed.Msg))
+		return "", fmt.Errorf("stt create task failed (http %d): %s", resp.StatusCode, strings.TrimSpace(parsed.Msg))
 	}
 	return parsed.Data.TaskID, nil
 }

@@ -25,6 +25,7 @@ func main() {
 	if err := config.LoadBotConfig(); err != nil {
 		panic(fmt.Sprintf("Error loading cfg: %s\n", err))
 	}
+	config.LogStartupConfig()
 	// Save all renames and deletes to an append-only log.
 	fs.LogRename = sync.LogRename
 	fs.LogDelete = sync.LogDelete

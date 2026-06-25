@@ -232,6 +232,7 @@ const (
 	CmdAddToFinalizeShortcut           = "fin_sc"
 	CmdAddToDiscussionShortcut         = "disc_sc"
 	CmdShowSaveType                    = "save_type"
+	CmdCancelPendingDraft              = "draft_x"
 	CmdSaveAsTask                      = "as_task"
 	CmdPickTaskPriority                = "task_prio"
 	CmdSaveAsNote                      = "as_note"
@@ -418,6 +419,7 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdAddToDiscussionShortcut: b.addToDiscussionFromShortcut,
 		CmdSetPriority:               b.setPriority,
 		CmdShowSaveType:              b.showSaveType,
+		CmdCancelPendingDraft:        b.cancelPendingDraft,
 		CmdSaveAsTask:                b.saveAsTask,
 		CmdPickTaskPriority:          b.pickTaskPriority,
 		CmdSaveAsNote:                b.saveAsNote,
