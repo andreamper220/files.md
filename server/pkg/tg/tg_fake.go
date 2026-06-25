@@ -48,6 +48,10 @@ func (tg *FakeTG) SendImages(userID int64, images []string) ([]int, error) {
 	return nil, nil
 }
 
+func (tg *FakeTG) SendLocalMedia(userID int64, items []LocalMedia) ([]int, error) {
+	return nil, nil
+}
+
 func (tg *FakeTG) SendReaction(userID int64, msgID int, reaction string) error { return nil }
 
 func (f *FakeTG) Edit(userID int64, msgID int, text string, kb *Keyboard, markup string) error {

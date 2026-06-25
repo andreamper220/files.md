@@ -93,6 +93,7 @@ type Update interface {
 type Chat interface {
 	Send(userID int64, text string, kb *tg.Keyboard, markup string) (int, error)
 	SendImages(userID int64, images []string) ([]int, error)
+	SendLocalMedia(userID int64, items []tg.LocalMedia) ([]int, error)
 	SendReaction(userID int64, msgID int, reaction string) error
 	Edit(userID int64, msgID int, text string, kb *tg.Keyboard, markup string) error
 	Del(userID int64, msgID int) error
@@ -1172,7 +1173,7 @@ func (b *Bot) showHTML(validHTML string, kb *tg.Keyboard) error {
 func (b *Bot) showMD(probablyInvalidMD string, kb *tg.Keyboard) error {
 	b.delAllImages()
 
-	probablyInvalidMD, images, links := txt.ExtractTextImgsLinks(probablyInvalidMD)
+	probablyInvalidMD, images, localMedia, links := txt.ExtractTextImgsLinks(probablyInvalidMD)
 
 	for label, link := range links {
 		link = strings.TrimSpace(link)
@@ -1199,8 +1200,19 @@ func (b *Bot) showMD(probablyInvalidMD string, kb *tg.Keyboard) error {
 
 	mid, hasLastKeyboard := b.db.LastKeyboardMsgID()
 	textChunks := txt.SplitTextIntoChunks(probablyInvalidMD, maxMsgLength)
-	if !hasLastKeyboard || len(textChunks) > 1 || len(images) > 0 {
+	if !hasLastKeyboard || len(textChunks) > 1 || len(images) > 0 || len(localMedia) > 0 {
 		b.delAllKeyboards()
+
+		if len(localMedia) > 0 {
+			mids, mediaErr := b.sendLocalMediaFiles(b.userID, localMedia)
+			if mediaErr == nil {
+				for _, imgMid := range mids {
+					b.db.AddImgMsgID(imgMid)
+				}
+			} else {
+				slog.Error("Can't send local media", "error", mediaErr)
+			}
+		}
 
 		// Sending a gallery of images if there are any
 		if len(images) > 0 {
@@ -1878,6 +1890,29 @@ func (b *Bot) showFile(params []string) error {
 	}
 
 	return nil
+}
+
+func (b *Bot) sendLocalMediaFiles(userID int64, paths []string) ([]int, error) {
+	if len(paths) == 0 {
+		return nil, nil
+	}
+	var items []tg.LocalMedia
+	for _, mediaPath := range paths {
+		dir, filename := txt.AttachmentMediaPath(mediaPath)
+		data, err := b.fs.Read(dir, filename)
+		if err != nil {
+			slog.Error("Can't read local media", "path", mediaPath, "error", err)
+			continue
+		}
+		items = append(items, tg.LocalMedia{
+			Filename: filename,
+			Data:     []byte(data),
+		})
+	}
+	if len(items) == 0 {
+		return nil, nil
+	}
+	return b.tg.SendLocalMedia(userID, items)
 }
 
 func (b *Bot) showAttachmentFile(att txt.AttachmentInfo, kb *tg.Keyboard) error {
@@ -3097,7 +3132,17 @@ func (b *Bot) shareNote(params []string) error {
 
 	for _, channel := range b.cfg.Channels() {
 		probablyInvalidMD := fmt.Sprintf("**%s/%s**\n\n%s", fs.DisplayName(dir), fs.DisplayName(filename), content)
-		probablyInvalidMD, images, _ := txt.ExtractTextImgsLinks(probablyInvalidMD)
+		probablyInvalidMD, images, localMedia, _ := txt.ExtractTextImgsLinks(probablyInvalidMD)
+		if len(localMedia) > 0 {
+			mids, mediaErr := b.sendLocalMediaFiles(channel, localMedia)
+			if mediaErr == nil {
+				for _, imgMid := range mids {
+					b.db.AddImgMsgID(imgMid)
+				}
+			} else {
+				slog.Error("Can't send local media", "error", mediaErr)
+			}
+		}
 		// Sending a gallery of images if there are any
 		if len(images) > 0 {
 			// We tolerate errors with the image gallery for now, text is more important

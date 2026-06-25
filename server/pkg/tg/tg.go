@@ -87,6 +87,61 @@ func (tg *TG) SendImages(userID int64, photos []string) ([]int, error) {
 	return msgIDs, nil
 }
 
+// LocalMedia is a file read from disk to send via Telegram.
+type LocalMedia struct {
+	Filename string
+	Data     []byte
+}
+
+func isPhotoExt(ext string) bool {
+	switch strings.ToLower(ext) {
+	case ".jpg", ".jpeg", ".png", ".webp":
+		return true
+	default:
+		return false
+	}
+}
+
+// SendLocalMedia uploads files from disk (photos as album, other types as documents).
+func (tg *TG) SendLocalMedia(userID int64, items []LocalMedia) ([]int, error) {
+	var photoFiles []any
+	var documentFiles []any
+	for _, item := range items {
+		file := tgbotapi.FileBytes{Name: item.Filename, Bytes: item.Data}
+		if isPhotoExt(path.Ext(item.Filename)) {
+			photoFiles = append(photoFiles, tgbotapi.NewInputMediaPhoto(file))
+		} else {
+			documentFiles = append(documentFiles, tgbotapi.NewInputMediaDocument(file))
+		}
+	}
+
+	var msgIDs []int
+	if len(photoFiles) > 0 {
+		msg := tgbotapi.NewMediaGroup(userID, photoFiles)
+		responses, err := tg.api.SendMediaGroup(msg)
+		if err != nil {
+			js, _ := json.Marshal(msg)
+			return nil, fmt.Errorf("tg send local photos: can't send json %s: %w", js, err)
+		}
+		for _, resp := range responses {
+			msgIDs = append(msgIDs, resp.MessageID)
+		}
+	}
+	if len(documentFiles) > 0 {
+		msg := tgbotapi.NewMediaGroup(userID, documentFiles)
+		responses, err := tg.api.SendMediaGroup(msg)
+		if err != nil {
+			js, _ := json.Marshal(msg)
+			return nil, fmt.Errorf("tg send local documents: can't send json %s: %w", js, err)
+		}
+		for _, resp := range responses {
+			msgIDs = append(msgIDs, resp.MessageID)
+		}
+	}
+
+	return msgIDs, nil
+}
+
 func (tg *TG) SendReaction(userID int64, msgID int, reaction string) error {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/setMessageReaction", tg.api.Token)
 

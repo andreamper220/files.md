@@ -101,10 +101,11 @@ func TelegramEntitiesToMarkdown(text string, messageEntities []tgbotapi.MessageE
 	return string(output)
 }
 
-func ExtractTextImgsLinks(text string) (txt string, images []string, links map[string]string) {
+func ExtractTextImgsLinks(text string) (txt string, images []string, localMedia []string, links map[string]string) {
 	links = make(map[string]string)
 
-	imgRegexp := regexp.MustCompile(`!\[.*?\]\(.*?tg_([^.]+)\..*?\)`)
+	imgRegexp := regexp.MustCompile(`!\[.*?\]\(([^)]*tg_[^)]+)\)`)
+	tgIDRegexp := regexp.MustCompile(`tg_([^.]+)\.`)
 	linkRegexp := regexp.MustCompile(`\[.*?\]\((.+?)\)`)
 	wikiLinkRegexp := regexp.MustCompile(`\[\[(.+?)\]\]`)
 
@@ -143,11 +144,20 @@ func ExtractTextImgsLinks(text string) (txt string, images []string, links map[s
 	}
 	text = strings.Join(processedLines, "\n")
 
-	// Process images
+	// Process images and locally stored media (voice, photos saved under media/).
 	text = imgRegexp.ReplaceAllStringFunc(text, func(match string) string {
 		matches := imgRegexp.FindStringSubmatch(match)
-		if len(matches) == 2 {
-			images = append(images, matches[1])
+		if len(matches) != 2 {
+			return match
+		}
+		path := strings.TrimPrefix(strings.TrimSpace(matches[1]), "/")
+		if strings.HasPrefix(path, "media/") {
+			localMedia = append(localMedia, path)
+			return "🖼"
+		}
+		idMatches := tgIDRegexp.FindStringSubmatch(path)
+		if len(idMatches) == 2 {
+			images = append(images, idMatches[1])
 			return "🖼"
 		}
 		return match
@@ -181,7 +191,7 @@ func ExtractTextImgsLinks(text string) (txt string, images []string, links map[s
 		return match
 	})
 
-	return strings.TrimSpace(text), images, links
+	return strings.TrimSpace(text), images, localMedia, links
 }
 
 func HasImage(msg string) bool {

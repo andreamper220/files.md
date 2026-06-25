@@ -158,37 +158,51 @@ func TestDoesntEscapeBrokenMD(t *testing.T) {
 func TestExtractTextImgsLinks_NoImagesOrLinks(t *testing.T) {
 	text := "This is a simple text without images or links."
 
-	resultText, images, links := ExtractTextImgsLinks(text)
+	resultText, images, localMedia, links := ExtractTextImgsLinks(text)
 
 	require.Equal(t, "This is a simple text without images or links.", resultText)
 	require.Empty(t, images)
+	require.Empty(t, localMedia)
+	require.Empty(t, links)
+}
+
+func TestExtractTextImgsLinks_WithLocalMedia(t *testing.T) {
+	text := "🎙 Голосовое сообщение\n\n![](media/tg_AwACAgIAAxkBAAOVajzo.ogg)"
+
+	resultText, images, localMedia, links := ExtractTextImgsLinks(text)
+
+	require.Equal(t, "🎙 Голосовое сообщение\n\n🖼", resultText)
+	require.Empty(t, images)
+	require.Equal(t, []string{"media/tg_AwACAgIAAxkBAAOVajzo.ogg"}, localMedia)
 	require.Empty(t, links)
 }
 
 func TestExtractTextImgsLinks_WithSingleImage(t *testing.T) {
 	text := "This text includes an image: ![center](../img/tg_BQACAgIAAxkBAAIs.png)."
 
-	resultText, images, links := ExtractTextImgsLinks(text)
+	resultText, images, localMedia, links := ExtractTextImgsLinks(text)
 
 	require.Equal(t, "This text includes an image: 🖼.", resultText)
 	require.Equal(t, []string{"BQACAgIAAxkBAAIs"}, images)
+	require.Empty(t, localMedia)
 	require.Empty(t, links)
 }
 
 func TestExtractTextImgsLinks_WithMultipleImages(t *testing.T) {
 	text := "Here are two images: ![](../img/tg_image1.png) and ![](../img/tg_image2.jpg)."
 
-	resultText, images, links := ExtractTextImgsLinks(text)
+	resultText, images, localMedia, links := ExtractTextImgsLinks(text)
 
 	require.Equal(t, "Here are two images: 🖼 and 🖼.", resultText)
 	require.ElementsMatch(t, []string{"image1", "image2"}, images)
+	require.Empty(t, localMedia)
 	require.Empty(t, links)
 }
 
 func TestExtractTextImgsLinks_WithSingleLink(t *testing.T) {
 	text := "Check this link: [Document](/path/to/document.md)."
 
-	resultText, images, links := ExtractTextImgsLinks(text)
+	resultText, images, _, links := ExtractTextImgsLinks(text)
 
 	require.Equal(t, "Check this link: `document`.", resultText)
 	require.Empty(t, images)
@@ -198,17 +212,18 @@ func TestExtractTextImgsLinks_WithSingleLink(t *testing.T) {
 func TestExtractTextImgsLinks_WithImageAndLink(t *testing.T) {
 	text := "Here is an image: ![](img/tg_image.png) and a link: [Document](/path/to/doc.md)."
 
-	resultText, images, links := ExtractTextImgsLinks(text)
+	resultText, images, localMedia, links := ExtractTextImgsLinks(text)
 
 	require.Equal(t, "Here is an image: 🖼 and a link: `doc`.", resultText)
 	require.Equal(t, []string{"image"}, images)
+	require.Empty(t, localMedia)
 	require.Equal(t, map[string]string{"doc": "/path/to/doc.md"}, links)
 }
 
 func TestExtractTextImgsLinks_WithMultipleLinks(t *testing.T) {
 	text := "Multiple links: [Doc1](/path/to/doc1.md), [Doc2](/path/to/doc2.md)."
 
-	resultText, images, links := ExtractTextImgsLinks(text)
+	resultText, images, _, links := ExtractTextImgsLinks(text)
 
 	require.Equal(t, "Multiple links: `doc1`, `doc2`.", resultText)
 	require.Empty(t, images)
@@ -221,7 +236,7 @@ func TestExtractTextImgsLinks_WithMultipleLinks(t *testing.T) {
 func TestExtractTextImgsLinks_WithMultipleWikiLinks(t *testing.T) {
 	text := "Multiple links: [[/path/to/doc1|Doc1]], [[/path/to/doc2|Doc2]]."
 
-	resultText, images, links := ExtractTextImgsLinks(text)
+	resultText, images, _, links := ExtractTextImgsLinks(text)
 
 	require.Equal(t, "Multiple links: `doc1`, `doc2`.", resultText)
 	require.Empty(t, images)
@@ -235,7 +250,7 @@ func TestExtractTextImgsLinks_WithBottomLink(t *testing.T) {
 	text := `Text with a bottom link.
 	[Document](/path/to/doc.md)`
 
-	resultText, images, links := ExtractTextImgsLinks(text)
+	resultText, images, _, links := ExtractTextImgsLinks(text)
 
 	require.Equal(t, "Text with a bottom link.", resultText)
 	require.Empty(t, images)
@@ -245,10 +260,11 @@ func TestExtractTextImgsLinks_WithBottomLink(t *testing.T) {
 func TestExtractTextImgsLinks_WithNestedLinksAndImages(t *testing.T) {
 	text := "Complex example with image and links:\n![](img/tg_image.png)\n[Doc1](/path/to/doc1.md)\n[Doc2](/path/to/doc2.md)"
 
-	resultText, images, links := ExtractTextImgsLinks(text)
+	resultText, images, localMedia, links := ExtractTextImgsLinks(text)
 
 	require.Equal(t, "Complex example with image and links:\n🖼", resultText)
 	require.Equal(t, []string{"image"}, images)
+	require.Empty(t, localMedia)
 	require.Equal(t, map[string]string{
 		"doc1": "/path/to/doc1.md",
 		"doc2": "/path/to/doc2.md",
