@@ -6,6 +6,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -1191,7 +1192,7 @@ func (b *Bot) showMD(probablyInvalidMD string, kb *tg.Keyboard) error {
 			mediaPath = parts[0] + "/" + parts[1]
 		}
 		if dir == fs.DirMedia || !strings.HasSuffix(strings.ToLower(mediaPath), fs.MDExt) {
-			cmd = tg.NewCmd(CmdOpenMedia, []string{fs.ShortHash(mediaPath)})
+			cmd = mediaOpenCmd(mediaPath)
 		} else {
 			cmd = tg.NewCmd(CmdShowFile, []string{fs.Hash(dir), fs.Hash(filename)})
 		}
@@ -1926,7 +1927,7 @@ func (b *Bot) showAttachmentNote(content, dir, filename string, kb *tg.Keyboard)
 	var fileKb tg.Keyboard
 	for _, att := range attachments {
 		name := txt.AttachmentDisplayName(att.Name, att.Path)
-		fileKb.AddRow(tg.NewRow(tg.NewBtn(name, tg.NewCmd(CmdOpenMedia, []string{fs.ShortHash(att.Path)}))))
+		fileKb.AddRow(tg.NewRow(tg.NewBtn(name, mediaOpenCmd(att.Path, name))))
 	}
 	if kb != nil {
 		for _, row := range kb.Btns {
@@ -1963,6 +1964,9 @@ func (b *Bot) openMedia(params []string) error {
 		return fmt.Errorf("open media: missing params")
 	}
 	mediaPath, err := b.resolveMediaPath(params[0])
+	if err != nil && len(params) > 1 {
+		mediaPath, err = b.resolveMediaPath(params[1])
+	}
 	if err != nil {
 		return fmt.Errorf("open media: %w", err)
 	}
@@ -1970,10 +1974,44 @@ func (b *Bot) openMedia(params []string) error {
 	return b.sendMediaDocument(att, nil)
 }
 
+const maxCallbackDataLen = 64
+
+func mediaOpenCmd(mediaPath string, fallbackNames ...string) tg.Cmd {
+	mediaPath = strings.TrimPrefix(strings.TrimSpace(filepath.ToSlash(mediaPath)), "/")
+	var candidates [][]string
+	candidates = append(candidates, []string{mediaPath}, []string{fs.Hash(mediaPath)})
+	for _, name := range fallbackNames {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		candidates = append(candidates,
+			[]string{mediaPath, name},
+			[]string{fs.Hash(mediaPath), name},
+			[]string{name},
+		)
+	}
+	candidates = append(candidates, []string{fs.ShortHash(mediaPath)})
+	for _, params := range candidates {
+		cmd := tg.NewCmd(CmdOpenMedia, params)
+		data, _ := json.Marshal(cmd)
+		if len(data) <= maxCallbackDataLen {
+			return cmd
+		}
+	}
+	return tg.NewCmd(CmdOpenMedia, []string{fs.ShortHash(mediaPath)})
+}
+
 func (b *Bot) resolveMediaPath(hashOrPath string) (string, error) {
 	hashOrPath = strings.TrimSpace(hashOrPath)
-	if strings.Contains(hashOrPath, "/") {
-		return strings.TrimPrefix(hashOrPath, "/"), nil
+	if hashOrPath == "" {
+		return "", fmt.Errorf("empty media path")
+	}
+	if strings.Contains(hashOrPath, "/") || strings.Contains(hashOrPath, ".") {
+		path := strings.TrimPrefix(filepath.ToSlash(hashOrPath), "/")
+		if b.mediaFileExists(path) {
+			return b.normalizeMediaPath(path), nil
+		}
 	}
 	files, err := b.fs.FilesAndDirs(fs.DirMedia)
 	if err != nil {
@@ -1984,11 +2022,60 @@ func (b *Bot) resolveMediaPath(hashOrPath string) (string, error) {
 			continue
 		}
 		full := fs.DirMedia + "/" + f.Name
-		if fs.ShortHash(full) == hashOrPath || fs.ShortHash(f.Name) == hashOrPath {
-			return full, nil
+		for _, candidate := range []string{full, f.Name} {
+			if fs.ShortHash(candidate) == hashOrPath || fs.Hash(candidate) == hashOrPath {
+				return full, nil
+			}
+		}
+	}
+	if strings.Contains(hashOrPath, ".") {
+		if path, ok := b.findMediaByBasename(filepath.Base(hashOrPath)); ok {
+			return path, nil
 		}
 	}
 	return "", fmt.Errorf("media not found: %s", hashOrPath)
+}
+
+func (b *Bot) normalizeMediaPath(path string) string {
+	path = strings.TrimPrefix(filepath.ToSlash(strings.TrimSpace(path)), "/")
+	if strings.HasPrefix(path, fs.DirMedia+"/") {
+		return path
+	}
+	dir, filename := txt.AttachmentMediaPath(path)
+	if dir == fs.DirMedia {
+		return fs.DirMedia + "/" + filename
+	}
+	return path
+}
+
+func (b *Bot) mediaFileExists(mediaPath string) bool {
+	dir, filename := txt.AttachmentMediaPath(mediaPath)
+	exists, err := b.fs.Exists(dir, filename)
+	return err == nil && exists
+}
+
+func (b *Bot) findMediaByBasename(name string) (string, bool) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", false
+	}
+	files, err := b.fs.FilesAndDirs(fs.DirMedia)
+	if err != nil {
+		return "", false
+	}
+	var matches []string
+	for _, f := range files {
+		if f.IsDir {
+			continue
+		}
+		if f.Name == name {
+			matches = append(matches, fs.DirMedia+"/"+f.Name)
+		}
+	}
+	if len(matches) == 1 {
+		return matches[0], true
+	}
+	return "", false
 }
 
 func (b *Bot) sendMediaDocument(att txt.AttachmentInfo, kb *tg.Keyboard) error {
