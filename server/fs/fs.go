@@ -167,6 +167,34 @@ func (fs FS) Exists(dir, filename string) (bool, error) {
 	return exists, nil
 }
 
+// UniqueMediaFilename returns a sanitized filename that does not yet exist in media/.
+func (fs FS) UniqueMediaFilename(desired string) (string, error) {
+	desired = SanitizeFilename(filepath.Base(strings.TrimSpace(desired)))
+	if desired == "" {
+		return "", fmt.Errorf("empty media filename")
+	}
+	exists, err := fs.Exists(DirMedia, desired)
+	if err != nil {
+		return "", err
+	}
+	if !exists {
+		return desired, nil
+	}
+	ext := filepath.Ext(desired)
+	stem := strings.TrimSuffix(desired, ext)
+	for i := 2; i < 1000; i++ {
+		candidate := fmt.Sprintf("%s (%d)%s", stem, i, ext)
+		exists, err := fs.Exists(DirMedia, candidate)
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			return candidate, nil
+		}
+	}
+	return "", fmt.Errorf("too many files named %q", desired)
+}
+
 func (fs FS) Read(dir, filename string) (string, error) {
 	filePath, err := fs.SafePath(dir, filename)
 	if err != nil {

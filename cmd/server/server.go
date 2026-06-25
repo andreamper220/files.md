@@ -9,7 +9,6 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/joho/godotenv"
 	"github.com/spf13/afero"
 
 	"github.com/zakirullin/files.md/server"
@@ -22,9 +21,7 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		fmt.Println("No .env file found, relying on process environment")
-	}
+	config.LoadDotEnv()
 	if err := config.LoadBotConfig(); err != nil {
 		panic(fmt.Sprintf("Error loading cfg: %s\n", err))
 	}

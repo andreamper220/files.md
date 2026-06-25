@@ -481,6 +481,22 @@ func TestExists(t *testing.T) {
 	r.True(exists)
 }
 
+func TestUniqueMediaFilename(t *testing.T) {
+	r := require.New(t)
+	fs, err := NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	r.NoError(fs.CreateSystemDirs())
+
+	name, err := fs.UniqueMediaFilename("report.pdf")
+	r.NoError(err)
+	r.Equal("report.pdf", name)
+
+	r.NoError(fs.Write(DirMedia, "report.pdf", "v1"))
+	name, err = fs.UniqueMediaFilename("report.pdf")
+	r.NoError(err)
+	r.Equal("report (2).pdf", name)
+}
+
 func TestExistsRoot(t *testing.T) {
 	r := require.New(t)
 

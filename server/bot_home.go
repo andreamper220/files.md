@@ -247,7 +247,7 @@ func taskDetailKeyboard(opts taskDetailOpts) *tg.Keyboard {
 	row = append(row, tg.NewBtn("🗑", opts.delete))
 	if opts.projectPath != "" {
 		row = append(row, tg.NewBtn(
-			life.AreaLabel(opts.projectPath),
+			life.AreaNavBtnLabel(opts.projectPath),
 			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(opts.projectPath)}),
 		))
 	}
@@ -263,28 +263,19 @@ func (b *Bot) showMoveAreaTask(params []string) error {
 	itemHash := params[1]
 
 	_ = life.EnsureSpheresRoot(b.fs)
-	spheres, err := life.ListSpheres(b.fs)
-	if err != nil {
-		return fmt.Errorf("show move area task: %w", err)
-	}
 
 	var kb tg.Keyboard
-	for _, spherePath := range spheres {
-		areas, err := life.ListAllAreas(b.fs, spherePath)
-		if err != nil {
+	var dstAreas []string
+	for _, areaPath := range b.collectAllAreas() {
+		if fs.ShortHash(areaPath) == srcHash {
 			continue
 		}
-		for _, areaPath := range areas {
-			if fs.ShortHash(areaPath) == srcHash {
-				continue
-			}
-			kb.AddRow(tg.NewBtn(
-				life.AreaPickerLabel(spherePath, areaPath),
-				tg.NewCmd(CmdMoveAreaTask, []string{srcHash, itemHash, fs.ShortHash(areaPath)}),
-			))
-		}
+		dstAreas = append(dstAreas, areaPath)
 	}
-	if len(kb.Btns) == 0 {
+	addAreaPickerBtns(&kb, dstAreas, func(areaPath string) tg.Cmd {
+		return tg.NewCmd(CmdMoveAreaTask, []string{srcHash, itemHash, fs.ShortHash(areaPath)})
+	})
+	if len(dstAreas) == 0 {
 		kb.AddRow(tg.NewBtn("—", tg.NewCmd(CmdDoNothing, nil)))
 	}
 	kb.AddRow(tg.NewBtn("⬅️", tg.NewCmd(CmdShowTask, []string{taskKindArea, srcHash, itemHash})))

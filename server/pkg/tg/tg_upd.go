@@ -270,6 +270,15 @@ func (u *TGUpd) DocumentFileName() string {
 	return message.Document.FileName
 }
 
+// MediaGroupID returns the Telegram media group id when present.
+func (u *TGUpd) MediaGroupID() (string, bool) {
+	message := u.raw.Message
+	if message == nil || message.MediaGroupID == "" {
+		return "", false
+	}
+	return message.MediaGroupID, true
+}
+
 // Caption returns the caption for the animation, audio,
 // document, paid media, photo, video or voice
 func (u *TGUpd) Caption() string {

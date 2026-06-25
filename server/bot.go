@@ -80,6 +80,7 @@ type Update interface {
 	PhotoOrImageID() (string, bool)
 	AudioOnlyID() (string, bool)
 	DocumentOnlyID() (string, bool)
+	MediaGroupID() (string, bool)
 	DocumentFileName() string
 	Caption() string
 	MsgID() (int, bool)
@@ -775,7 +776,24 @@ func (b *Bot) saveFromDocument(u Update) error {
 		return b.addToReplied(replyMsgID, content)
 	}
 
+	if groupID, ok := u.MediaGroupID(); ok {
+		return b.bufferMediaGroupContent(groupID, content, u.Caption(), u.CaptionEntities())
+	}
+
 	return b.queueIncomingContent(content)
+}
+
+func mediaStorageFilename(fsys *fs.FS, originalName, docID, extension string) (string, error) {
+	originalName = strings.TrimSpace(originalName)
+	if originalName == "" {
+		originalName = fmt.Sprintf("tg_%s%s", docID, extension)
+	} else {
+		originalName = filepath.Base(originalName)
+		if extension != "" && !strings.HasSuffix(strings.ToLower(originalName), strings.ToLower(extension)) {
+			originalName += extension
+		}
+	}
+	return fsys.UniqueMediaFilename(originalName)
 }
 
 func (b *Bot) saveDocument(u Update) (string, error) {
@@ -787,16 +805,25 @@ func (b *Bot) saveDocument(u Update) (string, error) {
 		return "", fmt.Errorf("can't download document: %w", err)
 	}
 
-	docFilename := fmt.Sprintf("tg_%s%s", docID, extension)
+	docFilename, err := mediaStorageFilename(b.fs, u.DocumentFileName(), docID, extension)
+	if err != nil {
+		return "", fmt.Errorf("can't pick document filename: %w", err)
+	}
 	if err := b.fs.Write(fs.DirMedia, docFilename, buf.String()); err != nil {
 		return "", fmt.Errorf("can't save document: %w", err)
 	}
 
 	docPath := fmt.Sprintf("%s/%s", fs.DirMedia, docFilename)
-	content := txt.FormatAttachmentContent(docPath)
+	displayName := txt.AttachmentDisplayName("", docPath)
+	if name := strings.TrimSpace(u.DocumentFileName()); name != "" {
+		displayName = fs.SanitizeFilename(filepath.Base(name))
+	}
+	content := txt.FormatAttachmentContent(docPath, displayName)
 	if u.Caption() != "" {
-		caption := txt.TelegramEntitiesToMarkdown(u.Caption(), u.CaptionEntities())
-		content = fmt.Sprintf("%s\n%s", strings.TrimSpace(caption), content)
+		if _, grouped := u.MediaGroupID(); !grouped {
+			caption := txt.TelegramEntitiesToMarkdown(u.Caption(), u.CaptionEntities())
+			content = fmt.Sprintf("%s\n%s", strings.TrimSpace(caption), content)
+		}
 	}
 
 	return content, nil
@@ -1021,7 +1048,17 @@ func (b *Bot) extractHeaderAndBody(msg string, maxHeaderLen int) (string, string
 	}
 
 	parts := strings.Split(msg, "\n")
-	title := txt.Ucfirst(strings.TrimSpace(parts[0]))
+	firstLine := strings.TrimSpace(parts[0])
+	title := txt.Ucfirst(firstLine)
+	if att, ok := txt.ParseAttachmentLine(firstLine); ok {
+		if draftTitle := txt.DraftTitle(msg); draftTitle != "" {
+			title = txt.Ucfirst(draftTitle)
+		} else if names := txt.AttachmentNames(msg); len(names) > 0 {
+			title = txt.Ucfirst(txt.AttachmentNoteTitle(names))
+		} else {
+			title = txt.Ucfirst(txt.AttachmentDisplayName(att.Name, att.Path))
+		}
+	}
 	if title == txt.VoicePlaceholder {
 		if alt := txt.VoiceSummary(msg); alt != "" {
 			title = txt.Ucfirst(alt)

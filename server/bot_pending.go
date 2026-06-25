@@ -115,26 +115,13 @@ func (b *Bot) showTaskPriorityPicker(draftHash string) error {
 
 func (b *Bot) showTaskAreaPicker(draftHash, priorityIdxStr string) error {
 	_ = life.EnsureSpheresRoot(b.fs)
-	spheres, err := life.ListSpheres(b.fs)
-	if err != nil {
-		return fmt.Errorf("task area picker: %w", err)
-	}
 
 	kb := tg.NewKeyboard(nil)
-	for _, spherePath := range spheres {
-		areas, err := life.ListAllAreas(b.fs, spherePath)
-		if err != nil {
-			continue
-		}
-		for _, projectPath := range areas {
-			label := life.AreaPickerLabel(spherePath, projectPath)
-			kb.AddRow(tg.NewBtn(
-				label,
-				tg.NewCmd(CmdSaveTaskToArea, []string{draftHash, fs.ShortHash(projectPath), priorityIdxStr}),
-			))
-		}
-	}
-	if len(spheres) == 0 {
+	areas := b.collectAllAreas()
+	addAreaPickerBtns(kb, areas, func(projectPath string) tg.Cmd {
+		return tg.NewCmd(CmdSaveTaskToArea, []string{draftHash, fs.ShortHash(projectPath), priorityIdxStr})
+	})
+	if len(areas) == 0 {
 		kb.AddRow(tg.NewBtn(i18n.Tr("🏗 Создать структуру"), tg.NewCmd(CmdInitLife, nil)))
 	}
 	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))
@@ -144,26 +131,13 @@ func (b *Bot) showTaskAreaPicker(draftHash, priorityIdxStr string) error {
 
 func (b *Bot) showNoteAreaPicker(draftHash string) error {
 	_ = life.EnsureSpheresRoot(b.fs)
-	spheres, err := life.ListSpheres(b.fs)
-	if err != nil {
-		return fmt.Errorf("note area picker: %w", err)
-	}
 
 	kb := tg.NewKeyboard(nil)
-	for _, spherePath := range spheres {
-		areas, err := life.ListAllAreas(b.fs, spherePath)
-		if err != nil {
-			continue
-		}
-		for _, projectPath := range areas {
-			label := life.AreaPickerLabel(spherePath, projectPath)
-			kb.AddRow(tg.NewBtn(
-				label,
-				tg.NewCmd(CmdSaveNoteToArea, []string{draftHash, fs.ShortHash(projectPath), life.KindCode(life.KindDraft)}),
-			))
-		}
-	}
-	if len(spheres) == 0 {
+	areas := b.collectAllAreas()
+	addAreaPickerBtns(kb, areas, func(projectPath string) tg.Cmd {
+		return tg.NewCmd(CmdSaveNoteToArea, []string{draftHash, fs.ShortHash(projectPath), life.KindCode(life.KindDraft)})
+	})
+	if len(areas) == 0 {
 		kb.AddRow(tg.NewBtn(i18n.Tr("🏗 Создать структуру"), tg.NewCmd(CmdInitLife, nil)))
 	}
 	kb.AddRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)))

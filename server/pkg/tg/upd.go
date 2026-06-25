@@ -103,6 +103,10 @@ func (u *Upd) DocumentFileName() string {
 	return ""
 }
 
+func (u *Upd) MediaGroupID() (string, bool) {
+	return "", false
+}
+
 func (u *Upd) Caption() string {
 	return u.PhotoCaption
 }
