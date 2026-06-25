@@ -1,19 +1,24 @@
 // Package stt transcribes audio via kie.ai (ElevenLabs speech-to-text).
+// API docs: https://docs.kie.ai/market/quickstart
 package stt
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strings"
 	"time"
 )
 
 const (
-	uploadURL     = "https://kieai.redpandaai.co/api/file-base64-upload"
+	// File uploads: https://docs.kie.ai/file-upload-api/quickstart
+	streamUploadURL = "https://kieai.redpandaai.co/api/file-stream-upload"
+	uploadPath      = "filesmd/voice"
+
+	// Market jobs: https://docs.kie.ai/market/quickstart
 	createTaskURL = "https://api.kie.ai/api/v1/jobs/createTask"
 	recordInfoURL = "https://api.kie.ai/api/v1/jobs/recordInfo"
 	model         = "elevenlabs/speech-to-text"
@@ -44,30 +49,47 @@ func Transcribe(apiKey string, audio []byte, mimeType string) (string, error) {
 	return pollTask(apiKey, taskID)
 }
 
-func uploadAudio(apiKey string, audio []byte, mimeType string) (string, error) {
-	ext := ".ogg"
+func audioExt(mimeType string) string {
 	switch mimeType {
 	case "audio/mpeg", "audio/mp3":
-		ext = ".mp3"
+		return ".mp3"
 	case "audio/wav", "audio/x-wav":
-		ext = ".wav"
-	case "audio/mp4":
-		ext = ".m4a"
+		return ".wav"
+	case "audio/mp4", "audio/aac":
+		return ".m4a"
+	default:
+		return ".ogg"
+	}
+}
+
+func uploadAudio(apiKey string, audio []byte, mimeType string) (string, error) {
+	fileName := fmt.Sprintf("voice_%d%s", time.Now().UnixNano(), audioExt(mimeType))
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", fileName)
+	if err != nil {
+		return "", fmt.Errorf("stt upload: %w", err)
+	}
+	if _, err := part.Write(audio); err != nil {
+		return "", fmt.Errorf("stt upload: %w", err)
+	}
+	if err := writer.WriteField("uploadPath", uploadPath); err != nil {
+		return "", fmt.Errorf("stt upload: %w", err)
+	}
+	if err := writer.WriteField("fileName", fileName); err != nil {
+		return "", fmt.Errorf("stt upload: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return "", fmt.Errorf("stt upload: %w", err)
 	}
 
-	dataURL := fmt.Sprintf("data:%s;base64,%s", mimeType, base64.StdEncoding.EncodeToString(audio))
-	body, _ := json.Marshal(map[string]string{
-		"base64Data": dataURL,
-		"uploadPath": "filesmd/voice",
-		"fileName":   fmt.Sprintf("voice%s", ext),
-	})
-
-	req, err := http.NewRequest(http.MethodPost, uploadURL, bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, streamUploadURL, &body)
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -82,24 +104,37 @@ func uploadAudio(apiKey string, audio []byte, mimeType string) (string, error) {
 		Msg     string
 		Data    struct {
 			DownloadURL string `json:"downloadUrl"`
+			FileURL     string `json:"fileUrl"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &parsed); err != nil {
 		return "", fmt.Errorf("stt upload: parse response: %w", err)
 	}
-	if parsed.Data.DownloadURL == "" {
-		return "", fmt.Errorf("stt upload failed: %s", strings.TrimSpace(parsed.Msg))
+	audioURL := strings.TrimSpace(parsed.Data.DownloadURL)
+	if audioURL == "" {
+		audioURL = strings.TrimSpace(parsed.Data.FileURL)
 	}
-	return parsed.Data.DownloadURL, nil
+	if parsed.Code != 200 || !parsed.Success || audioURL == "" {
+		msg := strings.TrimSpace(parsed.Msg)
+		if msg == "" {
+			msg = "no download URL in response"
+		}
+		if parsed.Code != 0 && parsed.Code != 200 {
+			return "", fmt.Errorf("stt upload failed (code %d): %s", parsed.Code, msg)
+		}
+		return "", fmt.Errorf("stt upload failed: %s", msg)
+	}
+	return audioURL, nil
 }
 
 func createTask(apiKey, audioURL string) (string, error) {
+	// Params per https://kieai.mintlify.app/market/elevenlabs/speech-to-text
 	body, _ := json.Marshal(map[string]any{
 		"model": model,
 		"input": map[string]any{
 			"audio_url":        audioURL,
-			"language_code":    "ru",
-			"tag_audio_events": false,
+			"language_code":    "",
+			"tag_audio_events": true,
 			"diarize":          false,
 		},
 	})
@@ -127,7 +162,9 @@ func isRetryableSTTError(err error) bool {
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "server exception") ||
 		strings.Contains(msg, "try again") ||
-		strings.Contains(msg, "timeout")
+		strings.Contains(msg, "timeout") ||
+		strings.Contains(msg, "code 500") ||
+		strings.Contains(msg, "code 455")
 }
 
 func createTaskOnce(apiKey string, body []byte) (string, error) {
@@ -155,10 +192,17 @@ func createTaskOnce(apiKey string, body []byte) (string, error) {
 	if err := json.Unmarshal(respBody, &parsed); err != nil {
 		return "", fmt.Errorf("stt create task: parse response: %w", err)
 	}
-	if parsed.Data.TaskID == "" {
-		return "", fmt.Errorf("stt create task failed (http %d): %s", resp.StatusCode, strings.TrimSpace(parsed.Msg))
+	if parsed.Code == 200 && parsed.Data.TaskID != "" {
+		return parsed.Data.TaskID, nil
 	}
-	return parsed.Data.TaskID, nil
+	msg := strings.TrimSpace(parsed.Msg)
+	if msg == "" {
+		msg = "empty taskId"
+	}
+	if parsed.Code != 0 {
+		return "", fmt.Errorf("stt create task failed (code %d): %s", parsed.Code, msg)
+	}
+	return "", fmt.Errorf("stt create task failed (http %d): %s", resp.StatusCode, msg)
 }
 
 func pollTask(apiKey, taskID string) (string, error) {
@@ -202,6 +246,8 @@ func taskStatus(apiKey, taskID string) (text, state string, err error) {
 
 	respBody, _ := io.ReadAll(resp.Body)
 	var parsed struct {
+		Code int
+		Msg  string
 		Data struct {
 			State      string `json:"state"`
 			ResultJSON string `json:"resultJson"`
@@ -211,8 +257,15 @@ func taskStatus(apiKey, taskID string) (text, state string, err error) {
 	if err := json.Unmarshal(respBody, &parsed); err != nil {
 		return "", "", fmt.Errorf("stt poll: parse response: %w", err)
 	}
+	if parsed.Code != 0 && parsed.Code != 200 {
+		return "", "", fmt.Errorf("stt poll failed (code %d): %s", parsed.Code, strings.TrimSpace(parsed.Msg))
+	}
 	if parsed.Data.State == "fail" {
-		return "", "fail", fmt.Errorf("stt: %s", parsed.Data.FailMsg)
+		failMsg := strings.TrimSpace(parsed.Data.FailMsg)
+		if failMsg == "" {
+			failMsg = "transcription failed"
+		}
+		return "", "fail", fmt.Errorf("stt: %s", failMsg)
 	}
 	if parsed.Data.State != "success" {
 		return "", parsed.Data.State, nil
@@ -228,21 +281,39 @@ func extractTranscript(resultJSON string) string {
 	if err := json.Unmarshal([]byte(resultJSON), &raw); err != nil {
 		return strings.TrimSpace(resultJSON)
 	}
-	for _, key := range []string{"text", "transcript", "transcription"} {
-		if v, ok := raw[key].(string); ok && v != "" {
-			return strings.TrimSpace(v)
-		}
+	if text := textFromMap(raw); text != "" {
+		return text
 	}
 	if obj, ok := raw["resultObject"].(map[string]any); ok {
-		for _, key := range []string{"text", "transcript", "transcription"} {
-			if v, ok := obj[key].(string); ok && v != "" {
-				return strings.TrimSpace(v)
+		if text := textFromMap(obj); text != "" {
+			return text
+		}
+	}
+	if transcripts, ok := raw["transcripts"].([]any); ok {
+		var parts []string
+		for _, item := range transcripts {
+			if m, ok := item.(map[string]any); ok {
+				if text := textFromMap(m); text != "" {
+					parts = append(parts, text)
+				}
 			}
+		}
+		if len(parts) > 0 {
+			return strings.TrimSpace(strings.Join(parts, "\n"))
 		}
 	}
 	if urls, ok := raw["resultUrls"].([]any); ok && len(urls) > 0 {
 		if u, ok := urls[0].(string); ok {
 			return fetchTextURL(u)
+		}
+	}
+	return ""
+}
+
+func textFromMap(raw map[string]any) string {
+	for _, key := range []string{"text", "transcript", "transcription"} {
+		if v, ok := raw[key].(string); ok && strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
 		}
 	}
 	return ""
@@ -258,5 +329,11 @@ func fetchTextURL(url string) string {
 	if err != nil {
 		return ""
 	}
-	return strings.TrimSpace(string(body))
+	content := strings.TrimSpace(string(body))
+	if strings.HasPrefix(content, "{") {
+		if text := extractTranscript(content); text != "" {
+			return text
+		}
+	}
+	return content
 }
