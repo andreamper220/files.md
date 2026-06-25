@@ -100,17 +100,17 @@ func (b *Bot) showLifeProject(params []string) error {
 	parent := life.ParentAreaPath(projectPath)
 	if life.AreaDepth(projectPath) >= 2 && parent != "" {
 		footer = append(footer, tg.NewBtn(
-			"⬆️"+life.AreaEmoji(parent),
+			"⬆️",
 			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(parent)}),
 		))
 	} else if life.IsSpherePath(parent) {
 		footer = append(footer, tg.NewBtn(
-			"⬅️"+life.SphereEmoji(parent),
+			"⬆️",
 			tg.NewCmd(CmdShowLifeSphere, []string{fs.ShortHash(parent)}),
 		))
 	} else if parent != "" {
 		footer = append(footer, tg.NewBtn(
-			"⬅️"+life.AreaEmoji(parent),
+			"⬆️",
 			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(parent)}),
 		))
 	}

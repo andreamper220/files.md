@@ -112,9 +112,9 @@ func AreaPickerLabel(spherePath, areaPath string) string {
 	return SaveLocationLabel(spherePath, areaPath)
 }
 
-// AreaNavBtnLabel returns emoji-only label for area navigation buttons.
+// AreaNavBtnLabel returns emoji + leaf area title for navigation buttons.
 func AreaNavBtnLabel(projectPath string) string {
-	return AreaEmoji(projectPath)
+	return AreaLabel(projectPath)
 }
 
 // SphereBtnLabel returns emoji + sphere title for UI buttons.
