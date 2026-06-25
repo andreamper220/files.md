@@ -123,25 +123,27 @@ func NeedsUserTitle(raw string) bool {
 	if DraftTitle(raw) != "" {
 		return false
 	}
-	return !hasOnlyNamedAttachments(raw)
+	return IsAttachmentOnly(raw)
 }
 
-func hasOnlyNamedAttachments(raw string) bool {
+// IsAttachmentOnly reports whether content contains only file attachments (optional title line).
+func IsAttachmentOnly(raw string) bool {
+	title := DraftTitle(raw)
 	hasAttachment := false
 	for _, line := range strings.Split(NormNewLines(raw), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-		if att, ok := ParseAttachmentLine(line); ok {
+		if _, ok := ParseAttachmentLine(line); ok {
 			hasAttachment = true
-			if att.Name == "" || att.Name == attachmentPlaceholder {
-				return false
-			}
 			continue
 		}
 		if HasImage(line) || line == VoicePlaceholder {
 			return false
+		}
+		if title != "" && line == title {
+			continue
 		}
 		return false
 	}

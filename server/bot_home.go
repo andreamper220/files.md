@@ -152,7 +152,7 @@ func (b *Bot) showAreaTask(projectHash, itemHash string) error {
 		move:        &moveCmd,
 		projectPath: projectPath,
 	})
-	title := fmt.Sprintf("%s %s", life.AreaEmoji(projectPath), life.AreaFullTitle(projectPath))
+	title := fmt.Sprintf("%s %s", life.AreaEmoji(projectPath), life.AreaTitle(projectPath))
 	displayItem := txt.VoiceDetailBody(item)
 	if displayItem == "" {
 		displayItem = txt.DisplayText(item)
@@ -245,12 +245,6 @@ func taskDetailKeyboard(opts taskDetailOpts) *tg.Keyboard {
 		row = append(row, tg.NewBtn("↔️", *opts.move))
 	}
 	row = append(row, tg.NewBtn("🗑", opts.delete))
-	if opts.projectPath != "" {
-		row = append(row, tg.NewBtn(
-			life.AreaNavBtnLabel(opts.projectPath),
-			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(opts.projectPath)}),
-		))
-	}
 	row = append(row, tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)))
 	return tg.NewKeyboard([]tg.Row{row})
 }
@@ -496,7 +490,7 @@ func sortedAreaKeys(m map[string][]taskEntry) []string {
 }
 
 func areaLabelForKey(key string) string {
-	return life.AreaEmoji(key) + " " + life.AreaFullTitle(key)
+	return life.AreaEmoji(key) + " " + life.AreaTitle(key)
 }
 
 func (b *Bot) showNotesHub(_ []string) error {

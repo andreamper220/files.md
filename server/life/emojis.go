@@ -104,7 +104,7 @@ func AreaTreePrefix(depth int) string {
 func SaveLocationLabel(spherePath, areaPath string) string {
 	return fmt.Sprintf("%s %s → %s %s",
 		SphereEmoji(spherePath), SphereTitle(spherePath),
-		AreaEmoji(areaPath), AreaFullTitle(areaPath))
+		AreaEmoji(areaPath), AreaTitle(areaPath))
 }
 
 // AreaPickerLabel returns a button label for area pickers.
@@ -112,13 +112,9 @@ func AreaPickerLabel(spherePath, areaPath string) string {
 	return SaveLocationLabel(spherePath, areaPath)
 }
 
-// AreaNavBtnLabel returns emoji + full area title for navigation buttons.
+// AreaNavBtnLabel returns emoji-only label for area navigation buttons.
 func AreaNavBtnLabel(projectPath string) string {
-	title := AreaFullTitle(projectPath)
-	if title == "" {
-		title = AreaTitle(projectPath)
-	}
-	return AreaEmoji(projectPath) + " " + title
+	return AreaEmoji(projectPath)
 }
 
 // SphereBtnLabel returns emoji + sphere title for UI buttons.

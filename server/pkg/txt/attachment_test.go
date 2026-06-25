@@ -14,8 +14,8 @@ func TestNeedsUserTitle_AttachmentOnly(t *testing.T) {
 
 func TestNeedsUserTitle_NamedAttachmentOnly(t *testing.T) {
 	raw := FormatAttachmentContent("media/go-cheatsheet.pdf", "go-cheatsheet.pdf")
-	if NeedsUserTitle(raw) {
-		t.Fatal("expected named attachment-only draft to skip title prompt")
+	if !NeedsUserTitle(raw) {
+		t.Fatal("expected named attachment-only draft to need title")
 	}
 }
 

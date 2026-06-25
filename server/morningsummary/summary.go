@@ -90,7 +90,7 @@ func formatAreaLine(projectPath string, emojis []string, userFS *fs.FS, startOfD
 }
 
 func formatAreaHeader(projectPath string) string {
-	return life.AreaEmoji(projectPath) + " " + life.AreaFullTitle(projectPath)
+	return life.AreaEmoji(projectPath) + " " + life.AreaTitle(projectPath)
 }
 
 func formatSphereOnlyLine(spherePath string, emojis []string, userFS *fs.FS, startOfDay time.Time) string {

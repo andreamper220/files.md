@@ -65,9 +65,8 @@ func (b *Bot) showLifeSphere(params []string) error {
 	addAreaNavBtns(&kb, projects, CmdShowLifeProject)
 
 	kb.AddRow(tg.NewRow(
-		tg.NewBtn(i18n.Tr("➕ Новая область"), tg.NewCmd(CmdLifeNewProject, []string{fs.ShortHash(spherePath)})),
-		tg.NewBtn(i18n.Tr("🌐 Сферы"), tg.NewCmd(CmdShowLifeSpheres, nil)),
-		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
+		tg.NewBtn("➕", tg.NewCmd(CmdLifeNewProject, []string{fs.ShortHash(spherePath)})),
+		tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)),
 	))
 
 	title := fmt.Sprintf("%s %s", i18n.Tr("🏗 Области сферы:"), life.SphereTitle(spherePath))
@@ -85,43 +84,40 @@ func (b *Bot) showLifeProject(params []string) error {
 	addAreaNavBtns(&kb, sections, CmdShowLifeProject)
 
 	kb.AddRow(tg.NewRow(
-		tg.NewBtn(i18n.Tr("📝 Черновики"), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindDraft)})),
-		tg.NewBtn(i18n.Tr("✨ Финальные"), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindFinal)})),
-		tg.NewBtn(i18n.Tr("💬 Обсуждения"), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindDiscussion)})),
+		tg.NewBtn(life.KindEmoji(life.KindDraft), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindDraft)})),
+		tg.NewBtn(life.KindEmoji(life.KindFinal), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindFinal)})),
+		tg.NewBtn(life.KindEmoji(life.KindDiscussion), tg.NewCmd(CmdShowLifeDocs, []string{fs.ShortHash(projectPath), life.KindCode(life.KindDiscussion)})),
 	))
 
 	var footer []tg.Btn
 	if life.IsAreaPath(projectPath) {
 		footer = append(footer,
-			tg.NewBtn(i18n.Tr("➕ Раздел"), tg.NewCmd(CmdLifeNewSection, []string{fs.ShortHash(projectPath)})),
-			tg.NewBtn(i18n.Tr("↔️ Сфера"), tg.NewCmd(CmdShowMoveToSphere, []string{fs.ShortHash(projectPath)})),
+			tg.NewBtn("➕", tg.NewCmd(CmdLifeNewSection, []string{fs.ShortHash(projectPath)})),
+			tg.NewBtn("↔️", tg.NewCmd(CmdShowMoveToSphere, []string{fs.ShortHash(projectPath)})),
 		)
 	}
 
 	parent := life.ParentAreaPath(projectPath)
 	if life.AreaDepth(projectPath) >= 2 && parent != "" {
 		footer = append(footer, tg.NewBtn(
-			"⬆️ "+life.AreaNavBtnLabel(parent),
+			"⬆️"+life.AreaEmoji(parent),
 			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(parent)}),
 		))
 	} else if life.IsSpherePath(parent) {
 		footer = append(footer, tg.NewBtn(
-			"⬅️ "+life.SphereBtnLabel(parent),
+			"⬅️"+life.SphereEmoji(parent),
 			tg.NewCmd(CmdShowLifeSphere, []string{fs.ShortHash(parent)}),
 		))
 	} else if parent != "" {
 		footer = append(footer, tg.NewBtn(
-			"⬅️ "+life.AreaNavBtnLabel(parent),
+			"⬅️"+life.AreaEmoji(parent),
 			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(parent)}),
 		))
 	}
-	footer = append(footer,
-		tg.NewBtn(i18n.Tr("🌐 Сферы"), tg.NewCmd(CmdShowLifeSpheres, nil)),
-		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
-	)
+	footer = append(footer, tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)))
 	kb.AddRow(footer)
 
-	title := fmt.Sprintf("%s %s", i18n.Tr("🏗 Область:"), life.AreaFullTitle(projectPath))
+	title := fmt.Sprintf("%s %s", i18n.Tr("🏗 Область:"), life.AreaTitle(projectPath))
 	return b.showHTML(title, &kb)
 }
 
@@ -155,10 +151,7 @@ func (b *Bot) showLifeDocs(params []string) error {
 		kb.AddRow(tg.NewBtn(i18n.Tr("Пока пусто"), tg.NewCmd(CmdDoNothing, nil)))
 	}
 
-	kb.AddRow(tg.NewRow(
-		tg.NewBtn(life.AreaNavBtnLabel(projectPath), tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)})),
-		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
-	))
+	kb.AddRow(tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)))
 
 	return b.showHTML(lifeKindLabel(kind), &kb)
 }
@@ -283,7 +276,7 @@ func (b *Bot) createLifeProjectOnly(params []string) error {
 		tg.NewBtn(life.AreaLabel(projectPath), tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)})),
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	)})
-	msg := fmt.Sprintf(i18n.Tr("Проект <b>%s</b> создан"), life.AreaFullTitle(projectPath))
+	msg := fmt.Sprintf(i18n.Tr("Проект <b>%s</b> создан"), life.AreaTitle(projectPath))
 	return b.showHTML(msg, kb)
 }
 
@@ -309,7 +302,7 @@ func (b *Bot) createLifeSection(params []string) error {
 		tg.NewBtn(life.AreaNavBtnLabel(sectionPath), tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(sectionPath)})),
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	)})
-	msg := fmt.Sprintf(i18n.Tr("Раздел <b>%s</b> создан"), life.AreaFullTitle(sectionPath))
+	msg := fmt.Sprintf(i18n.Tr("Раздел <b>%s</b> создан"), life.AreaTitle(sectionPath))
 	return b.showHTML(msg, kb)
 }
 
@@ -573,16 +566,7 @@ func lifeKindLabel(kind life.Kind) string {
 }
 
 func lifeKindNavBtnLabel(kind life.Kind) string {
-	switch kind {
-	case life.KindDraft:
-		return i18n.Tr("📝 Черновики")
-	case life.KindFinal:
-		return i18n.Tr("✨ Финальные")
-	case life.KindDiscussion:
-		return i18n.Tr("💬 Обсуждения")
-	default:
-		return life.KindEmoji(kind)
-	}
+	return life.KindEmoji(kind)
 }
 
 func noteDetailKeyboard(dir, filename, dirHash string) *tg.Keyboard {
@@ -607,12 +591,6 @@ func noteDetailKeyboard(dir, filename, dirHash string) *tg.Keyboard {
 
 	if canDeleteNote(dir, filename) {
 		row = append(row, tg.NewBtn("🗑", tg.NewCmd(CmdShowDeleteFile, []string{dirHash, fs.Hash(filename)})))
-	}
-	if projectPath, ok := life.ProjectPathFromDoc(dir); ok {
-		row = append(row, tg.NewBtn(
-			life.AreaNavBtnLabel(projectPath),
-			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)}),
-		))
 	}
 	row = append(row, tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)))
 	return tg.NewKeyboard([]tg.Row{row})

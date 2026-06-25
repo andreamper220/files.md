@@ -1872,8 +1872,8 @@ func (b *Bot) showFile(params []string) error {
 		kb = tg.NewKeyboard([]tg.Row{row})
 	}
 
-	if att, ok := txt.ParseAttachment(content); ok && txt.NeedsUserTitle(content) {
-		return b.showAttachmentFile(att, kb)
+	if txt.IsAttachmentOnly(content) {
+		return b.showAttachmentNote(content, dir, filename, kb)
 	}
 
 	displayContent := txt.FormatNoteDetailBody(content)
@@ -1913,6 +1913,45 @@ func (b *Bot) sendLocalMediaFiles(userID int64, paths []string) ([]int, error) {
 		return nil, nil
 	}
 	return b.tg.SendLocalMedia(userID, items)
+}
+
+func (b *Bot) showAttachmentNote(content, dir, filename string, kb *tg.Keyboard) error {
+	attachments := txt.ParseAttachments(content)
+	if len(attachments) == 0 {
+		if att, ok := txt.ParseAttachment(content); ok {
+			attachments = []txt.AttachmentInfo{att}
+		}
+	}
+
+	var fileKb tg.Keyboard
+	for _, att := range attachments {
+		name := txt.AttachmentDisplayName(att.Name, att.Path)
+		fileKb.AddRow(tg.NewRow(tg.NewBtn(name, tg.NewCmd(CmdOpenMedia, []string{fs.ShortHash(att.Path)}))))
+	}
+	if kb != nil {
+		for _, row := range kb.Btns {
+			fileKb.AddRow(row)
+		}
+	}
+
+	title := txt.DraftTitle(content)
+	if title == "" {
+		title = txt.AttachmentNoteTitle(txt.AttachmentNames(content))
+	}
+	if title == "" {
+		title = fs.DisplayName(filename)
+	}
+
+	err := b.showHTML(title, &fileKb)
+	if err != nil {
+		return fmt.Errorf("show attachment note: %w", err)
+	}
+
+	msgID, hasLastKeyboard := b.db.LastKeyboardMsgID()
+	if hasLastKeyboard {
+		b.db.SetHashOrPathByMsgID(msgID, filepath.ToSlash(filepath.Join(dir, filename)))
+	}
+	return nil
 }
 
 func (b *Bot) showAttachmentFile(att txt.AttachmentInfo, kb *tg.Keyboard) error {
