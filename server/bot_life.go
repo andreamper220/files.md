@@ -140,7 +140,7 @@ func (b *Bot) showLifeDocs(params []string) error {
 	}
 
 	kb.AddRow(tg.NewRow(
-		tg.NewBtn(i18n.Tr("🏗 Проект"), tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)})),
+		tg.NewBtn(life.AreaLabel(projectPath), tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)})),
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
 	))
 
@@ -263,10 +263,10 @@ func (b *Bot) createLifeProjectOnly(params []string) error {
 		return fmt.Errorf("create project only: %w", err)
 	}
 
-	kb := tg.NewKeyboard([]tg.Row{
-		tg.NewBtn(i18n.Tr("🏗 Проект"), tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)})),
+	kb := tg.NewKeyboard([]tg.Row{tg.NewRow(
+		tg.NewBtn(life.AreaLabel(projectPath), tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)})),
 		tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil)),
-	})
+	)})
 	msg := fmt.Sprintf(i18n.Tr("Проект <b>%s</b> создан"), life.AreaFullTitle(projectPath))
 	return b.showHTML(msg, kb)
 }
@@ -579,6 +579,12 @@ func noteDetailKeyboard(dir, filename, dirHash string) *tg.Keyboard {
 	if canDeleteNote(dir, filename) {
 		row = append(row, tg.NewBtn("🗑", tg.NewCmd(CmdShowDeleteFile, []string{dirHash, fs.Hash(filename)})))
 	}
+	if projectPath, ok := life.ProjectPathFromDoc(dir); ok {
+		row = append(row, tg.NewBtn(
+			life.AreaLabel(projectPath),
+			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(projectPath)}),
+		))
+	}
 	row = append(row, tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)))
 	return tg.NewKeyboard([]tg.Row{row})
 }
@@ -693,20 +699,17 @@ func noteBackCmd(dir string) tg.Cmd {
 }
 
 func addAreaNavBtns(kb *tg.Keyboard, areaPaths []string, cmd string) {
+	if len(areaPaths) == 0 {
+		return
+	}
 	row := tg.NewRow()
 	for _, areaPath := range areaPaths {
 		row = append(row, tg.NewBtn(
 			life.AreaNavBtnLabel(areaPath),
 			tg.NewCmd(cmd, []string{fs.ShortHash(areaPath)}),
 		))
-		if len(row) >= btnsPerRow {
-			kb.AddRow(row)
-			row = tg.NewRow()
-		}
 	}
-	if len(row) > 0 {
-		kb.AddRow(row)
-	}
+	kb.AddRow(row)
 }
 
 func lifeFinalizeBtn(dir, filename string) *tg.Btn {

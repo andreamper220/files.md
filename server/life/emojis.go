@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"strings"
-
-	"github.com/zakirullin/files.md/server/pkg/txt"
 )
 
 // Sphere emoji markers for home summary (names are not shown).
@@ -114,13 +112,9 @@ func AreaPickerLabel(spherePath, areaPath string) string {
 	return SaveLocationLabel(spherePath, areaPath)
 }
 
-// AreaNavBtnLabel returns a compact button label for area/section navigation.
+// AreaNavBtnLabel returns an emoji-only label for area/section navigation buttons.
 func AreaNavBtnLabel(projectPath string) string {
-	title := AreaTitle(projectPath)
-	if txt.IsEmojiOnlyName(title) {
-		return title
-	}
-	return AreaEmoji(projectPath) + " " + title
+	return AreaEmoji(projectPath)
 }
 
 // SphereLabel returns emoji-only label for UI buttons.

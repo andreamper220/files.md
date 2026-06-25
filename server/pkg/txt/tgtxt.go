@@ -114,6 +114,11 @@ func ExtractTextImgsLinks(text string) (txt string, images []string, links map[s
 	var processedLines []string
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
+		if att, ok := ParseAttachmentLine(trimmedLine); ok {
+			label := AttachmentDisplayName(att.Name, att.Path)
+			links[label] = att.Path
+			continue
+		}
 		if linkRegexp.MatchString(trimmedLine) && linkRegexp.FindString(trimmedLine) == trimmedLine {
 			matches := linkRegexp.FindStringSubmatch(line)
 			if len(matches) == 2 {

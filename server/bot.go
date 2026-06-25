@@ -247,6 +247,7 @@ const (
 	CmdCompleteAreaTask                = "area_c"
 	CmdShowTask                        = "task_show"
 	CmdDeleteTask                      = "task_del"
+	CmdOpenMedia                       = "open_m"
 	CmdShowTaskActions               = "task_act"
 )
 
@@ -432,6 +433,7 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdCompleteAreaTask:          b.completeAreaTask,
 		CmdShowTask:                  b.showTask,
 		CmdDeleteTask:                b.deleteTask,
+		CmdOpenMedia:                 b.openMedia,
 		CmdShowTaskActions:           b.showTaskActions,
 		CmdRandomNote:                b.randomNote,
 		CmdShowMoveExisting:   b.showMoveExisting,
@@ -1134,15 +1136,25 @@ func (b *Bot) showMD(probablyInvalidMD string, kb *tg.Keyboard) error {
 	probablyInvalidMD, images, links := txt.ExtractTextImgsLinks(probablyInvalidMD)
 
 	for label, link := range links {
-		dir := fs.DirUserRoot
 		link = strings.TrimSpace(link)
 		parts := strings.SplitN(link, "/", 2)
+		dir := fs.DirUserRoot
+		filename := link
 		if len(parts) == 2 {
 			dir = parts[0]
-			link = parts[1]
+			filename = parts[1]
 		}
 
-		cmd := tg.NewCmd(CmdShowFile, []string{fs.Hash(dir), fs.Hash(link)})
+		var cmd tg.Cmd
+		mediaPath := link
+		if len(parts) == 2 {
+			mediaPath = parts[0] + "/" + parts[1]
+		}
+		if dir == fs.DirMedia || !strings.HasSuffix(strings.ToLower(mediaPath), fs.MDExt) {
+			cmd = tg.NewCmd(CmdOpenMedia, []string{fs.ShortHash(mediaPath)})
+		} else {
+			cmd = tg.NewCmd(CmdShowFile, []string{fs.Hash(dir), fs.Hash(filename)})
+		}
 		kb.PrependRow(tg.NewRow(tg.NewBtn(txt.Ucfirst(label), cmd)))
 	}
 
@@ -1809,14 +1821,11 @@ func (b *Bot) showFile(params []string) error {
 		kb = tg.NewKeyboard([]tg.Row{row})
 	}
 
-	if att, ok := txt.ParseAttachment(content); ok {
+	if att, ok := txt.ParseAttachment(content); ok && txt.NeedsUserTitle(content) {
 		return b.showAttachmentFile(att, kb)
 	}
 
-	displayContent := content
-	if txt.VoiceSummary(content) != "" {
-		displayContent = txt.VoiceDetailBody(content)
-	}
+	displayContent := txt.FormatNoteDetailBody(content)
 
 	md := fmt.Sprintf("**%s**\n\n%s", fs.DisplayName(filename), displayContent)
 	err = b.showMD(md, kb)
@@ -1833,6 +1842,43 @@ func (b *Bot) showFile(params []string) error {
 }
 
 func (b *Bot) showAttachmentFile(att txt.AttachmentInfo, kb *tg.Keyboard) error {
+	return b.sendMediaDocument(att, kb)
+}
+
+func (b *Bot) openMedia(params []string) error {
+	if len(params) == 0 {
+		return fmt.Errorf("open media: missing params")
+	}
+	mediaPath, err := b.resolveMediaPath(params[0])
+	if err != nil {
+		return fmt.Errorf("open media: %w", err)
+	}
+	att := txt.AttachmentInfo{Path: mediaPath}
+	return b.sendMediaDocument(att, nil)
+}
+
+func (b *Bot) resolveMediaPath(hashOrPath string) (string, error) {
+	hashOrPath = strings.TrimSpace(hashOrPath)
+	if strings.Contains(hashOrPath, "/") {
+		return strings.TrimPrefix(hashOrPath, "/"), nil
+	}
+	files, err := b.fs.FilesAndDirs(fs.DirMedia)
+	if err != nil {
+		return "", err
+	}
+	for _, f := range files {
+		if f.IsDir {
+			continue
+		}
+		full := fs.DirMedia + "/" + f.Name
+		if fs.ShortHash(full) == hashOrPath || fs.ShortHash(f.Name) == hashOrPath {
+			return full, nil
+		}
+	}
+	return "", fmt.Errorf("media not found: %s", hashOrPath)
+}
+
+func (b *Bot) sendMediaDocument(att txt.AttachmentInfo, kb *tg.Keyboard) error {
 	displayName := txt.AttachmentDisplayName(att.Name, att.Path)
 	dir, filename := txt.AttachmentMediaPath(att.Path)
 	data, err := b.fs.Read(dir, filename)
@@ -1842,11 +1888,12 @@ func (b *Bot) showAttachmentFile(att txt.AttachmentInfo, kb *tg.Keyboard) error 
 	}
 
 	b.delAllKeyboards()
-	_, err = b.tg.SendDocument(b.userID, displayName, strings.NewReader(data), displayName, kb)
+	mid, err := b.tg.SendDocument(b.userID, displayName, strings.NewReader(data), displayName, kb)
 	if err != nil {
 		return fmt.Errorf("show attachment: %w", err)
 	}
 
+	b.db.SetLastKeyboardMsgID(mid)
 	msgID, hasLastKeyboard := b.db.LastKeyboardMsgID()
 	if hasLastKeyboard {
 		b.db.SetHashOrPathByMsgID(msgID, att.Path)

@@ -1,6 +1,9 @@
 package txt
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestDisplayText_PrefersTranscriptOverVoicePlaceholder(t *testing.T) {
 	raw := "Расписание на завтра\n\n![](media/tg_voice.ogg)"
@@ -29,6 +32,27 @@ func TestDisplayText_FallsBackToPlaceholder(t *testing.T) {
 	raw := VoicePlaceholder + "\n\n![](media/tg_voice.ogg)"
 	if got := DisplayText(raw); got != "" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestVoiceSummary_AfterPlaceholder(t *testing.T) {
+	raw := VoicePlaceholder + "\nРасписание на завтра.\n\n![](media/tg_voice.ogg)"
+	if got := VoiceSummary(raw); got != "Расписание на завтра." {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestFormatNoteDetailBody_MixedVoice(t *testing.T) {
+	raw := "тест\n" + VoicePlaceholder + "\nРасшифровка голоса.\n\n![](media/tg_voice.ogg)"
+	got := FormatNoteDetailBody(raw)
+	if !strings.Contains(got, "тест") {
+		t.Fatalf("missing text: %q", got)
+	}
+	if strings.Contains(got, VoicePlaceholder) {
+		t.Fatalf("placeholder still visible: %q", got)
+	}
+	if !strings.Contains(got, "Расшифровка голоса.") {
+		t.Fatalf("missing transcript: %q", got)
 	}
 }
 

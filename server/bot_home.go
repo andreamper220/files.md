@@ -146,10 +146,11 @@ func (b *Bot) showAreaTask(projectHash, itemHash string) error {
 
 	moveCmd := tg.NewCmd(CmdMoveToAreaTask, []string{projectHash, itemHash})
 	kb := taskDetailKeyboard(taskDetailOpts{
-		back:     tg.NewCmd(CmdShowTasksView, nil),
-		complete: tg.NewCmd(CmdCompleteAreaTask, []string{projectHash, itemHash}),
-		delete:   tg.NewCmd(CmdDeleteTask, []string{taskKindArea, projectHash, itemHash}),
-		move:     &moveCmd,
+		back:        tg.NewCmd(CmdShowTasksView, nil),
+		complete:    tg.NewCmd(CmdCompleteAreaTask, []string{projectHash, itemHash}),
+		delete:      tg.NewCmd(CmdDeleteTask, []string{taskKindArea, projectHash, itemHash}),
+		move:        &moveCmd,
+		projectPath: projectPath,
 	})
 	title := fmt.Sprintf("%s %s", life.AreaEmoji(projectPath), life.AreaFullTitle(projectPath))
 	displayItem := txt.VoiceDetailBody(item)
@@ -227,10 +228,11 @@ func (b *Bot) deleteAreaTask(projectHash, itemHash string) error {
 }
 
 type taskDetailOpts struct {
-	back     tg.Cmd
-	complete tg.Cmd
-	delete   tg.Cmd
-	move     *tg.Cmd
+	back        tg.Cmd
+	complete    tg.Cmd
+	delete      tg.Cmd
+	move        *tg.Cmd
+	projectPath string
 }
 
 func taskDetailKeyboard(opts taskDetailOpts) *tg.Keyboard {
@@ -242,10 +244,14 @@ func taskDetailKeyboard(opts taskDetailOpts) *tg.Keyboard {
 	if opts.move != nil {
 		row = append(row, tg.NewBtn("↔️", *opts.move))
 	}
-	row = append(row,
-		tg.NewBtn("🗑", opts.delete),
-		tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)),
-	)
+	row = append(row, tg.NewBtn("🗑", opts.delete))
+	if opts.projectPath != "" {
+		row = append(row, tg.NewBtn(
+			life.AreaLabel(opts.projectPath),
+			tg.NewCmd(CmdShowLifeProject, []string{fs.ShortHash(opts.projectPath)}),
+		))
+	}
+	row = append(row, tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)))
 	return tg.NewKeyboard([]tg.Row{row})
 }
 
