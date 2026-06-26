@@ -242,6 +242,8 @@ const (
 	CmdPickTaskPriority                = "task_prio"
 	CmdSaveAsNote                      = "as_note"
 	CmdApplyDraftTitle                 = "d_title"
+	CmdPickVoiceTitle                  = "v_title"
+	CmdVoiceTitleCustom                = "v_tcust"
 	CmdShowTasksView                   = "tasks_v"
 	CmdShowNotesHub                    = "notes_h"
 	CmdSaveNoteToArea                  = "note_area"
@@ -438,6 +440,8 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdPickTaskPriority:          b.pickTaskPriority,
 		CmdSaveAsNote:                b.saveAsNote,
 		CmdApplyDraftTitle:           b.applyDraftTitle,
+		CmdPickVoiceTitle:            b.pickVoiceTitle,
+		CmdVoiceTitleCustom:          b.voiceTitleCustom,
 		CmdShowTasksView:             b.showTasksView,
 		CmdShowNotesHub:              b.showNotesHub,
 		CmdSaveNoteToArea:            b.saveNoteToArea,

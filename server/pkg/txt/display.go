@@ -1,6 +1,7 @@
 package txt
 
 import (
+	"path/filepath"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -10,6 +11,100 @@ import (
 const VoicePlaceholder = "🎙 Голосовое сообщение"
 
 const voiceSummaryMaxRunes = 80
+
+// VoiceTitleBtnMaxRunes is the max rune length for voice title picker buttons.
+const VoiceTitleBtnMaxRunes = 36
+
+// IsVoiceDraft reports whether pending content is a voice message draft.
+func IsVoiceDraft(raw string) bool {
+	if strings.Contains(raw, VoicePlaceholder) {
+		return true
+	}
+	for _, line := range strings.Split(NormNewLines(raw), "\n") {
+		if path, ok := ParseImageLine(strings.TrimSpace(line)); ok && IsVoiceMediaPath(path) {
+			return true
+		}
+	}
+	return false
+}
+
+// IsVoiceMediaPath reports whether a stored media path is voice/audio.
+func IsVoiceMediaPath(path string) bool {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".oga", ".ogg", ".opus", ".mp3", ".mpeg", ".wav", ".m4a", ".mp4", ".webm":
+		return true
+	default:
+		return false
+	}
+}
+
+// VoiceTitleSuggestions returns short title options for a voice draft.
+func VoiceTitleSuggestions(raw string) []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(s string) {
+		s = strings.TrimSpace(s)
+		if s == "" || s == VoicePlaceholder || seen[s] {
+			return
+		}
+		seen[s] = true
+		out = append(out, s)
+	}
+
+	if summary := VoiceSummary(raw); summary != "" {
+		add(summary)
+	}
+	if transcript := VoiceTranscript(raw); transcript != "" {
+		first := strings.TrimSpace(strings.Split(transcript, "\n")[0])
+		add(SummarizeVoice(first))
+	}
+	if len(out) == 0 {
+		add(VoicePlaceholder)
+	}
+	if len(out) > 2 {
+		out = out[:2]
+	}
+	return out
+}
+
+// BtnLabelTitle shortens a title for inline keyboard buttons.
+func BtnLabelTitle(title string, maxRunes int) string {
+	title = strings.TrimSpace(title)
+	if maxRunes <= 0 {
+		maxRunes = VoiceTitleBtnMaxRunes
+	}
+	if utf8.RuneCountInString(title) <= maxRunes {
+		return title
+	}
+	return Substr(title, 0, maxRunes-1) + "…"
+}
+
+// ApplyVoiceDraftTitle sets the note/task title and keeps transcript + audio in the body.
+func ApplyVoiceDraftTitle(raw, title string) string {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return raw
+	}
+	media := voiceMediaSuffix(raw)
+	transcript := strings.TrimSpace(VoiceTranscript(raw))
+	if transcript == "" {
+		if alt := VoiceSummary(raw); alt != "" && alt != VoicePlaceholder {
+			transcript = alt
+		}
+	}
+	if transcript == title {
+		transcript = ""
+	}
+
+	body := title
+	if transcript != "" {
+		body = title + "\n" + transcript
+	}
+	if media != "" {
+		return body + media
+	}
+	return body
+}
 
 // DisplayText returns human-readable text for previews, stripping media and
 // preferring voice summaries over the placeholder label.

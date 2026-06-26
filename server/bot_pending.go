@@ -69,6 +69,9 @@ func (b *Bot) saveAsTask(params []string) error {
 	if !ok {
 		return b.ShowHome(nil)
 	}
+	if txt.IsVoiceDraft(content) {
+		return b.showVoiceTitlePicker(draftHash, draftKindTask)
+	}
 	if txt.NeedsUserTitle(content) {
 		return b.showDraftTitlePrompt(draftHash, draftKindTask)
 	}
@@ -91,6 +94,9 @@ func (b *Bot) saveAsNote(params []string) error {
 	content, ok := b.db.PendingDraft(draftHash)
 	if !ok {
 		return b.ShowHome(nil)
+	}
+	if txt.IsVoiceDraft(content) {
+		return b.showVoiceTitlePicker(draftHash, draftKindNote)
 	}
 	if txt.NeedsUserTitle(content) {
 		return b.showDraftTitlePrompt(draftHash, draftKindNote)
@@ -234,6 +240,88 @@ func (b *Bot) showDraftTitlePrompt(draftHash, kind string) error {
 	return b.showHTML(i18n.Tr("Пришли название:"), nil)
 }
 
+func (b *Bot) showVoiceTitlePicker(draftHash, kind string) error {
+	content, ok := b.db.PendingDraft(draftHash)
+	if !ok {
+		return b.ShowHome(nil)
+	}
+
+	suggestions := txt.VoiceTitleSuggestions(content)
+	kb := tg.NewKeyboard(nil)
+	row := tg.NewRow()
+	for i, title := range suggestions {
+		row = append(row, tg.NewBtn(
+			txt.BtnLabelTitle(title, txt.VoiceTitleBtnMaxRunes),
+			tg.NewCmd(CmdPickVoiceTitle, []string{draftHash, kind, strconv.Itoa(i)}),
+		))
+		if len(row) >= 2 {
+			kb.AddRow(row)
+			row = tg.NewRow()
+		}
+	}
+	if len(row) > 0 {
+		kb.AddRow(row)
+	}
+	kb.AddRow(tg.NewBtn("✏️ "+i18n.Tr("Своё"), tg.NewCmd(CmdVoiceTitleCustom, []string{draftHash, kind})))
+
+	preview := txt.VoiceSummary(content)
+	if preview == "" {
+		preview = txt.VoicePlaceholder
+	}
+	msg := i18n.Tr("Выбери заголовок:") + "\n\n<i>" + txt.EscapeHTML(preview) + "</i>"
+	return b.showHTML(msg, kb)
+}
+
+func (b *Bot) pickVoiceTitle(params []string) error {
+	if len(params) < 3 {
+		return fmt.Errorf("pick voice title: missing params")
+	}
+	draftHash := params[0]
+	kind := params[1]
+	content, ok := b.db.PendingDraft(draftHash)
+	if !ok {
+		return b.ShowHome(nil)
+	}
+	idx, err := strconv.Atoi(params[2])
+	if err != nil {
+		return fmt.Errorf("pick voice title: bad index: %w", err)
+	}
+	suggestions := txt.VoiceTitleSuggestions(content)
+	if idx < 0 || idx >= len(suggestions) {
+		return b.ShowHome(nil)
+	}
+	return b.applyVoiceDraftTitle(draftHash, kind, suggestions[idx])
+}
+
+func (b *Bot) voiceTitleCustom(params []string) error {
+	if len(params) < 2 {
+		return fmt.Errorf("voice title custom: missing params")
+	}
+	return b.showDraftTitlePrompt(params[0], params[1])
+}
+
+func (b *Bot) applyVoiceDraftTitle(draftHash, kind, title string) error {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return b.showVoiceTitlePicker(draftHash, kind)
+	}
+	content, ok := b.db.PendingDraft(draftHash)
+	if !ok {
+		return b.ShowHome(nil)
+	}
+	b.db.SetPendingDraft(draftHash, txt.ApplyVoiceDraftTitle(content, title))
+	b.db.DelInputExpectation()
+
+	switch kind {
+	case draftKindTask:
+		return b.showTaskPriorityPicker(draftHash)
+	case draftKindNote:
+		return b.showNoteAreaPicker(draftHash)
+	default:
+		return b.ShowHome(nil)
+	}
+}
+
 func (b *Bot) applyDraftTitle(params []string) error {
 	if len(params) < 3 {
 		return fmt.Errorf("apply draft title: missing params")
@@ -249,7 +337,11 @@ func (b *Bot) applyDraftTitle(params []string) error {
 	if !ok {
 		return b.ShowHome(nil)
 	}
-	b.db.SetPendingDraft(draftHash, txt.ApplyDraftTitle(content, title))
+	if txt.IsVoiceDraft(content) {
+		b.db.SetPendingDraft(draftHash, txt.ApplyVoiceDraftTitle(content, title))
+	} else {
+		b.db.SetPendingDraft(draftHash, txt.ApplyDraftTitle(content, title))
+	}
 	b.db.DelInputExpectation()
 
 	switch kind {

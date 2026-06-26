@@ -117,7 +117,13 @@ func saveIncomingAsNoteToProject(bot *Bot, fakeDB *db.FakeDB, projectPath string
 
 func ensureDraftTitled(bot *Bot, draftHash, kind string) error {
 	content, ok := bot.db.PendingDraft(draftHash)
-	if !ok || !txt.NeedsUserTitle(content) {
+	if !ok {
+		return nil
+	}
+	if txt.IsVoiceDraft(content) {
+		return bot.pickVoiceTitle([]string{draftHash, kind, "0"})
+	}
+	if !txt.NeedsUserTitle(content) {
 		return nil
 	}
 	return bot.applyDraftTitle([]string{draftHash, kind, defaultTestDraftTitle(content, kind)})

@@ -165,13 +165,15 @@ func ExtractTextImgsLinks(text string) (txt string, images []string, localMedia 
 		replacement := full
 		if strings.HasPrefix(path, "media/") {
 			localMedia = append(localMedia, path)
-			replacement = "🖼"
+			replacement = ""
 		} else if idMatches := tgIDRegexp.FindStringSubmatch(path); len(idMatches) == 2 {
 			images = append(images, idMatches[1])
-			replacement = "🖼"
+			replacement = ""
 		}
 		text = text[:loc[0]] + replacement + text[loc[1]+closeRel+1:]
 	}
+
+	text = collapseBlankLines(text)
 
 	// Process inline links
 	text = linkRegexp.ReplaceAllStringFunc(text, func(match string) string {
@@ -202,6 +204,13 @@ func ExtractTextImgsLinks(text string) (txt string, images []string, localMedia 
 	})
 
 	return strings.TrimSpace(text), images, localMedia, links
+}
+
+func collapseBlankLines(text string) string {
+	for strings.Contains(text, "\n\n\n") {
+		text = strings.ReplaceAll(text, "\n\n\n", "\n\n")
+	}
+	return text
 }
 
 func HasImage(msg string) bool {

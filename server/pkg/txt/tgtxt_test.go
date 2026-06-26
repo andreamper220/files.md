@@ -171,7 +171,7 @@ func TestExtractTextImgsLinks_WithLocalMedia(t *testing.T) {
 
 	resultText, images, localMedia, links := ExtractTextImgsLinks(text)
 
-	require.Equal(t, "🎙 Голосовое сообщение\n\n🖼", resultText)
+	require.Equal(t, "🎙 Голосовое сообщение", resultText)
 	require.Empty(t, images)
 	require.Equal(t, []string{"media/tg_AwACAgIAAxkBAAOVajzo.ogg"}, localMedia)
 	require.Empty(t, links)
@@ -182,7 +182,7 @@ func TestExtractTextImgsLinks_WithSingleImage(t *testing.T) {
 
 	resultText, images, localMedia, links := ExtractTextImgsLinks(text)
 
-	require.Equal(t, "This text includes an image: 🖼.", resultText)
+	require.Equal(t, "This text includes an image: .", resultText)
 	require.Equal(t, []string{"BQACAgIAAxkBAAIs"}, images)
 	require.Empty(t, localMedia)
 	require.Empty(t, links)
@@ -193,7 +193,7 @@ func TestExtractTextImgsLinks_WithMultipleImages(t *testing.T) {
 
 	resultText, images, localMedia, links := ExtractTextImgsLinks(text)
 
-	require.Equal(t, "Here are two images: 🖼 and 🖼.", resultText)
+	require.Equal(t, "Here are two images:  and .", resultText)
 	require.ElementsMatch(t, []string{"image1", "image2"}, images)
 	require.Empty(t, localMedia)
 	require.Empty(t, links)
@@ -214,7 +214,7 @@ func TestExtractTextImgsLinks_WithImageAndLink(t *testing.T) {
 
 	resultText, images, localMedia, links := ExtractTextImgsLinks(text)
 
-	require.Equal(t, "Here is an image: 🖼 and a link: `doc`.", resultText)
+	require.Equal(t, "Here is an image:  and a link: `doc`.", resultText)
 	require.Equal(t, []string{"image"}, images)
 	require.Empty(t, localMedia)
 	require.Equal(t, map[string]string{"doc": "/path/to/doc.md"}, links)
@@ -262,7 +262,7 @@ func TestExtractTextImgsLinks_WithNestedLinksAndImages(t *testing.T) {
 
 	resultText, images, localMedia, links := ExtractTextImgsLinks(text)
 
-	require.Equal(t, "Complex example with image and links:\n🖼", resultText)
+	require.Equal(t, "Complex example with image and links:", resultText)
 	require.Equal(t, []string{"image"}, images)
 	require.Empty(t, localMedia)
 	require.Equal(t, map[string]string{
