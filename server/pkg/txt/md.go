@@ -190,37 +190,31 @@ func ReplaceChecklistItem(md, itemHash, newText string) (string, bool) {
 		return md, false
 	}
 	lines := strings.Split(md, "\n")
-	for i, line := range lines {
-		line = strings.TrimSpace(line)
-		if len(line) < 6 {
-			continue
-		}
-		if strings.HasPrefix(line, "- [ ] ") && Hash(line[6:]) == itemHash {
-			lines[i] = "- [ ] " + newText
-			return strings.Join(lines, "\n"), true
-		}
+	start, end, _, ok := findChecklistItemRange(lines, itemHash, true)
+	if !ok {
+		return md, false
 	}
-	return md, false
+	newLines := strings.Split(NormNewLines(newText), "\n")
+	block := []string{"- [ ] " + strings.TrimSpace(newLines[0])}
+	block = append(block, newLines[1:]...)
+	result := append(append(lines[:start], block...), lines[end:]...)
+	return strings.Join(result, "\n"), true
 }
 
-// AppendChecklistItem appends text to an open checklist item as a continuation line.
+// AppendChecklistItem appends text to an open checklist item as continuation line(s).
 func AppendChecklistItem(md, itemHash, addition string) (string, bool) {
 	addition = strings.TrimRight(strings.TrimSpace(addition), "\n")
 	if addition == "" {
 		return md, false
 	}
 	lines := strings.Split(md, "\n")
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if len(trimmed) < 6 {
-			continue
-		}
-		if strings.HasPrefix(trimmed, "- [ ] ") && Hash(trimmed[6:]) == itemHash {
-			lines[i] = strings.TrimRight(line, "\n") + "\n" + addition
-			return strings.Join(lines, "\n"), true
-		}
+	start, end, _, ok := findChecklistItemRange(lines, itemHash, true)
+	if !ok {
+		return md, false
 	}
-	return md, false
+	block := append(append([]string(nil), lines[start:end]...), strings.Split(addition, "\n")...)
+	result := append(append(lines[:start], block...), lines[end:]...)
+	return strings.Join(result, "\n"), true
 }
 
 // RemoveChecklistItem removes given item from checklist.
@@ -269,17 +263,54 @@ func RemoveCompletedChecklistItems(md string) (string, string) {
 
 func ChecklistItem(md, itemOrHash string) string {
 	lines := strings.Split(md, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if len(line) < 6 {
+	start, end, firstLineText, ok := findChecklistItemRange(lines, itemOrHash, false)
+	if !ok {
+		return ""
+	}
+	body := []string{firstLineText}
+	for i := start + 1; i < end; i++ {
+		body = append(body, lines[i])
+	}
+	return strings.Join(body, "\n")
+}
+
+func isChecklistLine(line string) (marker, text string, ok bool) {
+	line = strings.TrimSpace(line)
+	if strings.HasPrefix(line, "- [ ] ") {
+		return "- [ ] ", line[6:], true
+	}
+	if strings.HasPrefix(line, "- [x] ") {
+		return "- [x] ", line[6:], true
+	}
+	return "", "", false
+}
+
+// findChecklistItemRange locates a checklist item block: the marker line plus any
+// continuation lines until the next checklist marker.
+func findChecklistItemRange(lines []string, itemOrHash string, openOnly bool) (start, end int, firstLineText string, ok bool) {
+	for i := 0; i < len(lines); i++ {
+		marker, text, isChecklist := isChecklistLine(lines[i])
+		if !isChecklist {
 			continue
 		}
-
-		if Hash(line[6:]) == itemOrHash || line[6:] == itemOrHash {
-			return line[6:]
+		if openOnly && marker != "- [ ] " {
+			continue
 		}
+		if Hash(text) != itemOrHash && text != itemOrHash {
+			continue
+		}
+		start = i
+		firstLineText = text
+		end = i + 1
+		for end < len(lines) {
+			if _, _, next := isChecklistLine(lines[end]); next {
+				break
+			}
+			end++
+		}
+		return start, end, firstLineText, true
 	}
-	return ""
+	return 0, 0, "", false
 }
 
 // MarkdownToHTML naively converts user's markdown to Telegram-supported subset of HTML.

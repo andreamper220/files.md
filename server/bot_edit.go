@@ -190,17 +190,30 @@ func (b *Bot) startEditTask(mode string, params []string) error {
 		return fmt.Errorf("start edit task: missing params")
 	}
 
+	b.db.SetEditTaskTarget(params, mode)
+
 	back := tg.NewCmd(CmdShowTask, params)
 	kb := tg.NewKeyboard([]tg.Row{tg.NewRow(tg.NewBtn(i18n.Tr(i18n.StrBack), back))})
 
-	cmd := tg.NewCmd(CmdEditTask, append(append([]string(nil), params...), mode, "%s"))
-	b.db.SetInputExpectation(cmd)
-
-	msg := i18n.Tr("OK. Send me the new text for your task")
+	msg := i18n.Tr("OK. Send new text or files to replace your task")
 	if mode == editModeAppend {
-		msg = i18n.Tr("OK. Send text to append to your task")
+		msg = i18n.Tr("OK. Send new text or attach files to your task")
 	}
 	return b.showHTML(msg, kb)
+}
+
+func (b *Bot) applyEditTaskContent(params []string, mode, content string) error {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return nil
+	}
+	if err := b.editTask(append(append(append([]string(nil), params...), mode), content)); err != nil {
+		return err
+	}
+	if mode == editModeReplace {
+		b.db.DelEditTaskTarget()
+	}
+	return nil
 }
 
 func (b *Bot) editTask(params []string) error {
@@ -288,7 +301,7 @@ func (b *Bot) editListTask(checklistHash, itemHash, newText string) error {
 	if err := b.fs.Write(fs.DirUserRoot, checklist, newMD); err != nil {
 		return fmt.Errorf("edit list task: %w", err)
 	}
-	return b.showListTask(checklistHash, fs.Hash(newText))
+	return b.showListTask(checklistHash, checklistItemHash(newText))
 }
 
 func (b *Bot) appendListTask(checklistHash, itemHash, addition string) error {
@@ -326,7 +339,7 @@ func (b *Bot) editAreaTask(projectHash, itemHash, newText string) error {
 	if err := b.fs.Write(projectPath, life.TasksFilename, newMD); err != nil {
 		return fmt.Errorf("edit area task: %w", err)
 	}
-	return b.showAreaTask(projectHash, fs.Hash(newText))
+	return b.showAreaTask(projectHash, checklistItemHash(newText))
 }
 
 func (b *Bot) appendAreaTask(projectHash, itemHash, addition string) error {
@@ -378,4 +391,9 @@ func editNoteCmd(dirHash, filename string) tg.Cmd {
 
 func editTaskCmd(params ...string) tg.Cmd {
 	return tg.NewCmd(CmdShowEditTask, params)
+}
+
+func checklistItemHash(text string) string {
+	first := strings.TrimSpace(strings.SplitN(txt.NormNewLines(text), "\n", 2)[0])
+	return fs.Hash(first)
 }

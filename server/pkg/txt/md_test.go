@@ -508,8 +508,39 @@ func TestChecklistItemNotFound(t *testing.T) {
 func TestChecklistItemWithWhitespace(t *testing.T) {
 	r := require.New(t)
 
-	md := "   - [ ] spaced task   \nother text"
+	md := "   - [ ] spaced task   \n- [x] other task"
 	result := ChecklistItem(md, "spaced task")
 
 	r.Equal("spaced task", result)
+}
+
+func TestAppendChecklistItem_WithContinuationLines(t *testing.T) {
+	r := require.New(t)
+
+	md := "- [ ] Buy milk\n![](media/photo.jpg)"
+	itemHash := Hash("Buy milk")
+	result, ok := AppendChecklistItem(md, itemHash, "and eggs")
+
+	r.True(ok)
+	r.Equal("- [ ] Buy milk\n![](media/photo.jpg)\nand eggs", result)
+}
+
+func TestReplaceChecklistItem_WithContinuationLines(t *testing.T) {
+	r := require.New(t)
+
+	md := "- [ ] Old task\n![](media/old.jpg)\nextra"
+	itemHash := Hash("Old task")
+	result, ok := ReplaceChecklistItem(md, itemHash, "New task\n![](media/new.jpg)")
+
+	r.True(ok)
+	r.Equal("- [ ] New task\n![](media/new.jpg)", result)
+}
+
+func TestChecklistItem_WithContinuationLines(t *testing.T) {
+	r := require.New(t)
+
+	md := "- [ ] Task title\n![](media/file.png)"
+	result := ChecklistItem(md, Hash("Task title"))
+
+	r.Equal("Task title\n![](media/file.png)", result)
 }

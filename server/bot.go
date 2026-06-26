@@ -115,6 +115,9 @@ type Database interface {
 	SetEditNoteTarget(dirHash, filenameHash, mode string)
 	EditNoteTarget() (dirHash, filenameHash, mode string, ok bool)
 	DelEditNoteTarget()
+	SetEditTaskTarget(params []string, mode string)
+	EditTaskTarget() (params []string, mode string, ok bool)
+	DelEditTaskTarget()
 	HashOrPathByMsgID(msgID int) (string, bool)
 	SetHashOrPathByMsgID(msgID int, value string)
 	RecentCommand() (string, bool)
@@ -640,6 +643,10 @@ func (b *Bot) saveFromTextMsg(u Update) error {
 		return b.editNoteText(dirHash, filenameHash, msg)
 	}
 
+	if params, mode, ok := b.db.EditTaskTarget(); ok {
+		return b.applyEditTaskContent(params, mode, msg)
+	}
+
 	// Collapse a few consecutive messages into one, see bot_forwards.go
 	msgTime, updateHasTime := u.Time()
 	if updateHasTime {
@@ -675,6 +682,14 @@ func (b *Bot) saveFromImage(u Update) error {
 			return fmt.Errorf("save from image: %w", err)
 		}
 		return b.applyEditNoteContent(dirHash, filenameHash, mode, content)
+	}
+
+	if params, mode, ok := b.db.EditTaskTarget(); ok {
+		content, err := b.saveImage(u)
+		if err != nil {
+			return fmt.Errorf("save from image: %w", err)
+		}
+		return b.applyEditTaskContent(params, mode, content)
 	}
 
 	content, err := b.saveImage(u)
@@ -725,6 +740,18 @@ func (b *Bot) saveFromAudio(u Update) error {
 			return fmt.Errorf("save from audio: %w", err)
 		}
 		return b.applyEditNoteContent(dirHash, filenameHash, mode, content)
+	}
+
+	if params, mode, ok := b.db.EditTaskTarget(); ok {
+		statusID := b.sendVoiceTranscriptionStatus()
+		content, err := b.saveAudio(u)
+		if statusID > 0 {
+			b.finishVoiceTranscriptionStatus(statusID, content, err)
+		}
+		if err != nil {
+			return fmt.Errorf("save from audio: %w", err)
+		}
+		return b.applyEditTaskContent(params, mode, content)
 	}
 
 	statusID := b.sendVoiceTranscriptionStatus()
@@ -838,6 +865,17 @@ func (b *Bot) saveFromDocument(u Update) error {
 			return b.bufferMediaGroupContent(groupID, content, u.Caption(), u.CaptionEntities())
 		}
 		return b.applyEditNoteContent(dirHash, filenameHash, mode, content)
+	}
+
+	if params, mode, ok := b.db.EditTaskTarget(); ok {
+		content, err := b.saveDocument(u)
+		if err != nil {
+			return fmt.Errorf("save from document: %w", err)
+		}
+		if groupID, ok := u.MediaGroupID(); ok {
+			return b.bufferMediaGroupContent(groupID, content, u.Caption(), u.CaptionEntities())
+		}
+		return b.applyEditTaskContent(params, mode, content)
 	}
 
 	content, err := b.saveDocument(u)
@@ -1479,6 +1517,7 @@ func (b *Bot) recentCmdBtn(msgHash string) *tg.Btn {
 
 func (b *Bot) ShowHome(_ []string) error {
 	b.db.DelEditNoteTarget()
+	b.db.DelEditTaskTarget()
 
 	report, err := morningsummary.Build(b.fs, b.cfg)
 	if err != nil {

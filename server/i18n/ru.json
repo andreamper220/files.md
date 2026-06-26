@@ -114,6 +114,8 @@
   "How do you want to edit the task?": "Как редактировать задачу?",
   "✏️ Rewrite": "✏️ Переписать",
   "OK. Send new text or files to replace your note": "ОК. Пришли новый текст или файлы для замены заметки",
+  "OK. Send new text or files to replace your task": "ОК. Пришли новый текст или файлы для замены задачи",
+  "OK. Send new text or attach files to your task": "ОК. Пришли новый текст или прикрепи файлы к задаче",
   "➕ Append": "➕ Дополнить",
   "OK. Send me the name for your new dir": "ОК. Пришли имя для новой папки",
   "You don't have any scheduled tasks! 🌴": "Нет запланированных задач! 🌴",

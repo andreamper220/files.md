@@ -12,6 +12,8 @@ type FakeDB struct {
 	EditNoteDirHash     string
 	EditNoteFileHash    string
 	EditNoteMode        string
+	EditTaskParams      []string
+	EditTaskMode        string
 	LastKeyboardMID     int
 	RecentCMD           string
 	RecentCMDParams     []string
@@ -70,6 +72,23 @@ func (db *FakeDB) DelEditNoteTarget() {
 	db.EditNoteDirHash = ""
 	db.EditNoteFileHash = ""
 	db.EditNoteMode = ""
+}
+
+func (db *FakeDB) SetEditTaskTarget(params []string, mode string) {
+	db.EditTaskParams = append([]string(nil), params...)
+	db.EditTaskMode = mode
+}
+
+func (db *FakeDB) EditTaskTarget() (params []string, mode string, ok bool) {
+	if len(db.EditTaskParams) == 0 {
+		return nil, "", false
+	}
+	return db.EditTaskParams, db.EditTaskMode, true
+}
+
+func (db *FakeDB) DelEditTaskTarget() {
+	db.EditTaskParams = nil
+	db.EditTaskMode = ""
 }
 
 func (db *FakeDB) HashOrPathByMsgID(msgID int) (string, bool) {

@@ -85,5 +85,9 @@ func (buf *mediaGroupBuffer) flush(key string) {
 		_ = bot.applyEditNoteContent(dirHash, fileHash, mode, content)
 		return
 	}
+	if params, mode, ok := bot.db.EditTaskTarget(); ok {
+		_ = bot.applyEditTaskContent(params, mode, content)
+		return
+	}
 	_ = bot.queueIncomingContent(content)
 }

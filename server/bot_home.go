@@ -24,6 +24,7 @@ const (
 )
 
 func (b *Bot) showTask(params []string) error {
+	b.db.DelEditTaskTarget()
 	if len(params) < 2 {
 		return fmt.Errorf("show task: missing params")
 	}

@@ -20,6 +20,7 @@ var (
 	sentPhotoMsgIDs       sync.Map
 	pendingDrafts         sync.Map
 	editNoteTargets       sync.Map
+	editTaskTargets       sync.Map
 )
 
 // DB Do we need a type at all?
@@ -96,6 +97,33 @@ func (db *DB) EditNoteTarget() (dirHash, filenameHash, mode string, ok bool) {
 
 func (db *DB) DelEditNoteTarget() {
 	editNoteTargets.Delete(editNoteTargetKey(db.UserID))
+}
+
+// SetEditTaskTarget marks a task being edited (text and/or file attachments).
+// params identify the task: [c,msgHash], [k,checklistHash,itemHash], or [a,projectHash,itemHash].
+// mode is "r" (replace) or "a" (append).
+func (db *DB) SetEditTaskTarget(params []string, mode string) {
+	parts := append(append([]string(nil), params...), mode)
+	editTaskTargets.Store(editTaskTargetKey(db.UserID), strings.Join(parts, "/"))
+}
+
+// EditTaskTarget returns the task currently being edited.
+func (db *DB) EditTaskTarget() (params []string, mode string, ok bool) {
+	v, ok := editTaskTargets.Load(editTaskTargetKey(db.UserID))
+	if !ok {
+		return nil, "", false
+	}
+	parts := strings.Split(v.(string), "/")
+	if len(parts) < 3 {
+		return nil, "", false
+	}
+	mode = parts[len(parts)-1]
+	params = parts[:len(parts)-1]
+	return params, mode, true
+}
+
+func (db *DB) DelEditTaskTarget() {
+	editTaskTargets.Delete(editTaskTargetKey(db.UserID))
 }
 
 // HashOrPathByMsgID returns the target the bot rendered for this msgID -
@@ -175,6 +203,10 @@ func inputExpectationKey(userID int64) string {
 
 func editNoteTargetKey(userID int64) string {
 	return fmt.Sprintf("%d:editNoteTarget", userID)
+}
+
+func editTaskTargetKey(userID int64) string {
+	return fmt.Sprintf("%d:editTaskTarget", userID)
 }
 
 func hashOrPathByMsgIDKey(userID int64, msgID int) string {
