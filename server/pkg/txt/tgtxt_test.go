@@ -271,6 +271,20 @@ func TestExtractTextImgsLinks_WithNestedLinksAndImages(t *testing.T) {
 	}, links)
 }
 
+func TestExtractTextImgsLinks_WithAttachments(t *testing.T) {
+	text := "ntcn\n📎 [go-cheatsheet-1page.pdf](media/go-cheatsheet-1page.pdf)\n📎 [go-livecoding-and-common.pdf](media/go-livecoding-and-common.pdf)"
+
+	resultText, images, localMedia, links := ExtractTextImgsLinks(text)
+
+	require.Equal(t, "ntcn", resultText)
+	require.Empty(t, images)
+	require.Equal(t, []string{
+		"media/go-cheatsheet-1page.pdf",
+		"media/go-livecoding-and-common.pdf",
+	}, localMedia)
+	require.Empty(t, links)
+}
+
 func TestHasImage(t *testing.T) {
 	text := "Text with an image: ![](img/tg_image.png)"
 	require.True(t, HasImage(text))

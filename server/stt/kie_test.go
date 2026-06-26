@@ -32,3 +32,23 @@ func TestAudioExt(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestUniqueURLs_PrefersFileURLFirst(t *testing.T) {
+	got := uniqueURLs("https://example.com/file.ogg", "https://example.com/download/abc")
+	if len(got) != 2 {
+		t.Fatalf("got %v", got)
+	}
+	if got[0] != "https://example.com/file.ogg" {
+		t.Fatalf("got %q", got[0])
+	}
+}
+
+func TestSttInputVariants_IncludesAutoDetect(t *testing.T) {
+	variants := sttInputVariants("https://example.com/voice.ogg", "ru")
+	if len(variants) < 2 {
+		t.Fatalf("expected multiple variants, got %d", len(variants))
+	}
+	if variants[0]["language_code"] != "" {
+		t.Fatalf("first variant should auto-detect, got %q", variants[0]["language_code"])
+	}
+}

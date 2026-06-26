@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/zakirullin/files.md/server/pkg/tg"
@@ -18,6 +19,7 @@ var (
 	recentCommandsTargets sync.Map
 	sentPhotoMsgIDs       sync.Map
 	pendingDrafts         sync.Map
+	editNoteTargets       sync.Map
 )
 
 // DB Do we need a type at all?
@@ -68,6 +70,32 @@ func (db *DB) SetInputExpectation(cmd tg.Cmd) {
 
 func (db *DB) DelInputExpectation() {
 	inputExpectations.Delete(inputExpectationKey(db.UserID))
+}
+
+// SetEditNoteTarget marks a note being edited (text and/or file attachments).
+// mode is "r" (replace text) or "a" (append).
+func (db *DB) SetEditNoteTarget(dirHash, filenameHash, mode string) {
+	editNoteTargets.Store(editNoteTargetKey(db.UserID), dirHash+"/"+filenameHash+"/"+mode)
+}
+
+// EditNoteTarget returns the note currently being edited.
+func (db *DB) EditNoteTarget() (dirHash, filenameHash, mode string, ok bool) {
+	v, ok := editNoteTargets.Load(editNoteTargetKey(db.UserID))
+	if !ok {
+		return "", "", "", false
+	}
+	parts := strings.SplitN(v.(string), "/", 3)
+	if len(parts) < 2 {
+		return "", "", "", false
+	}
+	if len(parts) == 2 {
+		return parts[0], parts[1], "r", true
+	}
+	return parts[0], parts[1], parts[2], true
+}
+
+func (db *DB) DelEditNoteTarget() {
+	editNoteTargets.Delete(editNoteTargetKey(db.UserID))
 }
 
 // HashOrPathByMsgID returns the target the bot rendered for this msgID -
@@ -143,6 +171,10 @@ func photoMsgIDKey(userID int64) string {
 
 func inputExpectationKey(userID int64) string {
 	return fmt.Sprintf("%d:inputExpectations", userID)
+}
+
+func editNoteTargetKey(userID int64) string {
+	return fmt.Sprintf("%d:editNoteTarget", userID)
 }
 
 func hashOrPathByMsgIDKey(userID int64, msgID int) string {

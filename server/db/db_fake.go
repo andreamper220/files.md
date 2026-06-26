@@ -9,6 +9,9 @@ import (
 type FakeDB struct {
 	HashOrPathByMID     string
 	InputExpectationCMD *tg.Cmd
+	EditNoteDirHash     string
+	EditNoteFileHash    string
+	EditNoteMode        string
 	LastKeyboardMID     int
 	RecentCMD           string
 	RecentCMDParams     []string
@@ -45,6 +48,28 @@ func (db *FakeDB) SetInputExpectation(cmd tg.Cmd) {
 
 func (db *FakeDB) DelInputExpectation() {
 	db.InputExpectationCMD = nil
+}
+
+func (db *FakeDB) SetEditNoteTarget(dirHash, filenameHash, mode string) {
+	db.EditNoteDirHash = dirHash
+	db.EditNoteFileHash = filenameHash
+	db.EditNoteMode = mode
+}
+
+func (db *FakeDB) EditNoteTarget() (dirHash, filenameHash, mode string, ok bool) {
+	if db.EditNoteDirHash == "" || db.EditNoteFileHash == "" {
+		return "", "", "", false
+	}
+	if db.EditNoteMode == "" {
+		return db.EditNoteDirHash, db.EditNoteFileHash, "r", true
+	}
+	return db.EditNoteDirHash, db.EditNoteFileHash, db.EditNoteMode, true
+}
+
+func (db *FakeDB) DelEditNoteTarget() {
+	db.EditNoteDirHash = ""
+	db.EditNoteFileHash = ""
+	db.EditNoteMode = ""
 }
 
 func (db *FakeDB) HashOrPathByMsgID(msgID int) (string, bool) {

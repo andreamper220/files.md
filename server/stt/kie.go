@@ -4,9 +4,11 @@ package stt
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -16,12 +18,15 @@ import (
 const (
 	// File uploads: https://docs.kie.ai/file-upload-api/quickstart
 	streamUploadURL = "https://kieai.redpandaai.co/api/file-stream-upload"
+	base64UploadURL = "https://kieai.redpandaai.co/api/file-base64-upload"
 	uploadPath      = "filesmd/voice"
 
 	// Market jobs: https://docs.kie.ai/market/quickstart
 	createTaskURL = "https://api.kie.ai/api/v1/jobs/createTask"
 	recordInfoURL = "https://api.kie.ai/api/v1/jobs/recordInfo"
 	model         = "elevenlabs/speech-to-text"
+
+	maxBase64UploadBytes = 10 * 1024 * 1024
 )
 
 // Transcribe uploads audio to kie.ai and returns the transcript text.
@@ -36,12 +41,12 @@ func Transcribe(apiKey string, audio []byte, mimeType, languageCode string) (str
 		mimeType = "audio/ogg"
 	}
 
-	downloadURL, err := uploadAudio(apiKey, audio, mimeType)
+	audioURLs, err := uploadAudio(apiKey, audio, mimeType)
 	if err != nil {
 		return "", err
 	}
 
-	taskID, err := createTask(apiKey, downloadURL, languageCode)
+	taskID, err := createTask(apiKey, audioURLs, languageCode)
 	if err != nil {
 		return "", err
 	}
@@ -62,42 +67,91 @@ func audioExt(mimeType string) string {
 	}
 }
 
-func uploadAudio(apiKey string, audio []byte, mimeType string) (string, error) {
+func uploadAudio(apiKey string, audio []byte, mimeType string) ([]string, error) {
+	urls, err := uploadAudioStream(apiKey, audio, mimeType)
+	if err == nil && len(urls) > 0 {
+		return urls, nil
+	}
+	if len(audio) <= maxBase64UploadBytes {
+		base64URLs, base64Err := uploadAudioBase64(apiKey, audio, mimeType)
+		if base64Err == nil && len(base64URLs) > 0 {
+			return base64URLs, nil
+		}
+		if err == nil {
+			err = base64Err
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	return nil, fmt.Errorf("stt upload: no download URL in response")
+}
+
+func uploadAudioStream(apiKey string, audio []byte, mimeType string) ([]string, error) {
 	fileName := fmt.Sprintf("voice_%d%s", time.Now().UnixNano(), audioExt(mimeType))
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 	part, err := writer.CreateFormFile("file", fileName)
 	if err != nil {
-		return "", fmt.Errorf("stt upload: %w", err)
+		return nil, fmt.Errorf("stt upload: %w", err)
 	}
 	if _, err := part.Write(audio); err != nil {
-		return "", fmt.Errorf("stt upload: %w", err)
+		return nil, fmt.Errorf("stt upload: %w", err)
 	}
 	if err := writer.WriteField("uploadPath", uploadPath); err != nil {
-		return "", fmt.Errorf("stt upload: %w", err)
+		return nil, fmt.Errorf("stt upload: %w", err)
 	}
 	if err := writer.WriteField("fileName", fileName); err != nil {
-		return "", fmt.Errorf("stt upload: %w", err)
+		return nil, fmt.Errorf("stt upload: %w", err)
 	}
 	if err := writer.Close(); err != nil {
-		return "", fmt.Errorf("stt upload: %w", err)
+		return nil, fmt.Errorf("stt upload: %w", err)
 	}
 
 	req, err := http.NewRequest(http.MethodPost, streamUploadURL, &body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("stt upload: %w", err)
+		return nil, fmt.Errorf("stt upload: %w", err)
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	return parseUploadResponse(resp.Body)
+}
+
+func uploadAudioBase64(apiKey string, audio []byte, mimeType string) ([]string, error) {
+	fileName := fmt.Sprintf("voice_%d%s", time.Now().UnixNano(), audioExt(mimeType))
+	dataURL := fmt.Sprintf("data:%s;base64,%s", mimeType, base64.StdEncoding.EncodeToString(audio))
+	body, _ := json.Marshal(map[string]string{
+		"base64Data": dataURL,
+		"uploadPath": uploadPath,
+		"fileName":   fileName,
+	})
+
+	req, err := http.NewRequest(http.MethodPost, base64UploadURL, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("stt base64 upload: %w", err)
+	}
+	defer resp.Body.Close()
+
+	return parseUploadResponse(resp.Body)
+}
+
+func parseUploadResponse(respBody io.Reader) ([]string, error) {
+	raw, _ := io.ReadAll(respBody)
 	var parsed struct {
 		Success bool `json:"success"`
 		Code    int  `json:"code"`
@@ -107,55 +161,99 @@ func uploadAudio(apiKey string, audio []byte, mimeType string) (string, error) {
 			FileURL     string `json:"fileUrl"`
 		} `json:"data"`
 	}
-	if err := json.Unmarshal(respBody, &parsed); err != nil {
-		return "", fmt.Errorf("stt upload: parse response: %w", err)
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		return nil, fmt.Errorf("stt upload: parse response: %w", err)
 	}
-	audioURL := strings.TrimSpace(parsed.Data.DownloadURL)
-	if audioURL == "" {
-		audioURL = strings.TrimSpace(parsed.Data.FileURL)
-	}
-	if parsed.Code != 200 || !parsed.Success || audioURL == "" {
+	// fileUrl is a direct public link; downloadUrl may require auth redirects.
+	urls := uniqueURLs(parsed.Data.FileURL, parsed.Data.DownloadURL)
+	if parsed.Code != 200 || !parsed.Success || len(urls) == 0 {
 		msg := strings.TrimSpace(parsed.Msg)
 		if msg == "" {
 			msg = "no download URL in response"
 		}
 		if parsed.Code != 0 && parsed.Code != 200 {
-			return "", fmt.Errorf("stt upload failed (code %d): %s", parsed.Code, msg)
+			return nil, fmt.Errorf("stt upload failed (code %d): %s", parsed.Code, msg)
 		}
-		return "", fmt.Errorf("stt upload failed: %s", msg)
+		return nil, fmt.Errorf("stt upload failed: %s", msg)
 	}
-	return audioURL, nil
+	return urls, nil
 }
 
-func createTask(apiKey, audioURL, languageCode string) (string, error) {
-	if strings.TrimSpace(languageCode) == "" {
+func uniqueURLs(urls ...string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, u := range urls {
+		u = strings.TrimSpace(u)
+		if u == "" || seen[u] {
+			continue
+		}
+		seen[u] = true
+		out = append(out, u)
+	}
+	return out
+}
+
+func createTask(apiKey string, audioURLs []string, languageCode string) (string, error) {
+	languageCode = strings.TrimSpace(languageCode)
+	if languageCode == "" {
 		languageCode = "ru"
 	}
-	// Params per https://kieai.mintlify.app/market/elevenlabs/speech-to-text
-	body, _ := json.Marshal(map[string]any{
-		"model": model,
-		"input": map[string]any{
+
+	var lastErr error
+	for _, audioURL := range audioURLs {
+		for _, input := range sttInputVariants(audioURL, languageCode) {
+			body, _ := json.Marshal(map[string]any{
+				"model": model,
+				"input": input,
+			})
+			for attempt := 1; attempt <= 3; attempt++ {
+				taskID, err := createTaskOnce(apiKey, body)
+				if err == nil {
+					return taskID, nil
+				}
+				lastErr = err
+				slog.Warn("stt create task attempt failed",
+					"attempt", attempt,
+					"audio_url", audioURL,
+					"language_code", input["language_code"],
+					"err", err,
+				)
+				if attempt < 3 && isRetryableSTTError(err) {
+					time.Sleep(time.Duration(attempt) * time.Second)
+					continue
+				}
+				break
+			}
+		}
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("stt create task: no audio URLs to try")
+	}
+	return "", lastErr
+}
+
+// sttInputVariants returns createTask input payloads to try, ordered by API docs preference.
+func sttInputVariants(audioURL, languageCode string) []map[string]any {
+	return []map[string]any{
+		{
+			"audio_url":        audioURL,
+			"language_code":    "",
+			"tag_audio_events": true,
+			"diarize":          false,
+		},
+		{
 			"audio_url":        audioURL,
 			"language_code":    languageCode,
 			"tag_audio_events": true,
 			"diarize":          false,
 		},
-	})
-
-	var lastErr error
-	for attempt := 1; attempt <= 3; attempt++ {
-		taskID, err := createTaskOnce(apiKey, body)
-		if err == nil {
-			return taskID, nil
-		}
-		lastErr = err
-		if attempt < 3 && isRetryableSTTError(err) {
-			time.Sleep(time.Duration(attempt) * time.Second)
-			continue
-		}
-		return "", err
+		{
+			"audio_url":        audioURL,
+			"language_code":    languageCode,
+			"tag_audio_events": false,
+			"diarize":          false,
+		},
 	}
-	return "", lastErr
 }
 
 func isRetryableSTTError(err error) bool {
@@ -199,6 +297,9 @@ func createTaskOnce(apiKey string, body []byte) (string, error) {
 		return parsed.Data.TaskID, nil
 	}
 	msg := strings.TrimSpace(parsed.Msg)
+	if msg == "" {
+		msg = strings.TrimSpace(string(respBody))
+	}
 	if msg == "" {
 		msg = "empty taskId"
 	}

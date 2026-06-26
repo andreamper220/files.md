@@ -34,14 +34,12 @@ func (b *Bot) showLifeSpheres(_ []string) error {
 
 	var kb tg.Keyboard
 	if len(spheres) > 0 {
-		row := tg.NewRow()
 		for _, spherePath := range spheres {
-			row = append(row, tg.NewBtn(
+			kb.AddRow(tg.NewBtn(
 				life.SphereBtnLabel(spherePath),
 				tg.NewCmd(CmdShowLifeSphere, []string{fs.ShortHash(spherePath)}),
 			))
 		}
-		kb.AddRow(row)
 	} else {
 		kb.AddRow(tg.NewBtn(i18n.Tr("🏗 Создать структуру"), tg.NewCmd(CmdInitLife, nil)))
 	}
@@ -65,6 +63,7 @@ func (b *Bot) showLifeSphere(params []string) error {
 	addAreaNavBtns(&kb, projects, CmdShowLifeProject)
 
 	kb.AddRow(tg.NewRow(
+		tg.NewBtn("⬅️", tg.NewCmd(CmdShowLifeSpheres, nil)),
 		tg.NewBtn("➕", tg.NewCmd(CmdLifeNewProject, []string{fs.ShortHash(spherePath)})),
 		tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)),
 	))
@@ -117,7 +116,7 @@ func (b *Bot) showLifeProject(params []string) error {
 	footer = append(footer, tg.NewBtn("🏠", tg.NewCmd(CmdShowHome, nil)))
 	kb.AddRow(footer)
 
-	title := fmt.Sprintf("%s %s", i18n.Tr("🏗 Область:"), life.AreaTitle(projectPath))
+	title := life.AreaTitle(projectPath)
 	return b.showHTML(title, &kb)
 }
 
@@ -178,14 +177,12 @@ func (b *Bot) showLifeSpherePicker(kind life.Kind, msgHash string) error {
 	var kb tg.Keyboard
 	kindCode := life.KindCode(kind)
 	if len(spheres) > 0 {
-		row := tg.NewRow()
 		for _, spherePath := range spheres {
-			row = append(row, tg.NewBtn(
+			kb.AddRow(tg.NewBtn(
 				life.SphereBtnLabel(spherePath),
 				tg.NewCmd(CmdLifePickProject, []string{fs.ShortHash(spherePath), kindCode, msgHash}),
 			))
 		}
-		kb.AddRow(row)
 	} else {
 		kb.AddRow(tg.NewBtn(i18n.Tr("🏗 Создать структуру"), tg.NewCmd(CmdInitLife, nil)))
 	}

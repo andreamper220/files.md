@@ -131,11 +131,20 @@ func (tg *TG) SendLocalMedia(userID int64, items []LocalMedia) ([]int, error) {
 		msg := tgbotapi.NewMediaGroup(userID, documentFiles)
 		responses, err := tg.api.SendMediaGroup(msg)
 		if err != nil {
-			js, _ := json.Marshal(msg)
-			return nil, fmt.Errorf("tg send local documents: can't send json %s: %w", js, err)
-		}
-		for _, resp := range responses {
-			msgIDs = append(msgIDs, resp.MessageID)
+			for _, item := range items {
+				if isPhotoExt(path.Ext(item.Filename)) {
+					continue
+				}
+				mid, docErr := tg.SendDocument(userID, item.Filename, bytes.NewReader(item.Data), "", nil)
+				if docErr != nil {
+					return msgIDs, fmt.Errorf("tg send local documents: %w", docErr)
+				}
+				msgIDs = append(msgIDs, mid)
+			}
+		} else {
+			for _, resp := range responses {
+				msgIDs = append(msgIDs, resp.MessageID)
+			}
 		}
 	}
 

@@ -68,3 +68,22 @@ func TestParseAttachments_Multiple(t *testing.T) {
 		t.Fatalf("got %d attachments", len(got))
 	}
 }
+
+func TestAppendNoteContent_AddsAttachment(t *testing.T) {
+	raw := "title\n" + FormatAttachmentContent("media/a.pdf", "a.pdf")
+	add := FormatAttachmentContent("media/b.pdf", "b.pdf")
+	got := AppendNoteContent(raw, add)
+	if !strings.Contains(got, "media/b.pdf") {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestReplaceNote_ReplacesAllContent(t *testing.T) {
+	got := ReplaceNote("new title")
+	if strings.Contains(got, "old title") || strings.Contains(got, "media/a.pdf") {
+		t.Fatalf("got %q", got)
+	}
+	if !strings.Contains(got, "new title") {
+		t.Fatalf("got %q", got)
+	}
+}

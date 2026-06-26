@@ -203,6 +203,26 @@ func ReplaceChecklistItem(md, itemHash, newText string) (string, bool) {
 	return md, false
 }
 
+// AppendChecklistItem appends text to an open checklist item as a continuation line.
+func AppendChecklistItem(md, itemHash, addition string) (string, bool) {
+	addition = strings.TrimRight(strings.TrimSpace(addition), "\n")
+	if addition == "" {
+		return md, false
+	}
+	lines := strings.Split(md, "\n")
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if len(trimmed) < 6 {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "- [ ] ") && Hash(trimmed[6:]) == itemHash {
+			lines[i] = strings.TrimRight(line, "\n") + "\n" + addition
+			return strings.Join(lines, "\n"), true
+		}
+	}
+	return md, false
+}
+
 // RemoveChecklistItem removes given item from checklist.
 // Returns newMarkdown, removedItem
 func RemoveChecklistItem(md, itemOrHash string) (string, string) {

@@ -112,6 +112,9 @@ type Database interface {
 	InputExpectation() *tg.Cmd
 	SetInputExpectation(cmd tg.Cmd)
 	DelInputExpectation()
+	SetEditNoteTarget(dirHash, filenameHash, mode string)
+	EditNoteTarget() (dirHash, filenameHash, mode string, ok bool)
+	DelEditNoteTarget()
 	HashOrPathByMsgID(msgID int) (string, bool)
 	SetHashOrPathByMsgID(msgID int, value string)
 	RecentCommand() (string, bool)
@@ -255,8 +258,13 @@ const (
 	CmdShowTaskActions               = "task_act"
 	CmdShowEditNote                    = "edit_n"
 	CmdEditNote                        = "en"
+	CmdEditNoteReplace                 = "enr"
+	CmdEditNoteAppend                  = "ena"
+	CmdCancelEditNote                  = "edit_x"
 	CmdShowEditTask                    = "edit_t"
 	CmdEditTask                        = "et"
+	CmdEditTaskReplace                 = "etr"
+	CmdEditTaskAppend                  = "eta"
 )
 
 var Shortcuts = map[string][]string{
@@ -446,8 +454,13 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdShowTaskActions:           b.showTaskActions,
 		CmdShowEditNote:              b.showEditNote,
 		CmdEditNote:                  b.editNote,
+		CmdEditNoteReplace:           b.startEditNoteReplace,
+		CmdEditNoteAppend:            b.startEditNoteAppend,
+		CmdCancelEditNote:            b.cancelEditNote,
 		CmdShowEditTask:              b.showEditTask,
 		CmdEditTask:                  b.editTask,
+		CmdEditTaskReplace:           b.startEditTaskReplace,
+		CmdEditTaskAppend:            b.startEditTaskAppend,
 		CmdRandomNote:                b.randomNote,
 		CmdShowMoveExisting:   b.showMoveExisting,
 		CmdShowSettings:       b.showSettings,
@@ -616,6 +629,13 @@ func (b *Bot) saveFromTextMsg(u Update) error {
 		return fmt.Errorf("save: empty message")
 	}
 
+	if dirHash, filenameHash, mode, ok := b.db.EditNoteTarget(); ok {
+		if mode == editModeAppend {
+			return b.appendToEditNote(dirHash, filenameHash, msg)
+		}
+		return b.editNoteText(dirHash, filenameHash, msg)
+	}
+
 	// Collapse a few consecutive messages into one, see bot_forwards.go
 	msgTime, updateHasTime := u.Time()
 	if updateHasTime {
@@ -645,6 +665,14 @@ func (b *Bot) saveFromTextMsg(u Update) error {
 
 // TODO test collapsing from both regular messages and images
 func (b *Bot) saveFromImage(u Update) error {
+	if dirHash, filenameHash, mode, ok := b.db.EditNoteTarget(); ok {
+		content, err := b.saveImage(u)
+		if err != nil {
+			return fmt.Errorf("save from image: %w", err)
+		}
+		return b.applyEditNoteContent(dirHash, filenameHash, mode, content)
+	}
+
 	content, err := b.saveImage(u)
 	if err != nil {
 		return fmt.Errorf("save from image: %w", err)
@@ -683,6 +711,18 @@ func (b *Bot) saveFromImage(u Update) error {
 }
 
 func (b *Bot) saveFromAudio(u Update) error {
+	if dirHash, filenameHash, mode, ok := b.db.EditNoteTarget(); ok {
+		statusID := b.sendVoiceTranscriptionStatus()
+		content, err := b.saveAudio(u)
+		if statusID > 0 {
+			b.finishVoiceTranscriptionStatus(statusID, content, err)
+		}
+		if err != nil {
+			return fmt.Errorf("save from audio: %w", err)
+		}
+		return b.applyEditNoteContent(dirHash, filenameHash, mode, content)
+	}
+
 	statusID := b.sendVoiceTranscriptionStatus()
 
 	content, err := b.saveAudio(u)
@@ -779,6 +819,17 @@ func (b *Bot) saveAudio(u Update) (string, error) {
 }
 
 func (b *Bot) saveFromDocument(u Update) error {
+	if dirHash, filenameHash, mode, ok := b.db.EditNoteTarget(); ok {
+		content, err := b.saveDocument(u)
+		if err != nil {
+			return fmt.Errorf("save from document: %w", err)
+		}
+		if groupID, ok := u.MediaGroupID(); ok {
+			return b.bufferMediaGroupContent(groupID, content, u.Caption(), u.CaptionEntities())
+		}
+		return b.applyEditNoteContent(dirHash, filenameHash, mode, content)
+	}
+
 	content, err := b.saveDocument(u)
 	if err != nil {
 		return fmt.Errorf("save from document: %w", err)
@@ -1417,6 +1468,8 @@ func (b *Bot) recentCmdBtn(msgHash string) *tg.Btn {
 }
 
 func (b *Bot) ShowHome(_ []string) error {
+	b.db.DelEditNoteTarget()
+
 	report, err := morningsummary.Build(b.fs, b.cfg)
 	if err != nil {
 		report = ""
@@ -1925,13 +1978,6 @@ func (b *Bot) sendLocalMediaFiles(userID int64, paths []string) ([]int, error) {
 }
 
 func (b *Bot) showAttachmentNote(content, dir, filename string, kb *tg.Keyboard) error {
-	attachments := txt.ParseAttachments(content)
-	if len(attachments) == 0 {
-		if att, ok := txt.ParseAttachment(content); ok {
-			attachments = []txt.AttachmentInfo{att}
-		}
-	}
-
 	title := txt.DraftTitle(content)
 	if title == "" {
 		title = txt.AttachmentNoteTitle(txt.AttachmentNames(content))
@@ -1940,20 +1986,8 @@ func (b *Bot) showAttachmentNote(content, dir, filename string, kb *tg.Keyboard)
 		title = fs.DisplayName(filename)
 	}
 
-	paths := make([]string, 0, len(attachments))
-	for _, att := range attachments {
-		paths = append(paths, att.Path)
-	}
-
-	b.delAllKeyboards()
-	if len(paths) > 0 {
-		if _, err := b.sendLocalMediaFiles(b.userID, paths); err != nil {
-			slog.Warn("can't send attachment media", "err", err)
-		}
-	}
-
-	err := b.showHTML(title, kb)
-	if err != nil {
+	md := attachmentNoteMarkdown(title, content)
+	if err := b.showMD(md, kb); err != nil {
 		return fmt.Errorf("show attachment note: %w", err)
 	}
 
@@ -1962,6 +1996,18 @@ func (b *Bot) showAttachmentNote(content, dir, filename string, kb *tg.Keyboard)
 		b.db.SetHashOrPathByMsgID(msgID, filepath.ToSlash(filepath.Join(dir, filename)))
 	}
 	return nil
+}
+
+func attachmentNoteMarkdown(title, content string) string {
+	title = strings.TrimSpace(title)
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return title
+	}
+	if title != "" && txt.DraftTitle(content) != title {
+		return title + "\n" + content
+	}
+	return content
 }
 
 func (b *Bot) showAttachmentFile(att txt.AttachmentInfo, kb *tg.Keyboard) error {

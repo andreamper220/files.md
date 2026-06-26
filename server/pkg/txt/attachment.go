@@ -165,27 +165,46 @@ func DraftTitle(raw string) string {
 	return ""
 }
 
-// ReplaceNoteText replaces user-authored text while preserving attachment lines.
-func ReplaceNoteText(raw, newText string) string {
-	newText = strings.TrimSpace(newText)
-	attachments := ParseAttachments(raw)
-	if len(attachments) == 0 {
-		if newText == "" {
-			return raw
+// ReplaceNote replaces entire note content with newContent.
+func ReplaceNote(newContent string) string {
+	newContent = strings.TrimSpace(newContent)
+	if newContent == "" {
+		return ""
+	}
+	if !strings.HasSuffix(newContent, "\n") {
+		newContent += "\n"
+	}
+	return newContent
+}
+
+// AppendNoteContent appends text or attachment markdown to a note.
+func AppendNoteContent(raw, addition string) string {
+	raw = strings.TrimRight(raw, "\n")
+	addition = strings.TrimSpace(addition)
+	if addition == "" {
+		if raw == "" {
+			return ""
 		}
-		if !strings.HasSuffix(newText, "\n") {
-			newText += "\n"
+		return raw + "\n"
+	}
+	if raw == "" {
+		return addition + "\n"
+	}
+	return raw + "\n" + addition + "\n"
+}
+
+// HasNoteMedia reports whether a note contains file or image attachments.
+func HasNoteMedia(raw string) bool {
+	for _, line := range strings.Split(NormNewLines(raw), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
 		}
-		return newText
+		if IsAttachmentLine(trimmed) || HasImage(trimmed) {
+			return true
+		}
 	}
-	var lines []string
-	if newText != "" {
-		lines = append(lines, newText)
-	}
-	for _, att := range attachments {
-		lines = append(lines, FormatAttachmentContent(att.Path, att.Name))
-	}
-	return strings.Join(lines, "\n") + "\n"
+	return false
 }
 
 // ApplyDraftTitle prepends a user title and labels unnamed attachment links.
