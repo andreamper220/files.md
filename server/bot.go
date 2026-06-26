@@ -742,7 +742,7 @@ func (b *Bot) saveFromAudio(u Update) error {
 
 func (b *Bot) sendVoiceTranscriptionStatus() int {
 	var msg string
-	if config.ServerCfg.KieAPIKey != "" {
+	if stt.Enabled(config.ServerCfg.GroqAPIKey, config.ServerCfg.KieAPIKey) {
 		msg = i18n.Tr("🎙 Расшифровываю…")
 	} else {
 		msg = i18n.Tr("🎙 Сохраняю голосовое…")
@@ -759,7 +759,7 @@ func (b *Bot) finishVoiceTranscriptionStatus(statusID int, content string, saveE
 	switch {
 	case saveErr != nil:
 		msg = i18n.Tr("🎙 Ошибка сохранения")
-	case config.ServerCfg.KieAPIKey == "":
+	case !stt.Enabled(config.ServerCfg.GroqAPIKey, config.ServerCfg.KieAPIKey):
 		msg = i18n.Tr("🎙 Сохранено")
 	case txt.VoiceSummary(content) != "":
 		msg = i18n.Tr("🎙 Расшифровано ✓")
@@ -797,8 +797,14 @@ func (b *Bot) saveAudio(u Update) (string, error) {
 	}
 
 	var content string
-	if config.ServerCfg.KieAPIKey != "" {
-		transcript, sttErr := stt.Transcribe(config.ServerCfg.KieAPIKey, buf.Bytes(), mimeType, b.cfg.Language())
+	if stt.Enabled(config.ServerCfg.GroqAPIKey, config.ServerCfg.KieAPIKey) {
+		transcript, sttErr := stt.Transcribe(
+			config.ServerCfg.GroqAPIKey,
+			config.ServerCfg.KieAPIKey,
+			buf.Bytes(),
+			mimeType,
+			b.cfg.Language(),
+		)
 		if sttErr != nil {
 			slog.Warn("voice transcription failed", "err", sttErr)
 		} else if strings.TrimSpace(transcript) != "" {

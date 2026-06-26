@@ -20,6 +20,7 @@ services:
       TOKENS_DIR: /app/tokens
       CERT_DIR: ${CERT_DIR:-}
       BOT_API_TOKEN: ${BOT_API_TOKEN:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
       KIE_API_KEY: ${KIE_API_KEY:-}
       TOKENS_SALT: ${TOKENS_SALT:-}
       STORAGE_QUOTA_KB: ${STORAGE_QUOTA_KB:-0}

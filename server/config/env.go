@@ -48,11 +48,11 @@ func LoadDotEnv() {
 		fmt.Println("Using environment variables (no .env file on disk)")
 		return
 	}
-	fmt.Println("No .env file found and BOT_API_TOKEN / KIE_API_KEY are not set")
+	fmt.Println("No .env file found and BOT_API_TOKEN / GROQ_API_KEY / KIE_API_KEY are not set")
 }
 
 func envLooksConfigured() bool {
-	return os.Getenv("BOT_API_TOKEN") != "" || os.Getenv("KIE_API_KEY") != ""
+	return os.Getenv("BOT_API_TOKEN") != "" || os.Getenv("KIE_API_KEY") != "" || os.Getenv("GROQ_API_KEY") != ""
 }
 
 // LogStartupConfig logs whether required settings are present (never logs secrets).
@@ -62,10 +62,12 @@ func LogStartupConfig() {
 	} else {
 		slog.Warn("config missing", "telegram_bot", false, "hint", "set BOT_API_TOKEN in .env or environment")
 	}
-	if ServerCfg.KieAPIKey != "" {
-		slog.Info("config ready", "voice_transcription", true)
+	if ServerCfg.GroqAPIKey != "" {
+		slog.Info("config ready", "voice_transcription", true, "provider", "groq")
+	} else if ServerCfg.KieAPIKey != "" {
+		slog.Info("config ready", "voice_transcription", true, "provider", "kie")
 	} else {
-		slog.Warn("config missing", "voice_transcription", false, "hint", "set KIE_API_KEY in .env or environment")
+		slog.Warn("config missing", "voice_transcription", false, "hint", "set GROQ_API_KEY or KIE_API_KEY in .env or environment")
 	}
 	if ServerCfg.TokensSalt != "" {
 		slog.Info("config ready", "tokens_salt", true)

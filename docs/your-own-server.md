@@ -6,7 +6,7 @@
 
 ```bash
 cp .env.example .env
-# Edit .env: BOT_API_TOKEN, KIE_API_KEY, TOKENS_SALT
+# Edit .env: BOT_API_TOKEN, GROQ_API_KEY, TOKENS_SALT
 
 docker compose up --build
 ```
@@ -16,7 +16,8 @@ Open [http://localhost](http://localhost) for the PWA. Message your Telegram bot
 | Variable | Purpose |
 |----------|---------|
 | `BOT_API_TOKEN` | Telegram bot from [@BotFather](https://t.me/BotFather) |
-| `KIE_API_KEY` | Voice transcription via [kie.ai](https://kie.ai/api-key) |
+| `GROQ_API_KEY` | Voice transcription via [Groq Whisper](https://console.groq.com/keys) (recommended) |
+| `KIE_API_KEY` | Legacy voice transcription via [kie.ai](https://kie.ai/api-key) (optional fallback) |
 | `TOKENS_SALT` | Random string for PWA sync tokens (`openssl rand -base64 32`) |
 | `APP_URL` / `API_URL` | Public URL, `http://localhost` for local Docker |
 | `HTTP_PORT` | Host port (default `80`) |

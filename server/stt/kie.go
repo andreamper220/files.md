@@ -31,8 +31,8 @@ const (
 	maxBase64UploadBytes = 10 * 1024 * 1024
 )
 
-// Transcribe uploads audio to kie.ai and returns the transcript text.
-func Transcribe(apiKey string, audio []byte, mimeType, languageCode string) (string, error) {
+// transcribeKie uploads audio to kie.ai and returns the transcript text.
+func transcribeKie(apiKey string, audio []byte, mimeType, languageCode string) (string, error) {
 	if apiKey == "" {
 		return "", fmt.Errorf("stt: KIE_API_KEY is not set")
 	}
@@ -76,17 +76,18 @@ func uploadAudio(apiKey string, audio []byte, mimeType string) ([]string, error)
 	var collected []string
 	var lastErr error
 
-	if urls, err := uploadAudioStream(apiKey, audio, mimeType); err == nil {
-		collected = append(collected, urls...)
-	} else {
-		lastErr = err
-	}
+	// Base64 upload returns stable kieai.redpandaai.co URLs more often than stream/tempfile.
 	if len(audio) <= maxBase64UploadBytes {
 		if urls, err := uploadAudioBase64(apiKey, audio, mimeType); err == nil {
 			collected = append(collected, urls...)
-		} else if lastErr == nil {
+		} else {
 			lastErr = err
 		}
+	}
+	if urls, err := uploadAudioStream(apiKey, audio, mimeType); err == nil {
+		collected = append(collected, urls...)
+	} else if lastErr == nil {
+		lastErr = err
 	}
 	if len(collected) == 0 {
 		if lastErr != nil {
@@ -123,15 +124,22 @@ func prepareSTTAudioURLs(apiKey string, urls []string, mimeType string) ([]strin
 			rehosted, err := uploadAudioFromURL(apiKey, u, mimeType)
 			if err != nil {
 				slog.Warn("stt rehost tempfile url failed", "url", u, "err", err)
-				add(u)
 				continue
 			}
 			for _, candidate := range orderURLsForSTT(rehosted) {
+				if isTempfileURL(candidate) {
+					continue
+				}
 				add(candidate)
 			}
 			continue
 		}
 		add(u)
+	}
+	if len(out) == 0 {
+		for _, u := range ordered {
+			add(u)
+		}
 	}
 	return out, nil
 }
@@ -163,69 +171,111 @@ func orderURLsForSTT(urls []string) []string {
 	return out
 }
 
-func uploadAudioFromURL(apiKey, sourceURL, mimeType string) ([]string, error) {
-	fileName := fmt.Sprintf("voice_%d%s", time.Now().UnixNano(), audioExt(mimeType))
-	body, _ := json.Marshal(map[string]string{
-		"fileUrl":    sourceURL,
-		"uploadPath": uploadPath,
-		"fileName":   fileName,
-	})
-
-	req, err := http.NewRequest(http.MethodPost, urlUploadURL, bytes.NewReader(body))
+func uploadAudioStream(apiKey string, audio []byte, mimeType string) ([]string, error) {
+	raw, err := uploadAudioStreamRaw(apiKey, audio, mimeType)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("stt url upload: %w", err)
-	}
-	defer resp.Body.Close()
-
-	return parseUploadResponse(resp.Body)
+	return parseUploadJSON(raw)
 }
 
-func uploadAudioStream(apiKey string, audio []byte, mimeType string) ([]string, error) {
+func uploadAudioBase64(apiKey string, audio []byte, mimeType string) ([]string, error) {
+	raw, err := uploadAudioBase64Raw(apiKey, audio, mimeType)
+	if err != nil {
+		return nil, err
+	}
+	return parseUploadJSON(raw)
+}
+
+func uploadAudioFromURL(apiKey, sourceURL, mimeType string) ([]string, error) {
+	raw, err := uploadAudioFromURLRaw(apiKey, sourceURL, mimeType)
+	if err != nil {
+		return nil, err
+	}
+	return parseUploadJSON(raw)
+}
+
+// DebugUploadResponses returns raw upload API responses for troubleshooting.
+func DebugUploadResponses(apiKey string, audio []byte, mimeType string) (streamJSON, base64JSON, rehostJSON string) {
+	if raw, err := uploadAudioStreamRaw(apiKey, audio, mimeType); err == nil {
+		streamJSON = raw
+	} else {
+		streamJSON = err.Error()
+	}
+	if len(audio) <= maxBase64UploadBytes {
+		if raw, err := uploadAudioBase64Raw(apiKey, audio, mimeType); err == nil {
+			base64JSON = raw
+		} else {
+			base64JSON = err.Error()
+		}
+	}
+	if streamJSON != "" {
+		var parsed struct {
+			Data struct {
+				FileURL     string `json:"fileUrl"`
+				DownloadURL string `json:"downloadUrl"`
+			} `json:"data"`
+		}
+		if json.Unmarshal([]byte(streamJSON), &parsed) == nil {
+			source := strings.TrimSpace(parsed.Data.DownloadURL)
+			if source == "" {
+				source = strings.TrimSpace(parsed.Data.FileURL)
+			}
+			if source != "" {
+				if raw, err := uploadAudioFromURLRaw(apiKey, source, mimeType); err == nil {
+					rehostJSON = raw
+				} else {
+					rehostJSON = err.Error()
+				}
+			}
+		}
+	}
+	return streamJSON, base64JSON, rehostJSON
+}
+
+func uploadAudioStreamRaw(apiKey string, audio []byte, mimeType string) (string, error) {
 	fileName := fmt.Sprintf("voice_%d%s", time.Now().UnixNano(), audioExt(mimeType))
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 	part, err := writer.CreateFormFile("file", fileName)
 	if err != nil {
-		return nil, fmt.Errorf("stt upload: %w", err)
+		return "", fmt.Errorf("stt upload: %w", err)
 	}
 	if _, err := part.Write(audio); err != nil {
-		return nil, fmt.Errorf("stt upload: %w", err)
+		return "", fmt.Errorf("stt upload: %w", err)
 	}
 	if err := writer.WriteField("uploadPath", uploadPath); err != nil {
-		return nil, fmt.Errorf("stt upload: %w", err)
+		return "", fmt.Errorf("stt upload: %w", err)
 	}
 	if err := writer.WriteField("fileName", fileName); err != nil {
-		return nil, fmt.Errorf("stt upload: %w", err)
+		return "", fmt.Errorf("stt upload: %w", err)
 	}
 	if err := writer.Close(); err != nil {
-		return nil, fmt.Errorf("stt upload: %w", err)
+		return "", fmt.Errorf("stt upload: %w", err)
 	}
 
 	req, err := http.NewRequest(http.MethodPost, streamUploadURL, &body)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("stt upload: %w", err)
+		return "", fmt.Errorf("stt upload: %w", err)
 	}
 	defer resp.Body.Close()
 
-	return parseUploadResponse(resp.Body)
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("stt upload: read response: %w", err)
+	}
+	return string(raw), nil
 }
 
-func uploadAudioBase64(apiKey string, audio []byte, mimeType string) ([]string, error) {
+func uploadAudioBase64Raw(apiKey string, audio []byte, mimeType string) (string, error) {
 	fileName := fmt.Sprintf("voice_%d%s", time.Now().UnixNano(), audioExt(mimeType))
 	dataURL := fmt.Sprintf("data:%s;base64,%s", mimeType, base64.StdEncoding.EncodeToString(audio))
 	body, _ := json.Marshal(map[string]string{
@@ -236,22 +286,61 @@ func uploadAudioBase64(apiKey string, audio []byte, mimeType string) ([]string, 
 
 	req, err := http.NewRequest(http.MethodPost, base64UploadURL, bytes.NewReader(body))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("stt base64 upload: %w", err)
+		return "", fmt.Errorf("stt base64 upload: %w", err)
 	}
 	defer resp.Body.Close()
 
-	return parseUploadResponse(resp.Body)
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("stt base64 upload: read response: %w", err)
+	}
+	return string(raw), nil
+}
+
+func uploadAudioFromURLRaw(apiKey, sourceURL, mimeType string) (string, error) {
+	fileName := fmt.Sprintf("voice_%d%s", time.Now().UnixNano(), audioExt(mimeType))
+	body, _ := json.Marshal(map[string]string{
+		"fileUrl":    sourceURL,
+		"uploadPath": uploadPath,
+		"fileName":   fileName,
+	})
+
+	req, err := http.NewRequest(http.MethodPost, urlUploadURL, bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("stt url upload: %w", err)
+	}
+	defer resp.Body.Close()
+
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("stt url upload: read response: %w", err)
+	}
+	return string(raw), nil
 }
 
 func parseUploadResponse(respBody io.Reader) ([]string, error) {
-	raw, _ := io.ReadAll(respBody)
+	raw, err := io.ReadAll(respBody)
+	if err != nil {
+		return nil, err
+	}
+	return parseUploadJSON(string(raw))
+}
+
+func parseUploadJSON(raw string) ([]string, error) {
 	var parsed struct {
 		Success bool `json:"success"`
 		Code    int  `json:"code"`
@@ -261,7 +350,7 @@ func parseUploadResponse(respBody io.Reader) ([]string, error) {
 			FileURL     string `json:"fileUrl"`
 		} `json:"data"`
 	}
-	if err := json.Unmarshal(raw, &parsed); err != nil {
+	if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
 		return nil, fmt.Errorf("stt upload: parse response: %w", err)
 	}
 	// downloadUrl is often the link kie.ai can fetch; fileUrl may redirect or require auth.

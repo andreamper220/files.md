@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -25,6 +26,7 @@ type Config struct {
 	StorageQuotaKB    int64  `default:"1024" envconfig:"STORAGE_QUOTA_KB"` // 1MB
 	UnlimitedQuotaIDs string `envconfig:"UNLIMITED_QUOTA_IDS"`
 	KieAPIKey         string `envconfig:"KIE_API_KEY"`
+	GroqAPIKey        string `envconfig:"GROQ_API_KEY"`
 }
 
 func (c Config) APIHost() string { return hostOf(c.APIURL) }
@@ -58,5 +60,14 @@ func LoadBotConfig() error {
 		ServerCfg.StorageDir = filepath.Join(wd, ServerCfg.StorageDir)
 	}
 
+	ServerCfg.BotAPIToken = normalizeEnvSecret(ServerCfg.BotAPIToken)
+	ServerCfg.KieAPIKey = normalizeEnvSecret(ServerCfg.KieAPIKey)
+	ServerCfg.GroqAPIKey = normalizeEnvSecret(ServerCfg.GroqAPIKey)
+	ServerCfg.TokensSalt = normalizeEnvSecret(ServerCfg.TokensSalt)
+
 	return nil
+}
+
+func normalizeEnvSecret(v string) string {
+	return strings.Trim(strings.TrimSpace(v), `"'`)
 }

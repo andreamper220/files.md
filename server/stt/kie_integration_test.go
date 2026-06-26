@@ -18,7 +18,7 @@ func TestTranscribeIntegration(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}
 
-	_, err := Transcribe(apiKey, audio, "audio/ogg", "ru")
+	_, err := Transcribe("", apiKey, audio, "audio/ogg", "ru")
 	if err != nil {
 		// Empty/silent audio may fail at poll with empty transcript; upload+createTask must not 500.
 		if isRetryableSTTError(err) {
