@@ -165,6 +165,29 @@ func DraftTitle(raw string) string {
 	return ""
 }
 
+// ReplaceNoteText replaces user-authored text while preserving attachment lines.
+func ReplaceNoteText(raw, newText string) string {
+	newText = strings.TrimSpace(newText)
+	attachments := ParseAttachments(raw)
+	if len(attachments) == 0 {
+		if newText == "" {
+			return raw
+		}
+		if !strings.HasSuffix(newText, "\n") {
+			newText += "\n"
+		}
+		return newText
+	}
+	var lines []string
+	if newText != "" {
+		lines = append(lines, newText)
+	}
+	for _, att := range attachments {
+		lines = append(lines, FormatAttachmentContent(att.Path, att.Name))
+	}
+	return strings.Join(lines, "\n") + "\n"
+}
+
 // ApplyDraftTitle prepends a user title and labels unnamed attachment links.
 func ApplyDraftTitle(content, title string) string {
 	title = strings.TrimSpace(title)

@@ -29,7 +29,7 @@ func displayPriorityEmojis(emojis []string) []string {
 	return out
 }
 
-// Build returns home summary: spheres → areas with names, urgency counts (emoji only), and new-note totals.
+// Build returns home summary: spheres → areas with open task counts by priority and total notes.
 func Build(userFS *fs.FS, cfg *userconfig.Config) (string, error) {
 	return buildHomeSummary(userFS, cfg)
 }
@@ -42,8 +42,6 @@ func buildHomeSummary(userFS *fs.FS, cfg *userconfig.Config) (string, error) {
 	}
 
 	emojis := cfg.PriorityEmojis()
-	tz := cfg.Timezone()
-	startOfDay := beginningOfDay(time.Now().In(tz))
 
 	var lines []string
 	for _, spherePath := range spheres {
@@ -53,13 +51,13 @@ func buildHomeSummary(userFS *fs.FS, cfg *userconfig.Config) (string, error) {
 		}
 
 		if len(projects) == 0 {
-			lines = append(lines, formatSphereOnlyLine(spherePath, emojis, userFS, startOfDay))
+			lines = append(lines, formatSphereOnlyLine(spherePath, emojis, userFS))
 			continue
 		}
 
 		lines = append(lines, formatSphereHeader(spherePath))
 		for _, projectPath := range projects {
-			lines = append(lines, formatAreaBlock(projectPath, emojis, userFS, startOfDay)...)
+			lines = append(lines, formatAreaBlock(projectPath, emojis, userFS)...)
 		}
 	}
 
@@ -75,28 +73,28 @@ func formatSphereHeader(spherePath string) string {
 }
 
 // formatAreaBlock builds tabulated area summary with counts under the title.
-func formatAreaBlock(projectPath string, emojis []string, userFS *fs.FS, startOfDay time.Time) []string {
+func formatAreaBlock(projectPath string, emojis []string, userFS *fs.FS) []string {
 	depth := life.AreaDepth(projectPath)
 	header := life.AreaTreePrefix(depth) + formatAreaHeader(projectPath)
 	indent := strings.Repeat("   ", depth)
 	taskLine := indent + strings.Join(formatPriorityCounts(emojis, countOpenByPriorityInMD(readAreaTasksMD(userFS, projectPath), emojis)), " ")
-	noteLine := indent + formatNoteTotal(userFS, projectPath, startOfDay)
+	noteLine := indent + formatNoteTotal(userFS, projectPath)
 	return []string{header, taskLine, noteLine}
 }
 
 // formatAreaLine builds a single-line area summary (legacy helper).
-func formatAreaLine(projectPath string, emojis []string, userFS *fs.FS, startOfDay time.Time) string {
-	return strings.Join(formatAreaBlock(projectPath, emojis, userFS, startOfDay), "\n")
+func formatAreaLine(projectPath string, emojis []string, userFS *fs.FS) string {
+	return strings.Join(formatAreaBlock(projectPath, emojis, userFS), "\n")
 }
 
 func formatAreaHeader(projectPath string) string {
 	return life.AreaEmoji(projectPath) + " " + life.AreaTitle(projectPath)
 }
 
-func formatSphereOnlyLine(spherePath string, emojis []string, userFS *fs.FS, startOfDay time.Time) string {
+func formatSphereOnlyLine(spherePath string, emojis []string, userFS *fs.FS) string {
 	lines := []string{formatSphereHeader(spherePath)}
 	lines = append(lines, "   "+strings.Join(formatPriorityCounts(emojis, emptyPriorityCounts(emojis)), " "))
-	lines = append(lines, "   "+formatNoteTotalForSphere(spherePath, userFS, startOfDay))
+	lines = append(lines, "   "+formatNoteTotalForSphere(spherePath, userFS))
 	return strings.Join(lines, "\n")
 }
 
@@ -108,12 +106,46 @@ func formatPriorityCounts(emojis []string, counts map[string]int) []string {
 	return parts
 }
 
-func formatNoteTotal(userFS *fs.FS, projectPath string, startOfDay time.Time) string {
-	return fmt.Sprintf("📝 %d", totalNewNotes(userFS, projectPath, startOfDay))
+func formatNoteTotal(userFS *fs.FS, projectPath string) string {
+	return fmt.Sprintf("📝 %d", totalNotes(userFS, projectPath))
 }
 
-func formatNoteTotalForSphere(spherePath string, userFS *fs.FS, startOfDay time.Time) string {
-	return fmt.Sprintf("📝 %d", totalNewNotesForSphere(spherePath, userFS, startOfDay))
+func formatNoteTotalForSphere(spherePath string, userFS *fs.FS) string {
+	return fmt.Sprintf("📝 %d", totalNotesForSphere(spherePath, userFS))
+}
+
+func totalNotes(userFS *fs.FS, projectPath string) int {
+	if projectPath == "" {
+		return 0
+	}
+	n := 0
+	for _, kind := range []life.Kind{life.KindDraft, life.KindFinal, life.KindDiscussion} {
+		n += countNotesInDir(userFS, life.DocDir(projectPath, kind))
+	}
+	return n
+}
+
+func totalNotesForSphere(spherePath string, userFS *fs.FS) int {
+	projects, _ := life.ListAllAreas(userFS, spherePath)
+	n := 0
+	for _, projectPath := range projects {
+		n += totalNotes(userFS, projectPath)
+	}
+	return n
+}
+
+func countNotesInDir(userFS *fs.FS, dir string) int {
+	entries, err := userFS.FilesAndDirs(dir)
+	if err != nil {
+		return 0
+	}
+	n := 0
+	for _, f := range fs.OnlyFiles(entries) {
+		if strings.HasSuffix(f.Name, fs.MDExt) {
+			n++
+		}
+	}
+	return n
 }
 
 func totalNewNotes(userFS *fs.FS, projectPath string, startOfDay time.Time) int {
@@ -176,8 +208,6 @@ func countOpenByPriorityInMD(md string, emojis []string) map[string]int {
 // BuildNotesHub returns detailed notes statistics for the notes screen.
 func BuildNotesHub(userFS *fs.FS, cfg *userconfig.Config) (string, error) {
 	_ = life.EnsureSpheresRoot(userFS)
-	tz := cfg.Timezone()
-	startOfDay := beginningOfDay(time.Now().In(tz))
 
 	var lines []string
 	lines = append(lines, "<b>🗒</b>")
@@ -191,7 +221,7 @@ func BuildNotesHub(userFS *fs.FS, cfg *userconfig.Config) (string, error) {
 			header := life.AreaTreePrefix(depth) + formatAreaHeader(projectPath)
 			indent := strings.Repeat("   ", depth)
 			lines = append(lines, header)
-			lines = append(lines, indent+fmt.Sprintf("📝 %d", totalNewNotes(userFS, projectPath, startOfDay)))
+			lines = append(lines, indent+formatNoteTotal(userFS, projectPath))
 		}
 	}
 

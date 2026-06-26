@@ -183,6 +183,26 @@ func CompleteChecklistItem(md, itemHash string) (string, string) {
 	return strings.Join(lines, "\n"), foundItem
 }
 
+// ReplaceChecklistItem replaces the text of an open checklist item identified by hash.
+func ReplaceChecklistItem(md, itemHash, newText string) (string, bool) {
+	newText = strings.TrimSpace(newText)
+	if newText == "" {
+		return md, false
+	}
+	lines := strings.Split(md, "\n")
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		if len(line) < 6 {
+			continue
+		}
+		if strings.HasPrefix(line, "- [ ] ") && Hash(line[6:]) == itemHash {
+			lines[i] = "- [ ] " + newText
+			return strings.Join(lines, "\n"), true
+		}
+	}
+	return md, false
+}
+
 // RemoveChecklistItem removes given item from checklist.
 // Returns newMarkdown, removedItem
 func RemoveChecklistItem(md, itemOrHash string) (string, string) {

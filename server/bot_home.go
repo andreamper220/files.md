@@ -79,6 +79,7 @@ func (b *Bot) showChatTask(msgHash string) error {
 
 	kb := taskDetailKeyboard(taskDetailOpts{
 		back:     tg.NewCmd(CmdShowTasksView, nil),
+		edit:     editTaskCmd(taskKindChat, msgHash),
 		complete: tg.NewCmd(CmdComplete, []string{msgHash}),
 		delete:   tg.NewCmd(CmdDeleteTask, []string{taskKindChat, msgHash}),
 	})
@@ -113,6 +114,7 @@ func (b *Bot) showListTaskWithBack(checklistHash, itemHash string, back tg.Cmd) 
 
 	kb := taskDetailKeyboard(taskDetailOpts{
 		back:     back,
+		edit:     editTaskCmd(taskKindList, checklistHash, itemHash),
 		complete: tg.NewCmd(CmdCompleteChecklistItem, []string{checklistHash, itemHash}),
 		delete:   tg.NewCmd(CmdDeleteTask, []string{taskKindList, checklistHash, itemHash}),
 	})
@@ -147,6 +149,7 @@ func (b *Bot) showAreaTask(projectHash, itemHash string) error {
 	moveCmd := tg.NewCmd(CmdMoveToAreaTask, []string{projectHash, itemHash})
 	kb := taskDetailKeyboard(taskDetailOpts{
 		back:        tg.NewCmd(CmdShowTasksView, nil),
+		edit:        editTaskCmd(taskKindArea, projectHash, itemHash),
 		complete:    tg.NewCmd(CmdCompleteAreaTask, []string{projectHash, itemHash}),
 		delete:      tg.NewCmd(CmdDeleteTask, []string{taskKindArea, projectHash, itemHash}),
 		move:        &moveCmd,
@@ -229,6 +232,7 @@ func (b *Bot) deleteAreaTask(projectHash, itemHash string) error {
 
 type taskDetailOpts struct {
 	back        tg.Cmd
+	edit        tg.Cmd
 	complete    tg.Cmd
 	delete      tg.Cmd
 	move        *tg.Cmd
@@ -239,6 +243,7 @@ func taskDetailKeyboard(opts taskDetailOpts) *tg.Keyboard {
 	row := tg.NewRow(
 		tg.NewBtn("⬅️", opts.back),
 		tg.NewBtn("🔎", tg.NewCustomCmd(CmdInlineQuerySearchEveryWhere, nil, tg.CmdTypeInlineQueryCurrentChat)),
+		tg.NewBtn("✏️", opts.edit),
 		tg.NewBtn("✅", opts.complete),
 	)
 	if opts.move != nil {

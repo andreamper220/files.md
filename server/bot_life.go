@@ -573,6 +573,7 @@ func noteDetailKeyboard(dir, filename, dirHash string) *tg.Keyboard {
 	row := tg.NewRow(
 		tg.NewBtn("⬅️", noteBackCmd(dir)),
 		tg.NewBtn("🔎", tg.NewCustomCmd(CmdInlineQuerySearchEveryWhere, nil, tg.CmdTypeInlineQueryCurrentChat)),
+		tg.NewBtn("✏️", editNoteCmd(dirHash, filename)),
 	)
 
 	if life.IsDocDir(dir) {

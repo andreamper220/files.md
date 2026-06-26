@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -96,6 +97,14 @@ func (c *Config) CreateDefaultIfNotExists() error {
 	}
 
 	return nil
+}
+
+func (c *Config) Language() string {
+	cfg, err := c.read(c.filename)
+	if err != nil || strings.TrimSpace(cfg.Language) == "" {
+		return DefaultConfig.Language
+	}
+	return cfg.Language
 }
 
 func (c *Config) Timezone() *time.Location {

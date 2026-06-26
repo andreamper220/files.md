@@ -25,7 +25,7 @@ const (
 )
 
 // Transcribe uploads audio to kie.ai and returns the transcript text.
-func Transcribe(apiKey string, audio []byte, mimeType string) (string, error) {
+func Transcribe(apiKey string, audio []byte, mimeType, languageCode string) (string, error) {
 	if apiKey == "" {
 		return "", fmt.Errorf("stt: KIE_API_KEY is not set")
 	}
@@ -41,7 +41,7 @@ func Transcribe(apiKey string, audio []byte, mimeType string) (string, error) {
 		return "", err
 	}
 
-	taskID, err := createTask(apiKey, downloadURL)
+	taskID, err := createTask(apiKey, downloadURL, languageCode)
 	if err != nil {
 		return "", err
 	}
@@ -127,13 +127,16 @@ func uploadAudio(apiKey string, audio []byte, mimeType string) (string, error) {
 	return audioURL, nil
 }
 
-func createTask(apiKey, audioURL string) (string, error) {
+func createTask(apiKey, audioURL, languageCode string) (string, error) {
+	if strings.TrimSpace(languageCode) == "" {
+		languageCode = "ru"
+	}
 	// Params per https://kieai.mintlify.app/market/elevenlabs/speech-to-text
 	body, _ := json.Marshal(map[string]any{
 		"model": model,
 		"input": map[string]any{
 			"audio_url":        audioURL,
-			"language_code":    "",
+			"language_code":    languageCode,
 			"tag_audio_events": true,
 			"diarize":          false,
 		},

@@ -253,6 +253,10 @@ const (
 	CmdDeleteTask                      = "task_del"
 	CmdOpenMedia                       = "open_m"
 	CmdShowTaskActions               = "task_act"
+	CmdShowEditNote                    = "edit_n"
+	CmdEditNote                        = "en"
+	CmdShowEditTask                    = "edit_t"
+	CmdEditTask                        = "et"
 )
 
 var Shortcuts = map[string][]string{
@@ -440,6 +444,10 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdDeleteTask:                b.deleteTask,
 		CmdOpenMedia:                 b.openMedia,
 		CmdShowTaskActions:           b.showTaskActions,
+		CmdShowEditNote:              b.showEditNote,
+		CmdEditNote:                  b.editNote,
+		CmdShowEditTask:              b.showEditTask,
+		CmdEditTask:                  b.editTask,
 		CmdRandomNote:                b.randomNote,
 		CmdShowMoveExisting:   b.showMoveExisting,
 		CmdShowSettings:       b.showSettings,
@@ -750,7 +758,7 @@ func (b *Bot) saveAudio(u Update) (string, error) {
 
 	var content string
 	if config.ServerCfg.KieAPIKey != "" {
-		transcript, sttErr := stt.Transcribe(config.ServerCfg.KieAPIKey, buf.Bytes(), mimeType)
+		transcript, sttErr := stt.Transcribe(config.ServerCfg.KieAPIKey, buf.Bytes(), mimeType, b.cfg.Language())
 		if sttErr != nil {
 			slog.Warn("voice transcription failed", "err", sttErr)
 		} else if strings.TrimSpace(transcript) != "" {
@@ -1924,17 +1932,6 @@ func (b *Bot) showAttachmentNote(content, dir, filename string, kb *tg.Keyboard)
 		}
 	}
 
-	var fileKb tg.Keyboard
-	for _, att := range attachments {
-		name := txt.AttachmentDisplayName(att.Name, att.Path)
-		fileKb.AddRow(tg.NewRow(tg.NewBtn(name, mediaOpenCmd(att.Path, name))))
-	}
-	if kb != nil {
-		for _, row := range kb.Btns {
-			fileKb.AddRow(row)
-		}
-	}
-
 	title := txt.DraftTitle(content)
 	if title == "" {
 		title = txt.AttachmentNoteTitle(txt.AttachmentNames(content))
@@ -1943,7 +1940,19 @@ func (b *Bot) showAttachmentNote(content, dir, filename string, kb *tg.Keyboard)
 		title = fs.DisplayName(filename)
 	}
 
-	err := b.showHTML(title, &fileKb)
+	paths := make([]string, 0, len(attachments))
+	for _, att := range attachments {
+		paths = append(paths, att.Path)
+	}
+
+	b.delAllKeyboards()
+	if len(paths) > 0 {
+		if _, err := b.sendLocalMediaFiles(b.userID, paths); err != nil {
+			slog.Warn("can't send attachment media", "err", err)
+		}
+	}
+
+	err := b.showHTML(title, kb)
 	if err != nil {
 		return fmt.Errorf("show attachment note: %w", err)
 	}
