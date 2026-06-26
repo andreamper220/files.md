@@ -3,11 +3,57 @@ package txt
 import (
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
-var attachmentRE = regexp.MustCompile(`📎\s*\[([^\]]*)\]\(([^)]+)\)`)
+// closeParenForMarkdownURL finds the closing ")" for a markdown link URL.
+func closeParenForMarkdownURL(rest string) int {
+	first := strings.Index(rest, ")")
+	if first == -1 {
+		return -1
+	}
+	candidate := rest[:first]
+	if strings.Contains(candidate, "(") {
+		return strings.LastIndex(rest, ")")
+	}
+	return first
+}
+func parseURLInParens(s string) (url string, ok bool) {
+	s = strings.TrimSpace(s)
+	if s == "" || s[len(s)-1] != ')' {
+		return "", false
+	}
+	return strings.TrimSpace(s[:len(s)-1]), true
+}
+
+// parseBracketLink parses [label](url), including ")" inside the URL.
+func parseBracketLink(s string) (label, url string, ok bool) {
+	s = strings.TrimSpace(s)
+	if !strings.HasPrefix(s, "[") {
+		return "", "", false
+	}
+	bracket := strings.Index(s, "](")
+	if bracket == -1 {
+		return "", "", false
+	}
+	label = strings.TrimSpace(s[1:bracket])
+	url, ok = parseURLInParens(s[bracket+2:])
+	return label, url, ok
+}
+
+// ParseImageLine parses ![](path), including ")" in filenames.
+func ParseImageLine(line string) (path string, ok bool) {
+	line = strings.TrimSpace(line)
+	if !strings.HasPrefix(line, "![") {
+		return "", false
+	}
+	bracket := strings.Index(line, "](")
+	if bracket == -1 {
+		return "", false
+	}
+	path, ok = parseURLInParens(line[bracket+2:])
+	return strings.TrimPrefix(strings.TrimSpace(path), "/"), ok
+}
 
 const attachmentPlaceholder = "·"
 
@@ -34,43 +80,35 @@ func IsAttachmentLine(line string) bool {
 
 // ParseAttachmentLine parses a single attachment markdown line.
 func ParseAttachmentLine(line string) (AttachmentInfo, bool) {
-	m := attachmentRE.FindStringSubmatch(strings.TrimSpace(line))
-	if m == nil {
+	line = strings.TrimSpace(line)
+	if !strings.HasPrefix(line, "📎") {
 		return AttachmentInfo{}, false
 	}
-	return AttachmentInfo{
-		Name: strings.TrimSpace(m[1]),
-		Path: strings.TrimSpace(m[2]),
-	}, true
+	rest := strings.TrimSpace(strings.TrimPrefix(line, "📎"))
+	name, path, ok := parseBracketLink(rest)
+	if !ok {
+		return AttachmentInfo{}, false
+	}
+	return AttachmentInfo{Name: name, Path: path}, true
 }
 
 // ParseAttachment extracts the first attachment link from markdown content.
 func ParseAttachment(raw string) (AttachmentInfo, bool) {
-	m := attachmentRE.FindStringSubmatch(raw)
-	if m == nil {
-		return AttachmentInfo{}, false
+	for _, line := range strings.Split(NormNewLines(raw), "\n") {
+		if att, ok := ParseAttachmentLine(line); ok {
+			return att, true
+		}
 	}
-	return AttachmentInfo{
-		Name: strings.TrimSpace(m[1]),
-		Path: strings.TrimSpace(m[2]),
-	}, true
+	return AttachmentInfo{}, false
 }
 
 // ParseAttachments returns every attachment link in markdown content.
 func ParseAttachments(raw string) []AttachmentInfo {
-	matches := attachmentRE.FindAllStringSubmatch(raw, -1)
-	if len(matches) == 0 {
-		return nil
-	}
-	out := make([]AttachmentInfo, 0, len(matches))
-	for _, m := range matches {
-		if len(m) < 3 {
-			continue
+	var out []AttachmentInfo
+	for _, line := range strings.Split(NormNewLines(raw), "\n") {
+		if att, ok := ParseAttachmentLine(line); ok {
+			out = append(out, att)
 		}
-		out = append(out, AttachmentInfo{
-			Name: strings.TrimSpace(m[1]),
-			Path: strings.TrimSpace(m[2]),
-		})
 	}
 	return out
 }
@@ -213,17 +251,18 @@ func ApplyDraftTitle(content, title string) string {
 	if title == "" {
 		return content
 	}
-	content = attachmentRE.ReplaceAllStringFunc(content, func(match string) string {
-		m := attachmentRE.FindStringSubmatch(match)
-		if len(m) < 3 {
-			return match
+	var lines []string
+	for _, line := range strings.Split(NormNewLines(content), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if att, ok := ParseAttachmentLine(trimmed); ok {
+			label := strings.TrimSpace(att.Name)
+			if label == "" || label == attachmentPlaceholder {
+				line = FormatAttachmentContent(att.Path, title)
+			}
 		}
-		label := strings.TrimSpace(m[1])
-		if label != "" && label != attachmentPlaceholder {
-			return match
-		}
-		return fmt.Sprintf("📎 [%s](%s)", title, m[2])
-	})
+		lines = append(lines, line)
+	}
+	content = strings.Join(lines, "\n")
 	if DraftTitle(content) == title {
 		return content
 	}

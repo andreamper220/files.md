@@ -87,16 +87,34 @@ func (c *Config) CreateDefaultIfNotExists() error {
 	if err != nil {
 		return fmt.Errorf("can't check whether config exists: %w", err)
 	}
-	if exists {
+	if !exists {
+		err = c.write(DefaultConfig)
+		if err != nil {
+			return fmt.Errorf("can't write default config file: %w", err)
+		}
+	}
+	return c.migrate()
+}
+
+// migrate patches legacy user config values on startup.
+func (c *Config) migrate() error {
+	exists, err := c.userFS.Exists(fs.DirUserRoot, c.filename)
+	if err != nil || !exists {
 		return nil
 	}
-
-	err = c.write(DefaultConfig)
+	cfg, err := c.read(c.filename)
 	if err != nil {
-		return fmt.Errorf("can't write default config file: %w", err)
+		return nil
 	}
-
-	return nil
+	changed := false
+	if lang := strings.TrimSpace(cfg.Language); lang == "" || lang == "en" {
+		cfg.Language = DefaultConfig.Language
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
+	return c.write(cfg)
 }
 
 func (c *Config) Language() string {

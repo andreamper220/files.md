@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 )
@@ -19,6 +20,7 @@ const (
 	// File uploads: https://docs.kie.ai/file-upload-api/quickstart
 	streamUploadURL = "https://kieai.redpandaai.co/api/file-stream-upload"
 	base64UploadURL = "https://kieai.redpandaai.co/api/file-base64-upload"
+	urlUploadURL    = "https://kieai.redpandaai.co/api/file-url-upload"
 	uploadPath      = "filesmd/voice"
 
 	// Market jobs: https://docs.kie.ai/market/quickstart
@@ -46,6 +48,9 @@ func Transcribe(apiKey string, audio []byte, mimeType, languageCode string) (str
 		return "", err
 	}
 
+	// Give the upload CDN a moment before kie.ai fetches the file.
+	time.Sleep(800 * time.Millisecond)
+
 	taskID, err := createTask(apiKey, audioURLs, languageCode)
 	if err != nil {
 		return "", err
@@ -68,23 +73,118 @@ func audioExt(mimeType string) string {
 }
 
 func uploadAudio(apiKey string, audio []byte, mimeType string) ([]string, error) {
-	urls, err := uploadAudioStream(apiKey, audio, mimeType)
-	if err == nil && len(urls) > 0 {
-		return urls, nil
+	var collected []string
+	var lastErr error
+
+	if urls, err := uploadAudioStream(apiKey, audio, mimeType); err == nil {
+		collected = append(collected, urls...)
+	} else {
+		lastErr = err
 	}
 	if len(audio) <= maxBase64UploadBytes {
-		base64URLs, base64Err := uploadAudioBase64(apiKey, audio, mimeType)
-		if base64Err == nil && len(base64URLs) > 0 {
-			return base64URLs, nil
-		}
-		if err == nil {
-			err = base64Err
+		if urls, err := uploadAudioBase64(apiKey, audio, mimeType); err == nil {
+			collected = append(collected, urls...)
+		} else if lastErr == nil {
+			lastErr = err
 		}
 	}
+	if len(collected) == 0 {
+		if lastErr != nil {
+			return nil, lastErr
+		}
+		return nil, fmt.Errorf("stt upload: no download URL in response")
+	}
+
+	sttURLs, err := prepareSTTAudioURLs(apiKey, uniqueURLs(collected...), mimeType)
 	if err != nil {
 		return nil, err
 	}
-	return nil, fmt.Errorf("stt upload: no download URL in response")
+	if len(sttURLs) == 0 {
+		return nil, fmt.Errorf("stt upload: no STT-ready audio URL")
+	}
+	return sttURLs, nil
+}
+
+func prepareSTTAudioURLs(apiKey string, urls []string, mimeType string) ([]string, error) {
+	ordered := orderURLsForSTT(urls)
+	seen := map[string]bool{}
+	var out []string
+	add := func(u string) {
+		u = strings.TrimSpace(u)
+		if u == "" || seen[u] {
+			return
+		}
+		seen[u] = true
+		out = append(out, u)
+	}
+
+	for _, u := range ordered {
+		if isTempfileURL(u) {
+			rehosted, err := uploadAudioFromURL(apiKey, u, mimeType)
+			if err != nil {
+				slog.Warn("stt rehost tempfile url failed", "url", u, "err", err)
+				add(u)
+				continue
+			}
+			for _, candidate := range orderURLsForSTT(rehosted) {
+				add(candidate)
+			}
+			continue
+		}
+		add(u)
+	}
+	return out, nil
+}
+
+func isTempfileURL(u string) bool {
+	return strings.Contains(strings.ToLower(u), "tempfile.redpandaai.co")
+}
+
+func orderURLsForSTT(urls []string) []string {
+	score := func(u string) int {
+		lower := strings.ToLower(u)
+		switch {
+		case strings.Contains(lower, "kieai.redpandaai.co/download"):
+			return 0
+		case strings.Contains(lower, "kieai.redpandaai.co/files"):
+			return 1
+		case strings.Contains(lower, "kieai.redpandaai.co"):
+			return 2
+		case strings.Contains(lower, "tempfile.redpandaai.co"):
+			return 4
+		default:
+			return 3
+		}
+	}
+	out := append([]string(nil), urls...)
+	slices.SortStableFunc(out, func(a, b string) int {
+		return score(a) - score(b)
+	})
+	return out
+}
+
+func uploadAudioFromURL(apiKey, sourceURL, mimeType string) ([]string, error) {
+	fileName := fmt.Sprintf("voice_%d%s", time.Now().UnixNano(), audioExt(mimeType))
+	body, _ := json.Marshal(map[string]string{
+		"fileUrl":    sourceURL,
+		"uploadPath": uploadPath,
+		"fileName":   fileName,
+	})
+
+	req, err := http.NewRequest(http.MethodPost, urlUploadURL, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("stt url upload: %w", err)
+	}
+	defer resp.Body.Close()
+
+	return parseUploadResponse(resp.Body)
 }
 
 func uploadAudioStream(apiKey string, audio []byte, mimeType string) ([]string, error) {
@@ -164,8 +264,8 @@ func parseUploadResponse(respBody io.Reader) ([]string, error) {
 	if err := json.Unmarshal(raw, &parsed); err != nil {
 		return nil, fmt.Errorf("stt upload: parse response: %w", err)
 	}
-	// fileUrl is a direct public link; downloadUrl may require auth redirects.
-	urls := uniqueURLs(parsed.Data.FileURL, parsed.Data.DownloadURL)
+	// downloadUrl is often the link kie.ai can fetch; fileUrl may redirect or require auth.
+	urls := uniqueURLs(parsed.Data.DownloadURL, parsed.Data.FileURL)
 	if parsed.Code != 200 || !parsed.Success || len(urls) == 0 {
 		msg := strings.TrimSpace(parsed.Msg)
 		if msg == "" {
@@ -201,6 +301,9 @@ func createTask(apiKey string, audioURLs []string, languageCode string) (string,
 
 	var lastErr error
 	for _, audioURL := range audioURLs {
+		if !isAudioURLReachable(audioURL) {
+			slog.Warn("stt audio url not reachable from bot host, trying anyway", "audio_url", audioURL)
+		}
 		for _, input := range sttInputVariants(audioURL, languageCode) {
 			body, _ := json.Marshal(map[string]any{
 				"model": model,
@@ -235,25 +338,45 @@ func createTask(apiKey string, audioURLs []string, languageCode string) (string,
 // sttInputVariants returns createTask input payloads to try, ordered by API docs preference.
 func sttInputVariants(audioURL, languageCode string) []map[string]any {
 	return []map[string]any{
-		{
-			"audio_url":        audioURL,
-			"language_code":    "",
-			"tag_audio_events": true,
-			"diarize":          false,
-		},
-		{
-			"audio_url":        audioURL,
-			"language_code":    languageCode,
-			"tag_audio_events": true,
-			"diarize":          false,
-		},
+		{"audio_url": audioURL},
 		{
 			"audio_url":        audioURL,
 			"language_code":    languageCode,
 			"tag_audio_events": false,
 			"diarize":          false,
 		},
+		{
+			"audio_url":        audioURL,
+			"language_code":    languageCode,
+			"tag_audio_events": true,
+			"diarize":          false,
+		},
+		{
+			"audio_url":        audioURL,
+			"language_code":    "",
+			"tag_audio_events": false,
+			"diarize":          false,
+		},
 	}
+}
+
+func isAudioURLReachable(audioURL string) bool {
+	client := &http.Client{Timeout: 10 * time.Second}
+	for _, method := range []string{http.MethodHead, http.MethodGet} {
+		req, err := http.NewRequest(method, audioURL, nil)
+		if err != nil {
+			return false
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			continue
+		}
+		resp.Body.Close()
+		if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+			return true
+		}
+	}
+	return false
 }
 
 func isRetryableSTTError(err error) bool {

@@ -89,6 +89,23 @@ func TestCreateDefaultIfNotExistsExistingConfig(t *testing.T) {
 	r.Equal("invalid json", c)
 }
 
+func TestMigrateLanguageEnToRu(t *testing.T) {
+	r := require.New(t)
+
+	userFS, err := fs.NewFS("/", afero.NewMemMapFs())
+	r.NoError(err)
+	err = userFS.Write("", "config.json", `{"language":"en","timezone":"UTC"}`)
+	r.NoError(err)
+
+	cfg := NewConfig(userFS, -1, "config.json")
+	err = cfg.CreateDefaultIfNotExists()
+	r.NoError(err)
+
+	c, err := userFS.Read("", "config.json")
+	r.NoError(err)
+	r.Contains(c, `"language": "ru"`)
+}
+
 func TestTimezone(t *testing.T) {
 	r := require.New(t)
 

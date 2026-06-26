@@ -104,8 +104,7 @@ func TelegramEntitiesToMarkdown(text string, messageEntities []tgbotapi.MessageE
 func ExtractTextImgsLinks(text string) (txt string, images []string, localMedia []string, links map[string]string) {
 	links = make(map[string]string)
 
-	imgRegexp := regexp.MustCompile(`!\[.*?\]\(([^)]*tg_[^)]+)\)`)
-	tgIDRegexp := regexp.MustCompile(`tg_([^.]+)\.`)
+	imgLinkStart := regexp.MustCompile(`!\[[^\]]*\]\(`)
 	linkRegexp := regexp.MustCompile(`\[.*?\]\((.+?)\)`)
 	wikiLinkRegexp := regexp.MustCompile(`\[\[(.+?)\]\]`)
 
@@ -143,24 +142,36 @@ func ExtractTextImgsLinks(text string) (txt string, images []string, localMedia 
 	}
 	text = strings.Join(processedLines, "\n")
 
+	tgIDRegexp := regexp.MustCompile(`tg_([^.]+)\.`)
+
 	// Process images and locally stored media (voice, photos saved under media/).
-	text = imgRegexp.ReplaceAllStringFunc(text, func(match string) string {
-		matches := imgRegexp.FindStringSubmatch(match)
-		if len(matches) != 2 {
-			return match
+	for {
+		loc := imgLinkStart.FindStringIndex(text)
+		if loc == nil {
+			break
 		}
-		path := strings.TrimPrefix(strings.TrimSpace(matches[1]), "/")
+		rest := text[loc[1]:]
+		closeRel := closeParenForMarkdownURL(rest)
+		if closeRel == -1 {
+			break
+		}
+		full := text[loc[0] : loc[1]+closeRel+1]
+		path, ok := parseURLInParens(rest[:closeRel+1])
+		if !ok {
+			text = text[:loc[0]] + text[loc[1]:]
+			continue
+		}
+		path = strings.TrimPrefix(strings.TrimSpace(path), "/")
+		replacement := full
 		if strings.HasPrefix(path, "media/") {
 			localMedia = append(localMedia, path)
-			return "🖼"
-		}
-		idMatches := tgIDRegexp.FindStringSubmatch(path)
-		if len(idMatches) == 2 {
+			replacement = "🖼"
+		} else if idMatches := tgIDRegexp.FindStringSubmatch(path); len(idMatches) == 2 {
 			images = append(images, idMatches[1])
-			return "🖼"
+			replacement = "🖼"
 		}
-		return match
-	})
+		text = text[:loc[0]] + replacement + text[loc[1]+closeRel+1:]
+	}
 
 	// Process inline links
 	text = linkRegexp.ReplaceAllStringFunc(text, func(match string) string {

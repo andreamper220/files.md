@@ -58,6 +58,20 @@ func TestAttachmentNoteTitle(t *testing.T) {
 	}
 }
 
+func TestParseAttachmentLine_ParensInFilename(t *testing.T) {
+	line := FormatAttachmentContent("media/go-cheatsheet-1page (6).pdf", "go-cheatsheet-1page (6).pdf")
+	got, ok := ParseAttachmentLine(line)
+	if !ok {
+		t.Fatal("expected parse ok")
+	}
+	if got.Path != "media/go-cheatsheet-1page (6).pdf" {
+		t.Fatalf("got path %q", got.Path)
+	}
+	if got.Name != "go-cheatsheet-1page (6).pdf" {
+		t.Fatalf("got name %q", got.Name)
+	}
+}
+
 func TestParseAttachments_Multiple(t *testing.T) {
 	raw := strings.Join([]string{
 		FormatAttachmentContent("media/a.pdf", "a.pdf"),

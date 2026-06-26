@@ -33,6 +33,26 @@ func TestAudioExt(t *testing.T) {
 	}
 }
 
+func TestOrderURLsForSTT_PrefersDownload(t *testing.T) {
+	urls := orderURLsForSTT([]string{
+		"https://tempfile.redpandaai.co/kieai/1/voice.ogg",
+		"https://kieai.redpandaai.co/download/file_abc",
+		"https://kieai.redpandaai.co/files/voice.ogg",
+	})
+	if urls[0] != "https://kieai.redpandaai.co/download/file_abc" {
+		t.Fatalf("got %v", urls)
+	}
+}
+
+func TestIsTempfileURL(t *testing.T) {
+	if !isTempfileURL("https://tempfile.redpandaai.co/x.ogg") {
+		t.Fatal("expected tempfile url")
+	}
+	if isTempfileURL("https://kieai.redpandaai.co/files/x.ogg") {
+		t.Fatal("expected non-tempfile url")
+	}
+}
+
 func TestUniqueURLs_PrefersFileURLFirst(t *testing.T) {
 	got := uniqueURLs("https://example.com/file.ogg", "https://example.com/download/abc")
 	if len(got) != 2 {
@@ -43,12 +63,12 @@ func TestUniqueURLs_PrefersFileURLFirst(t *testing.T) {
 	}
 }
 
-func TestSttInputVariants_IncludesAutoDetect(t *testing.T) {
+func TestSttInputVariants_MinimalFirst(t *testing.T) {
 	variants := sttInputVariants("https://example.com/voice.ogg", "ru")
-	if len(variants) < 2 {
-		t.Fatalf("expected multiple variants, got %d", len(variants))
+	if len(variants) < 1 {
+		t.Fatalf("expected variants")
 	}
-	if variants[0]["language_code"] != "" {
-		t.Fatalf("first variant should auto-detect, got %q", variants[0]["language_code"])
+	if len(variants[0]) != 1 {
+		t.Fatalf("first variant should be minimal, got %v", variants[0])
 	}
 }

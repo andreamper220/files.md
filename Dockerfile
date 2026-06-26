@@ -15,7 +15,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o /out/server ./cmd/server && \
     CGO_ENABLED=0 GOOS=linux go build \
     -ldflags "-s -w" \
-    -o /out/importobsidian ./cmd/importobsidian
+    -o /out/importobsidian ./cmd/importobsidian && \
+    CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags "-s -w" \
+    -o /out/sttprobe ./cmd/sttprobe
 
 # --- runtime stage -------------------------------------------------------
 FROM alpine:3.20
@@ -25,6 +28,7 @@ RUN apk add --no-cache ca-certificates tzdata wget && \
 WORKDIR /app
 COPY --from=build /out/server /app/server
 COPY --from=build /out/importobsidian /app/importobsidian
+COPY --from=build /out/sttprobe /app/sttprobe
 COPY web /app/web
 
 RUN mkdir -p /app/storage /app/tokens && chown -R app:app /app
