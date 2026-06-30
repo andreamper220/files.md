@@ -101,7 +101,7 @@ func (b *Bot) saveAsNote(params []string) error {
 	if txt.NeedsUserTitle(content) {
 		return b.showDraftTitlePrompt(draftHash, draftKindNote)
 	}
-	return b.showNoteAreaPicker(draftHash)
+	return b.showNoteKindPicker(draftHash)
 }
 
 func (b *Bot) showTaskPriorityPicker(draftHash string) error {
@@ -143,13 +143,43 @@ func (b *Bot) showTaskAreaPicker(draftHash, priorityIdxStr string) error {
 	return b.showHTML(i18n.Tr("Выбери область для задачи:"), kb)
 }
 
-func (b *Bot) showNoteAreaPicker(draftHash string) error {
+func (b *Bot) showNoteKindPicker(draftHash string) error {
+	if _, ok := b.db.PendingDraft(draftHash); !ok {
+		return b.ShowHome(nil)
+	}
+
+	kb := tg.NewKeyboard([]tg.Row{
+		tg.NewRow(
+			tg.NewBtn(life.KindEmoji(life.KindDraft), tg.NewCmd(CmdPickNoteKind, []string{draftHash, life.KindCode(life.KindDraft)})),
+			tg.NewBtn(life.KindEmoji(life.KindFinal), tg.NewCmd(CmdPickNoteKind, []string{draftHash, life.KindCode(life.KindFinal)})),
+			tg.NewBtn(life.KindEmoji(life.KindDiscussion), tg.NewCmd(CmdPickNoteKind, []string{draftHash, life.KindCode(life.KindDiscussion)})),
+		),
+		tg.NewRow(tg.NewBtn(i18n.Tr(i18n.StrHome), tg.NewCmd(CmdShowHome, nil))),
+	})
+	return b.showHTML(i18n.Tr("Choose note type:"), kb)
+}
+
+func (b *Bot) pickNoteKind(params []string) error {
+	if len(params) < 2 {
+		return fmt.Errorf("pick note kind: missing params")
+	}
+	draftHash := params[0]
+	if _, ok := b.db.PendingDraft(draftHash); !ok {
+		return b.ShowHome(nil)
+	}
+	if _, ok := life.KindFromCode(params[1]); !ok {
+		return fmt.Errorf("pick note kind: bad kind")
+	}
+	return b.showNoteAreaPicker(draftHash, params[1])
+}
+
+func (b *Bot) showNoteAreaPicker(draftHash, kindCode string) error {
 	_ = life.EnsureSpheresRoot(b.fs)
 
 	kb := tg.NewKeyboard(nil)
 	areas := b.collectAllAreas()
 	addAreaPickerBtns(kb, areas, func(projectPath string) tg.Cmd {
-		return tg.NewCmd(CmdSaveNoteToArea, []string{draftHash, fs.ShortHash(projectPath), life.KindCode(life.KindDraft)})
+		return tg.NewCmd(CmdSaveNoteToArea, []string{draftHash, fs.ShortHash(projectPath), kindCode})
 	})
 	if len(areas) == 0 {
 		kb.AddRow(tg.NewBtn(i18n.Tr("🏗 Создать структуру"), tg.NewCmd(CmdInitLife, nil)))
@@ -316,7 +346,7 @@ func (b *Bot) applyVoiceDraftTitle(draftHash, kind, title string) error {
 	case draftKindTask:
 		return b.showTaskPriorityPicker(draftHash)
 	case draftKindNote:
-		return b.showNoteAreaPicker(draftHash)
+		return b.showNoteKindPicker(draftHash)
 	default:
 		return b.ShowHome(nil)
 	}
@@ -348,7 +378,7 @@ func (b *Bot) applyDraftTitle(params []string) error {
 	case draftKindTask:
 		return b.showTaskPriorityPicker(draftHash)
 	case draftKindNote:
-		return b.showNoteAreaPicker(draftHash)
+		return b.showNoteKindPicker(draftHash)
 	default:
 		return b.ShowHome(nil)
 	}

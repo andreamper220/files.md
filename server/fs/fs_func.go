@@ -88,7 +88,7 @@ func ExcludeChecklists(dirs []File) []File {
 func ExcludeSystemDirs(dirs []File) []File {
 	var newDirs []File
 	for _, dir := range dirs {
-		if slices.Contains([]string{DirMedia, DirArchive, DirJournal, DirInsights, "img"}, dir.Name) {
+		if slices.Contains([]string{DirMedia, DirArchive, DirJournal, DirInsights, "img", "spheres"}, dir.Name) {
 			continue
 		}
 

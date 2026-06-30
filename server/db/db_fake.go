@@ -8,7 +8,8 @@ import (
 // We don't have to clear it after each test
 type FakeDB struct {
 	HashOrPathByMID     string
-	InputExpectationCMD *tg.Cmd
+	InputExpectationCMD tg.Cmd
+	hasInputExpectation bool
 	EditNoteDirHash     string
 	EditNoteFileHash    string
 	EditNoteMode        string
@@ -41,15 +42,20 @@ func (db *FakeDB) DelLastKeyboardMsgID() {
 }
 
 func (db *FakeDB) InputExpectation() *tg.Cmd {
-	return db.InputExpectationCMD
+	if !db.hasInputExpectation {
+		return nil
+	}
+	cmd := db.InputExpectationCMD
+	return &cmd
 }
 
 func (db *FakeDB) SetInputExpectation(cmd tg.Cmd) {
-	db.InputExpectationCMD = &cmd
+	db.InputExpectationCMD = cmd
+	db.hasInputExpectation = true
 }
 
 func (db *FakeDB) DelInputExpectation() {
-	db.InputExpectationCMD = nil
+	db.hasInputExpectation = false
 }
 
 func (db *FakeDB) SetEditNoteTarget(dirHash, filenameHash, mode string) {

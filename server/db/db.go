@@ -76,12 +76,21 @@ func (db *DB) DelInputExpectation() {
 // SetEditNoteTarget marks a note being edited (text and/or file attachments).
 // mode is "r" (replace text) or "a" (append).
 func (db *DB) SetEditNoteTarget(dirHash, filenameHash, mode string) {
-	editNoteTargets.Store(editNoteTargetKey(db.UserID), dirHash+"/"+filenameHash+"/"+mode)
+	val := dirHash + "/" + filenameHash + "/" + mode
+	editNoteTargets.Store(editNoteTargetKey(db.UserID), val)
+	_ = os.WriteFile(tmpFilePath(db.UserID, "editNote"), []byte(val), 0o644)
 }
 
 // EditNoteTarget returns the note currently being edited.
 func (db *DB) EditNoteTarget() (dirHash, filenameHash, mode string, ok bool) {
 	v, ok := editNoteTargets.Load(editNoteTargetKey(db.UserID))
+	if !ok {
+		if data, err := os.ReadFile(tmpFilePath(db.UserID, "editNote")); err == nil && len(data) > 0 {
+			v = string(data)
+			ok = true
+			editNoteTargets.Store(editNoteTargetKey(db.UserID), v)
+		}
+	}
 	if !ok {
 		return "", "", "", false
 	}
@@ -97,6 +106,7 @@ func (db *DB) EditNoteTarget() (dirHash, filenameHash, mode string, ok bool) {
 
 func (db *DB) DelEditNoteTarget() {
 	editNoteTargets.Delete(editNoteTargetKey(db.UserID))
+	_ = os.Remove(tmpFilePath(db.UserID, "editNote"))
 }
 
 // SetEditTaskTarget marks a task being edited (text and/or file attachments).

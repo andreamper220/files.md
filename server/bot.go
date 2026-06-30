@@ -244,6 +244,7 @@ const (
 	CmdSaveAsTask                      = "as_task"
 	CmdPickTaskPriority                = "task_prio"
 	CmdSaveAsNote                      = "as_note"
+	CmdPickNoteKind                    = "note_kind"
 	CmdApplyDraftTitle                 = "d_title"
 	CmdPickVoiceTitle                  = "v_title"
 	CmdVoiceTitleCustom                = "v_tcust"
@@ -442,6 +443,7 @@ func (b *Bot) handlers() map[string]func([]string) error {
 		CmdSaveAsTask:                b.saveAsTask,
 		CmdPickTaskPriority:          b.pickTaskPriority,
 		CmdSaveAsNote:                b.saveAsNote,
+		CmdPickNoteKind:              b.pickNoteKind,
 		CmdApplyDraftTitle:           b.applyDraftTitle,
 		CmdPickVoiceTitle:            b.pickVoiceTitle,
 		CmdVoiceTitleCustom:          b.voiceTitleCustom,
@@ -561,8 +563,13 @@ func (b *Bot) extractCmd(u Update) (*tg.Cmd, error) {
 		return cmd, nil
 	}
 
-	// Input expectation is mostly used for renaming things
-	cmd = b.db.InputExpectation()
+	// Input expectation is mostly used for renaming things.
+	// While a note/task edit is in progress, the next message is note body — not rename input.
+	_, _, _, editingNote := b.db.EditNoteTarget()
+	_, _, editingTask := b.db.EditTaskTarget()
+	if !editingNote && !editingTask {
+		cmd = b.db.InputExpectation()
+	}
 	if cmd != nil {
 		if cmd.Name == CmdApplyDraftTitle && isMediaUpdate(u) {
 			b.db.DelInputExpectation()

@@ -470,7 +470,7 @@ func (fs FS) md5(filename string) string {
 }
 
 func Filename(header string) string {
-	return txt.Ucfirst(header) + MDExt
+	return SanitizeFilename(txt.Ucfirst(header)) + MDExt
 }
 
 func IsChecklistItem(filename string) bool {

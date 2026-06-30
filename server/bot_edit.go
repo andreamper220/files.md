@@ -66,6 +66,7 @@ func (b *Bot) startEditNote(mode string, params []string) error {
 		return fmt.Errorf("start edit note: %w", err)
 	}
 
+	b.db.DelInputExpectation()
 	b.db.SetEditNoteTarget(dirHash, filenameHash, mode)
 
 	back := tg.NewCmd(CmdCancelEditNote, []string{dirHash, filenameHash})
@@ -114,11 +115,20 @@ func (b *Bot) replaceEditNote(dirHash, filenameHash, content string) error {
 	}
 
 	if err := b.fs.Write(dir, filename, content); err != nil {
+		b.notifyEditNoteSaveError()
 		return fmt.Errorf("edit note: %w", err)
 	}
 
 	b.db.DelEditNoteTarget()
-	return b.showFile([]string{dirHash, filenameHash})
+	if err := b.showFile([]string{dirHash, filenameHash}); err != nil {
+		_, _ = b.tg.Send(b.userID, i18n.Tr("Note saved, but couldn't refresh the view."), nil, tg.MarkupHTML)
+		return fmt.Errorf("edit note: show file: %w", err)
+	}
+	return nil
+}
+
+func (b *Bot) notifyEditNoteSaveError() {
+	_, _ = b.tg.Send(b.userID, i18n.Tr("Couldn't save the note. Please try again."), nil, tg.MarkupHTML)
 }
 
 func (b *Bot) applyEditNoteContent(dirHash, filenameHash, mode, content string) error {
@@ -190,6 +200,7 @@ func (b *Bot) startEditTask(mode string, params []string) error {
 		return fmt.Errorf("start edit task: missing params")
 	}
 
+	b.db.DelInputExpectation()
 	b.db.SetEditTaskTarget(params, mode)
 
 	back := tg.NewCmd(CmdShowTask, params)
